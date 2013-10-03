@@ -465,6 +465,14 @@ static int flexcan_get_berr_counter(const struct net_device *dev,
 	return err;
 }
 
+static void flexcan_berr_restart(const struct net_device *dev)
+{
+	const struct flexcan_priv *priv = netdev_priv(dev);
+	struct flexcan_regs __iomem *regs = priv->base;
+
+	flexcan_write(priv->reg_ctrl_default, &regs->ctrl);
+}
+
 static int flexcan_start_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	const struct flexcan_priv *priv = netdev_priv(dev);
@@ -706,7 +714,7 @@ static int flexcan_poll(struct napi_struct *napi, int quota)
 		napi_complete(napi);
 		/* enable IRQs */
 		flexcan_write(FLEXCAN_IFLAG_DEFAULT, &regs->imask1);
-		flexcan_write(priv->reg_ctrl_default, &regs->ctrl);
+		can_berr_limit(dev);
 	}
 
 	return work_done;
@@ -1217,6 +1225,7 @@ static int flexcan_probe(struct platform_device *pdev)
 	priv->can.bittiming_const = &flexcan_bittiming_const;
 	priv->can.do_set_mode = flexcan_set_mode;
 	priv->can.do_get_berr_counter = flexcan_get_berr_counter;
+	priv->can.do_berr_restart = flexcan_berr_restart;
 	priv->can.ctrlmode_supported = CAN_CTRLMODE_LOOPBACK |
 		CAN_CTRLMODE_LISTENONLY	| CAN_CTRLMODE_3_SAMPLES |
 		CAN_CTRLMODE_BERR_REPORTING;

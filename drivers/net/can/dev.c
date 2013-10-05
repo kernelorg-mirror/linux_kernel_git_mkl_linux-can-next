@@ -806,6 +806,7 @@ static const struct nla_policy can_policy[IFLA_CAN_MAX + 1] = {
 				= { .len = sizeof(struct can_bittiming) },
 	[IFLA_CAN_DATA_BITTIMING_CONST]
 				= { .len = sizeof(struct can_bittiming_const) },
+	[IFLA_CAN_BERR_LIMIT_MS]= { .type = NLA_MSECS },
 };
 
 static int can_changelink(struct net_device *dev,
@@ -897,6 +898,18 @@ static int can_changelink(struct net_device *dev,
 		}
 	}
 
+	if (data[IFLA_CAN_BERR_LIMIT_MS]) {
+		if (!priv->do_berr_restart)
+			return -EOPNOTSUPP;
+
+		/* Do not allow changing berr limit delay while running */
+		if (dev->flags & IFF_UP)
+			return -EBUSY;
+
+		priv->berr_limit_delay =
+			nla_get_msecs(data[IFLA_CAN_BERR_LIMIT_MS]);
+	}
+
 	return 0;
 }
 
@@ -919,6 +932,8 @@ static size_t can_get_size(const struct net_device *dev)
 		size += nla_total_size(sizeof(struct can_bittiming));
 	if (priv->data_bittiming_const)				/* IFLA_CAN_DATA_BITTIMING_CONST */
 		size += nla_total_size(sizeof(struct can_bittiming_const));
+	if (priv->do_berr_restart)				/* IFLA_CAN_BERR_LIMIT_MS */
+		size += nla_total_size(sizeof(u64));
 
 	return size;
 }
@@ -957,7 +972,12 @@ static int can_fill_info(struct sk_buff *skb, const struct net_device *dev)
 	    (priv->data_bittiming_const &&
 	     nla_put(skb, IFLA_CAN_DATA_BITTIMING_CONST,
 		     sizeof(*priv->data_bittiming_const),
-		     priv->data_bittiming_const)))
+		     priv->data_bittiming_const)) ||
+
+	    (priv->do_berr_restart &&
+	     nla_put_msecs(skb, IFLA_CAN_BERR_LIMIT_MS,
+			   priv->berr_limit_delay)))
+
 		return -EMSGSIZE;
 
 	return 0;

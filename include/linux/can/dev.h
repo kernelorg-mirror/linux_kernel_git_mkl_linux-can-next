@@ -46,6 +46,9 @@ struct can_priv {
 	int restart_ms;
 	struct timer_list restart_timer;
 
+	unsigned long berr_limit_delay;		/* in jiffies */
+	struct timer_list berr_limit_timer;
+
 	int (*do_set_bittiming)(struct net_device *dev);
 	int (*do_set_data_bittiming)(struct net_device *dev);
 	int (*do_set_mode)(struct net_device *dev, enum can_mode mode);
@@ -53,6 +56,7 @@ struct can_priv {
 			    enum can_state *state);
 	int (*do_get_berr_counter)(const struct net_device *dev,
 				   struct can_berr_counter *bec);
+	void (*do_berr_restart)(const struct net_device *dev);
 
 	unsigned int echo_skb_max;
 	struct sk_buff **echo_skb;
@@ -129,6 +133,7 @@ void unregister_candev(struct net_device *dev);
 
 int can_restart_now(struct net_device *dev);
 void can_bus_off(struct net_device *dev);
+void can_berr_limit(struct net_device *dev);
 
 void can_change_state(struct net_device *dev, struct can_frame *cf,
 		      enum can_state tx_state, enum can_state rx_state);

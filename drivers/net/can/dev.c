@@ -553,6 +553,29 @@ void can_bus_off(struct net_device *dev)
 }
 EXPORT_SYMBOL_GPL(can_bus_off);
 
+static void can_berr_restart(unsigned long data)
+{
+	struct net_device *dev = (struct net_device *)data;
+	struct can_priv *priv = netdev_priv(dev);
+
+	netdev_dbg(dev, "berr-restart\n");
+	priv->do_berr_restart(dev);
+}
+
+void can_berr_limit(struct net_device *dev)
+{
+	struct can_priv *priv = netdev_priv(dev);
+
+	if (priv->berr_limit_delay) {
+		netdev_dbg(dev, "berr-limit\n");
+		mod_timer(&priv->berr_limit_timer,
+			  jiffies + priv->berr_limit_delay);
+	} else {
+		priv->do_berr_restart(dev);
+	}
+}
+EXPORT_SYMBOL_GPL(can_berr_limit);
+
 static void can_setup(struct net_device *dev)
 {
 	dev->type = ARPHRD_CAN;
@@ -668,6 +691,7 @@ struct net_device *alloc_candev(int sizeof_priv, unsigned int echo_skb_max)
 	priv->state = CAN_STATE_STOPPED;
 
 	init_timer(&priv->restart_timer);
+	init_timer(&priv->berr_limit_timer);
 
 	return dev;
 }
@@ -743,6 +767,7 @@ int open_candev(struct net_device *dev)
 		netif_carrier_on(dev);
 
 	setup_timer(&priv->restart_timer, can_restart, (unsigned long)dev);
+	setup_timer(&priv->berr_limit_timer, can_berr_restart, (unsigned long)dev);
 
 	return 0;
 }
@@ -758,6 +783,7 @@ void close_candev(struct net_device *dev)
 {
 	struct can_priv *priv = netdev_priv(dev);
 
+	del_timer_sync(&priv->berr_limit_timer);
 	del_timer_sync(&priv->restart_timer);
 	can_flush_echo_skb(dev);
 }

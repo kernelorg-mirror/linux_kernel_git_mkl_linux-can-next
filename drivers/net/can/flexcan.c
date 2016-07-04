@@ -258,8 +258,14 @@ struct flexcan_regs {
 	u32 errsr;		/* 0xafc */
 };
 
+struct flexcan_devtype_clockratio {
+	u8 max_mb;
+	u8 ratio;
+};
+
 struct flexcan_devtype_data {
 	u32 quirks;		/* quirks needed for different IP cores */
+	const struct flexcan_devtype_clockratio const *clockratio;
 };
 
 struct flexcan_priv {
@@ -280,20 +286,39 @@ struct flexcan_priv {
 	struct regulator *reg_xceiver;
 };
 
-static const struct flexcan_devtype_data fsl_p1010_devtype_data = {
-	.quirks = FLEXCAN_QUIRK_BROKEN_ERR_STATE,
+static const struct flexcan_devtype_clockratio flexcan_clockratio_v2[] = {
+	/* Define values in descending order of ratio. */
+	{ .max_mb = 63, .ratio = 16},
+	{ .max_mb = 31, .ratio =  8},
+	{ /* sentinel */ }
 };
 
-static const struct flexcan_devtype_data fsl_imx28_devtype_data;
+static const struct flexcan_devtype_clockratio flexcan_clockratio_v3[] = {
+	/* Define values in descending order of ratio. */
+	{ .max_mb = 63, .ratio = 25},
+	{ .max_mb = 31, .ratio = 16},
+	{ /* sentinel */ }
+};
+
+static const struct flexcan_devtype_data fsl_p1010_devtype_data = {
+	.quirks = FLEXCAN_QUIRK_BROKEN_ERR_STATE,
+	.clockratio = flexcan_clockratio_v2,
+};
+
+static const struct flexcan_devtype_data fsl_imx28_devtype_data = {
+	.clockratio = flexcan_clockratio_v2,
+};
 
 static const struct flexcan_devtype_data fsl_imx6q_devtype_data = {
 	.quirks = FLEXCAN_QUIRK_DISABLE_RXFG | FLEXCAN_QUIRK_ENABLE_EACEN_RRS |
 		FLEXCAN_QUIRK_USE_OFF_TIMESTAMP,
+	.clockratio = flexcan_clockratio_v3,
 };
 
 static const struct flexcan_devtype_data fsl_vf610_devtype_data = {
 	.quirks = FLEXCAN_QUIRK_DISABLE_RXFG | FLEXCAN_QUIRK_ENABLE_EACEN_RRS |
 		FLEXCAN_QUIRK_DISABLE_MECR | FLEXCAN_QUIRK_USE_OFF_TIMESTAMP,
+	.clockratio = flexcan_clockratio_v3,
 };
 
 static const struct can_bittiming_const flexcan_bittiming_const = {
@@ -813,6 +838,37 @@ static void flexcan_set_bittiming(struct net_device *dev)
 	/* print chip status */
 	netdev_dbg(dev, "%s: mcr=0x%08x ctrl=0x%08x\n", __func__,
 		   flexcan_read(&regs->mcr), flexcan_read(&regs->ctrl));
+}
+
+/* flexcan_get_max_mb
+ *
+ * This function calculcated the maximum number of mailboxes usable
+ * depending on the CAN bittiming and clocking.
+ */
+static u8 flexcan_get_max_mb(struct net_device *dev)
+{
+	struct flexcan_priv *priv = netdev_priv(dev);
+	const struct can_bittiming *bt = &priv->can.bittiming;
+	const struct flexcan_devtype_clockratio *clockratio;
+	unsigned long f_sys;
+	unsigned int ratio;
+
+	f_sys = clk_get_rate(priv->clk_ipg);
+	if (!f_sys)
+		goto fallback;
+
+	ratio = f_sys / bt->bitrate;
+
+	netdev_dbg(dev, "f_sys=%ld, f_can=%d, ratio=%d\n", f_sys, bt->bitrate, ratio);
+
+	for (clockratio = priv->devtype_data->clockratio;
+	     clockratio->ratio; clockratio++) {
+		if (ratio >= clockratio->ratio)
+			return clockratio->max_mb;
+	}
+
+ fallback:
+	return FLEXCAN_MCR_MAXMB(flexcan_read(&priv->regs->mcr));
 }
 
 /* flexcan_chip_start

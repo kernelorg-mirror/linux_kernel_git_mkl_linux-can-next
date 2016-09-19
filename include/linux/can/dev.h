@@ -60,6 +60,7 @@ struct can_priv {
 
 	unsigned int echo_skb_max;
 	struct sk_buff **echo_skb;
+	struct sk_buff_head echo_queue;
 
 #ifdef CONFIG_CAN_LEDS
 	struct led_trigger *tx_led_trig;

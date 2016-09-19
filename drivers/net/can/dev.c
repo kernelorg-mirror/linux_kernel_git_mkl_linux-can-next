@@ -423,11 +423,9 @@ void can_put_echo_skb(struct sk_buff *skb, struct net_device *dev,
 	struct can_priv *priv = netdev_priv(dev);
 
 	BUG_ON(idx >= priv->echo_skb_max);
-
-	/* check flag whether this packet has to be looped back */
-	if (!(dev->flags & IFF_ECHO) || skb->pkt_type != PACKET_LOOPBACK ||
-	    (skb->protocol != htons(ETH_P_CAN) &&
-	     skb->protocol != htons(ETH_P_CANFD))) {
+	if (WARN_ONCE(skb->protocol != htons(ETH_P_CAN) &&
+		      skb->protocol != htons(ETH_P_CANFD),
+		      "CAN function used with non ETH_P_CAN* skb->protocol\n")) {
 		kfree_skb(skb);
 		return;
 	}
@@ -471,7 +469,13 @@ unsigned int can_get_echo_skb(struct net_device *dev, unsigned int idx)
 		struct can_frame *cf = (struct can_frame *)skb->data;
 		u8 dlc = cf->can_dlc;
 
-		netif_rx(priv->echo_skb[idx]);
+		/* check flag whether this packet has to be looped back */
+		if (!(dev->flags & IFF_ECHO) ||
+		    skb->pkt_type != PACKET_LOOPBACK ) {
+			kfree_skb(skb);
+		else
+			netif_rx(priv->echo_skb[idx]);
+
 		priv->echo_skb[idx] = NULL;
 
 		return dlc;
@@ -685,11 +689,8 @@ struct net_device *alloc_candev(int sizeof_priv, unsigned int echo_skb_max)
 	struct can_priv *priv;
 	int size;
 
-	if (echo_skb_max)
-		size = ALIGN(sizeof_priv, sizeof(struct sk_buff *)) +
-			echo_skb_max * sizeof(struct sk_buff *);
-	else
-		size = sizeof_priv;
+	size = ALIGN(sizeof_priv, sizeof(struct sk_buff *)) +
+		echo_skb_max * sizeof(struct sk_buff *);
 
 	dev = alloc_netdev(size, "can%d", NET_NAME_UNKNOWN, can_setup);
 	if (!dev)
@@ -703,6 +704,7 @@ struct net_device *alloc_candev(int sizeof_priv, unsigned int echo_skb_max)
 		priv->echo_skb = (void *)priv +
 			ALIGN(sizeof_priv, sizeof(struct sk_buff *));
 	}
+	skb_queue_head_init(&priv->echo_queue);
 
 	priv->state = CAN_STATE_STOPPED;
 

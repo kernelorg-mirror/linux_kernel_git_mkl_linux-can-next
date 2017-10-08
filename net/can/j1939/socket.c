@@ -213,6 +213,9 @@ static int j1939sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 		return -EINVAL;
 	if (!addr->can_ifindex)
 		return -ENODEV;
+	if (pgn_is_valid(addr->can_addr.j1939.pgn) &&
+			!pgn_is_clean_pdu(addr->can_addr.j1939.pgn))
+		return -EINVAL;
 
 	lock_sock(sock->sk);
 
@@ -292,6 +295,9 @@ static int j1939sk_connect(struct socket *sock, struct sockaddr *uaddr,
 		return -EINVAL;
 	if (!addr->can_ifindex)
 		return -ENODEV;
+	if (pgn_is_valid(addr->can_addr.j1939.pgn) &&
+			!pgn_is_clean_pdu(addr->can_addr.j1939.pgn))
+		return -EINVAL;
 
 	lock_sock(sock->sk);
 
@@ -603,6 +609,9 @@ static int j1939sk_sendmsg(struct socket *sock, struct msghdr *msg, size_t size)
 		if (msg->msg_namelen < J1939_MIN_NAMELEN)
 			return -EINVAL;
 		if (addr->can_family != AF_CAN)
+			return -EINVAL;
+		if (pgn_is_valid(addr->can_addr.j1939.pgn) &&
+				!pgn_is_clean_pdu(addr->can_addr.j1939.pgn))
 			return -EINVAL;
 		/* TODO: always check if ifindex is correct? */
 		if (addr->can_ifindex && (ifindex != addr->can_ifindex))

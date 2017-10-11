@@ -308,7 +308,7 @@ static int j1939sk_connect(struct socket *sock, struct sockaddr *uaddr,
 	}
 
 	/* A re-connect() is not supported */
-	if (!(jsk->state & J1939_SOCK_CONNECTED)) {
+	if (jsk->state & J1939_SOCK_CONNECTED) {
 		ret = -EBUSY;
 		goto out_release_sock;
 	}

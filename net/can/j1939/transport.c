@@ -277,7 +277,7 @@ static inline unsigned int j1939etp_ctl_to_size(const u8 *dat)
  * with reverse == 1
  */
 static int j1939tp_match(struct session *session, struct sk_buff *skb,
-			 int reverse)
+			 bool reverse)
 {
 	struct j1939_sk_buff_cb *cb = j1939_get_cb(skb);
 
@@ -317,7 +317,7 @@ static int j1939tp_match(struct session *session, struct sk_buff *skb,
 }
 
 static struct session *_j1939tp_find(struct list_head *root,
-				     struct sk_buff *skb, int reverse)
+				     struct sk_buff *skb, bool reverse)
 {
 	struct session *session;
 
@@ -332,7 +332,7 @@ static struct session *_j1939tp_find(struct list_head *root,
 }
 
 static struct session *j1939tp_find(struct list_head *root,
-				    struct sk_buff *skb, int reverse)
+				    struct sk_buff *skb, bool reverse)
 {
 	struct session *session;
 
@@ -539,7 +539,7 @@ static void j1939tp_rxtask(unsigned long val)
 }
 
 /* receive packet functions */
-static void _j1939xtp_rx_bad_message(struct sk_buff *skb, int extd, int reverse)
+static void _j1939xtp_rx_bad_message(struct sk_buff *skb, int extd, bool reverse)
 {
 	struct session *session;
 	pgn_t pgn;
@@ -567,7 +567,7 @@ static void j1939xtp_rx_bad_message(struct sk_buff *skb, int extd)
 	_j1939xtp_rx_bad_message(skb, extd, 1);
 }
 
-static void _j1939xtp_rx_abort(struct sk_buff *skb, int extd, int reverse)
+static void _j1939xtp_rx_abort(struct sk_buff *skb, int extd, bool reverse)
 {
 	struct session *session;
 	pgn_t pgn;

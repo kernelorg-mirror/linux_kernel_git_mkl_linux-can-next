@@ -91,13 +91,6 @@ void j1939_sock_pending_del(struct sock *sk)
 		wake_up(&jsk->waitq);	/* no pending SKB's */
 }
 
-static inline bool j1939_no_address(const struct sock *sk)
-{
-	const struct j1939_sock *jsk = j1939_sk(sk);
-
-	return (jsk->addr.sa == J1939_NO_ADDR) && !jsk->addr.src_name;
-}
-
 /* matches skb control buffer (addr) with a j1939 filter */
 static inline bool packet_match(const struct j1939_sk_buff_cb *skcb,
 				const struct j1939_filter *f, int nfilter)

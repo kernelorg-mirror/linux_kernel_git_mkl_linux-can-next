@@ -18,9 +18,11 @@
 #include <linux/can/skb.h>
 #include "j1939-priv.h"
 
+/* TODO: add common prefix */
 #define REGULAR 0
 #define EXTENDED 1
 
+/* TODO: use uppercase and common prefix */
 #define etp_pgn_ctl 0xc800
 #define etp_pgn_dat 0xc700
 #define tp_pgn_ctl 0xec00

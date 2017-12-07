@@ -231,7 +231,7 @@ static inline int j1939tp_im_transmitter(struct sk_buff *skb)
 }
 
 /* see if we are involved as either receiver or transmitter */
-static int j1939tp_im_involved(struct sk_buff *skb, int swap)
+static int j1939tp_im_involved(struct sk_buff *skb, bool swap)
 {
 	return swap ? j1939tp_im_receiver(skb) : j1939tp_im_transmitter(skb);
 }
@@ -388,7 +388,7 @@ static int j1939tp_tx_dat(struct sk_buff *related, bool extd,
 }
 
 static int j1939xtp_do_tx_ctl(struct sk_buff *related, bool extd,
-			      int swap_src_dst, pgn_t pgn, const u8 *dat)
+			      bool swap_src_dst, pgn_t pgn, const u8 *dat)
 {
 	struct sk_buff *skb;
 	struct j1939_sk_buff_cb *skb_cb;
@@ -429,14 +429,14 @@ static int j1939xtp_do_tx_ctl(struct sk_buff *related, bool extd,
 }
 
 static inline int j1939tp_tx_ctl(struct session *session,
-				 int swap_src_dst, const u8 *dat)
+				 bool swap_src_dst, const u8 *dat)
 {
 	return j1939xtp_do_tx_ctl(session->skb, session->extd, swap_src_dst,
 				  session->cb->addr.pgn, dat);
 }
 
 static int j1939xtp_tx_abort(struct sk_buff *related, bool extd,
-			     int swap_src_dst, int err, pgn_t pgn)
+			     bool swap_src_dst, int err, pgn_t pgn)
 {
 	u8 dat[5];
 

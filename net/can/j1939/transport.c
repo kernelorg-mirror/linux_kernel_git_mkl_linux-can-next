@@ -89,7 +89,7 @@ struct session {
 	 */
 	u8 last_cmd, last_txcmd;
 	u8 transmission;
-	u8 extd;
+	bool extd;
 	struct {
 		/* these do not require 16 bit, they should fit in u8
 		 * but putting in int makes it easier to deal with
@@ -126,7 +126,7 @@ static inline void fix_cb(struct j1939_sk_buff_cb *cb)
 	cb->msg_flags &= ~MSG_SYN;
 }
 
-static inline struct list_head *sessionq(int extd)
+static inline struct list_head *sessionq(bool extd)
 {
 	return extd ? &tp_extsessionq : &tp_sessionq;
 }
@@ -351,7 +351,7 @@ static void j1939_skbcb_swap(struct j1939_sk_buff_cb *cb)
 }
 
 /* TP transmit packet functions */
-static int j1939tp_tx_dat(struct sk_buff *related, int extd,
+static int j1939tp_tx_dat(struct sk_buff *related, bool extd,
 			  const u8 *dat, int len)
 {
 	struct sk_buff *skb;
@@ -387,7 +387,7 @@ static int j1939tp_tx_dat(struct sk_buff *related, int extd,
 	return j1939_send(skb);
 }
 
-static int j1939xtp_do_tx_ctl(struct sk_buff *related, int extd,
+static int j1939xtp_do_tx_ctl(struct sk_buff *related, bool extd,
 			      int swap_src_dst, pgn_t pgn, const u8 *dat)
 {
 	struct sk_buff *skb;
@@ -435,7 +435,7 @@ static inline int j1939tp_tx_ctl(struct session *session,
 				  session->cb->addr.pgn, dat);
 }
 
-static int j1939xtp_tx_abort(struct sk_buff *related, int extd,
+static int j1939xtp_tx_abort(struct sk_buff *related, bool extd,
 			     int swap_src_dst, int err, pgn_t pgn)
 {
 	u8 dat[5];
@@ -539,7 +539,7 @@ static void j1939tp_rxtask(unsigned long val)
 }
 
 /* receive packet functions */
-static void _j1939xtp_rx_bad_message(struct sk_buff *skb, int extd, bool reverse)
+static void _j1939xtp_rx_bad_message(struct sk_buff *skb, bool extd, bool reverse)
 {
 	struct session *session;
 	pgn_t pgn;
@@ -559,7 +559,7 @@ static void _j1939xtp_rx_bad_message(struct sk_buff *skb, int extd, bool reverse
 }
 
 /* abort packets may come in 2 directions */
-static void j1939xtp_rx_bad_message(struct sk_buff *skb, int extd)
+static void j1939xtp_rx_bad_message(struct sk_buff *skb, bool extd)
 {
 	pr_info("%s, pgn %05x\n", __func__, j1939xtp_ctl_to_pgn(skb->data));
 
@@ -567,7 +567,7 @@ static void j1939xtp_rx_bad_message(struct sk_buff *skb, int extd)
 	_j1939xtp_rx_bad_message(skb, extd, 1);
 }
 
-static void _j1939xtp_rx_abort(struct sk_buff *skb, int extd, bool reverse)
+static void _j1939xtp_rx_abort(struct sk_buff *skb, bool extd, bool reverse)
 {
 	struct session *session;
 	pgn_t pgn;
@@ -592,7 +592,7 @@ static void _j1939xtp_rx_abort(struct sk_buff *skb, int extd, bool reverse)
 }
 
 /* abort packets may come in 2 directions */
-static inline void j1939xtp_rx_abort(struct sk_buff *skb, int extd)
+static inline void j1939xtp_rx_abort(struct sk_buff *skb, bool extd)
 {
 	pr_info("%s %i, %05x\n", __func__, skb->skb_iif,
 		j1939xtp_ctl_to_pgn(skb->data));
@@ -601,7 +601,7 @@ static inline void j1939xtp_rx_abort(struct sk_buff *skb, int extd)
 	_j1939xtp_rx_abort(skb, extd, 1);
 }
 
-static void j1939xtp_rx_eof(struct sk_buff *skb, int extd)
+static void j1939xtp_rx_eof(struct sk_buff *skb, bool extd)
 {
 	struct session *session;
 	pgn_t pgn;
@@ -626,7 +626,7 @@ static void j1939xtp_rx_eof(struct sk_buff *skb, int extd)
 	j1939_session_put(session); /* ~j1939tp_find */
 }
 
-static void j1939xtp_rx_cts(struct sk_buff *skb, int extd)
+static void j1939xtp_rx_cts(struct sk_buff *skb, bool extd)
 {
 	struct session *session;
 	pgn_t pgn;
@@ -686,7 +686,7 @@ static void j1939xtp_rx_cts(struct sk_buff *skb, int extd)
 	j1939_session_put(session); /* ~j1939tp_find */
 }
 
-static void j1939xtp_rx_rts(struct sk_buff *skb, int extd)
+static void j1939xtp_rx_rts(struct sk_buff *skb, bool extd)
 {
 	struct j1939_sk_buff_cb *cb = j1939_get_cb(skb);
 	struct session *session;
@@ -798,7 +798,7 @@ static void j1939xtp_rx_rts(struct sk_buff *skb, int extd)
 	j1939_session_put(session); /* ~j1939tp_find */
 }
 
-static void j1939xtp_rx_dpo(struct sk_buff *skb, int extd)
+static void j1939xtp_rx_dpo(struct sk_buff *skb, bool extd)
 {
 	struct session *session;
 	pgn_t pgn;
@@ -826,7 +826,7 @@ static void j1939xtp_rx_dpo(struct sk_buff *skb, int extd)
 	j1939_session_put(session); /* ~j1939tp_find */
 }
 
-static void j1939xtp_rx_dat(struct sk_buff *skb, int extd)
+static void j1939xtp_rx_dat(struct sk_buff *skb, bool extd)
 {
 	struct session *session;
 	const u8 *dat;

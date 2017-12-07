@@ -88,7 +88,7 @@ struct session {
 	 * have stopped tx, but this time discrepancy is never avoided anyhow
 	 */
 	u8 last_cmd, last_txcmd;
-	u8 transmission;
+	bool transmission;
 	bool extd;
 	struct {
 		/* these do not require 16 bit, they should fit in u8
@@ -1169,7 +1169,7 @@ int j1939_send_transport(struct sk_buff *skb)
 
 	session->skb_iif = can_skb_prv(skb)->ifindex;
 	session->extd = (skb->len > MAX_TP_PACKET_SIZE) ? EXTENDED : REGULAR;
-	session->transmission = 1;
+	session->transmission = true;
 	session->pkt.total = (skb->len + 6) / 7;
 	session->pkt.block = session->extd ? 255 :
 		min(block ?: 255, session->pkt.total);

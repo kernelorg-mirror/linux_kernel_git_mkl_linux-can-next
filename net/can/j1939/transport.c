@@ -1295,7 +1295,7 @@ static struct session *j1939_session_fresh_new(int size,
 
 	session = j1939_session_new(skb);
 	if (!session) {
-		kfree(skb);
+		kfree_skb(skb);
 		return NULL;
 	}
 	session->skb_iif = rel_skb->skb_iif;

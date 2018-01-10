@@ -307,8 +307,6 @@ struct j1939_priv *j1939_priv_get_by_ifindex(int ifindex)
 	struct j1939_priv *priv;
 	struct net_device *netdev;
 
-	printk("%s: ifindex=%d\n", __func__, ifindex);
-
 	netdev = dev_get_by_index(&init_net, ifindex);
 	if (!netdev)
 		return NULL;

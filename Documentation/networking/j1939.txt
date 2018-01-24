@@ -407,7 +407,7 @@ This file contains
     struct sockaddr_can addr;
 
     memset(&addr, 0, sizeof(addr));
-    addr.can_ifindex = ifindex("can0"); // ifindex is a substitute.
+    addr.can_ifindex = if_nametoindex("can0");
     addr.can_addr.j1939.name = 0x12345678ULL;
     addr.can_addr.j1939.addr = J1939_NO_ADDR;
     addr.can_addr.j1939.pgn = J1939_NO_PGN;

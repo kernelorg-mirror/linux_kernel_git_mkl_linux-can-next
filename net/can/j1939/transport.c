@@ -283,21 +283,7 @@ static int j1939tp_match(struct session *session, struct sk_buff *skb,
 
 	if (session->skb_iif != skb->skb_iif)
 		return 0;
-	if (!reverse) {
-		if (session->cb->addr.src_name) {
-			if (session->cb->addr.src_name != cb->addr.src_name)
-				return 0;
-		} else if (session->cb->addr.sa != cb->addr.sa) {
-			return 0;
-		}
-
-		if (session->cb->addr.dst_name) {
-			if (session->cb->addr.dst_name != cb->addr.dst_name)
-				return 0;
-		} else if (session->cb->addr.da != cb->addr.da) {
-			return 0;
-		}
-	} else {
+	if (reverse) {
 		if (session->cb->addr.src_name) {
 			if (session->cb->addr.src_name != cb->addr.dst_name)
 				return 0;
@@ -309,6 +295,20 @@ static int j1939tp_match(struct session *session, struct sk_buff *skb,
 			if (session->cb->addr.dst_name != cb->addr.src_name)
 				return 0;
 		} else if (session->cb->addr.da != cb->addr.sa) {
+			return 0;
+		}
+	} else {
+		if (session->cb->addr.src_name) {
+			if (session->cb->addr.src_name != cb->addr.src_name)
+				return 0;
+		} else if (session->cb->addr.sa != cb->addr.sa) {
+			return 0;
+		}
+
+		if (session->cb->addr.dst_name) {
+			if (session->cb->addr.dst_name != cb->addr.dst_name)
+				return 0;
+		} else if (session->cb->addr.da != cb->addr.da) {
 			return 0;
 		}
 	}

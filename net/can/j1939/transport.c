@@ -276,44 +276,44 @@ static inline unsigned int j1939etp_ctl_to_size(const u8 *dat)
  * broadcasts (no dst, no da) would never call this
  * with reverse == 1
  */
-static int j1939tp_match(struct session *session, struct sk_buff *skb,
-			 bool reverse)
+static bool j1939tp_match(struct session *session, struct sk_buff *skb,
+			  bool reverse)
 {
 	struct j1939_sk_buff_cb *cb = j1939_get_cb(skb);
 
 	if (session->skb_iif != skb->skb_iif)
-		return 0;
+		return false;
 	if (reverse) {
 		if (session->cb->addr.src_name) {
 			if (session->cb->addr.src_name != cb->addr.dst_name)
-				return 0;
+				return false;
 		} else if (session->cb->addr.sa != cb->addr.da) {
-			return 0;
+			return false;
 		}
 
 		if (session->cb->addr.dst_name) {
 			if (session->cb->addr.dst_name != cb->addr.src_name)
-				return 0;
+				return false;
 		} else if (session->cb->addr.da != cb->addr.sa) {
-			return 0;
+			return false;
 		}
 	} else {
 		if (session->cb->addr.src_name) {
 			if (session->cb->addr.src_name != cb->addr.src_name)
-				return 0;
+				return false;
 		} else if (session->cb->addr.sa != cb->addr.sa) {
-			return 0;
+			return false;
 		}
 
 		if (session->cb->addr.dst_name) {
 			if (session->cb->addr.dst_name != cb->addr.dst_name)
-				return 0;
+				return false;
 		} else if (session->cb->addr.da != cb->addr.da) {
-			return 0;
+			return false;
 		}
 	}
 
-	return 1;
+	return true;
 }
 
 static struct session *_j1939tp_find(struct list_head *root,

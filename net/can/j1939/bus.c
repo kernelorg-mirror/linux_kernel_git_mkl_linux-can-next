@@ -22,10 +22,7 @@
 #include "j1939-priv.h"
 
 #define ecu_dbg(ecu, fmt, ...) \
-	pr_debug("j1939-%i,%016llx,%02x: " fmt, (ecu)->priv->ifindex, \
-		(ecu)->name, (ecu)->sa, ##__VA_ARGS__)
-#define ecu_alert(ecu, fmt, ...) \
-	pr_alert("j1939-%i,%016llx,%02x: " fmt, (ecu)->priv->ifindex, \
+	pr_debug("j1939-%i,%016llx,%02x: " fmt, (ecu)->priv->netdev->ifindex, \
 		(ecu)->name, (ecu)->sa, ##__VA_ARGS__)
 
 /* ECU device interface */

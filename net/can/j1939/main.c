@@ -220,7 +220,6 @@ int j1939_netdev_start(struct net_device *netdev)
 	rwlock_init(&priv->lock);
 	INIT_LIST_HEAD(&priv->ecus);
 	priv->netdev = netdev;
-	priv->ifindex = netdev->ifindex;
 	kref_init(&priv->kref);
 	dev_hold(netdev);
 

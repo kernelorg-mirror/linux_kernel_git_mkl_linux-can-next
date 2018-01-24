@@ -20,16 +20,15 @@ This file contains
     3.6 destinations with dynamic address
 
   4 How to use J1939
-    4.1 rtnetlink interface
-    4.2 API calls
-        4.2.1 Message flags during sendmsg
-	4.2.2 SCM_J1939_DEST_ADDR & SCM_J1939_DEST_NAME
-	4.2.3 SCM_J1939_PRIORITY
-    4.3 Dynamic addressing
-    4.4 Send Examples
-        4.4.1 Static address
-	4.4.2 Dynamic address
-	4.4.3 Mixed mode
+    4.1 API calls
+        4.1.1 Message flags during sendmsg
+	4.1.2 SCM_J1939_DEST_ADDR & SCM_J1939_DEST_NAME
+	4.1.3 SCM_J1939_PRIORITY
+    4.2 Dynamic addressing
+    4.3 Send Examples
+        4.3.1 Static address
+	4.3.2 Dynamic address
+	4.3.3 Mixed mode
 
   5 socket options
     5.1 SO_J1939_FILTER
@@ -44,9 +43,11 @@ This file contains
     6.4 /proc/net/can-j1939/transport
 
   7 can-j1939 SYSCTL
-    7.1 /proc/sys/net/can-j1939/transport_max_payload_in_bytes
-    7.2 /proc/sys/net/can-j1939/transport_cts_nr_of_frames
-    7.3 /proc/sys/net/can-j1939/transport_tx_retry_ms
+    7.1 /proc/sys/net/can-j1939/transport_burst_count
+    7.2 /proc/sys/net/can-j1939/transport_max_size
+    7.3 /proc/sys/net/can-j1939/transport_packet_delay
+    7.4 /proc/sys/net/can-j1939/transport_padding
+    7.5 /proc/sys/net/can-j1939/transport_retry_time
 
   8 Credits
 
@@ -188,30 +189,7 @@ This file contains
 4. How to use J1939
 --------------------------------
 
-4.1 rtnetlink interface
-
-  Per default j1939 is not active. Specifying can_ifindex != 0 in bind(2)
-  or connect(2) needs an active j1939 on that interface. You must have done
-  $ ip link set canX j1939 on
-  on that interface.
-
-  $ ip link set canX j1939 off
-  disables j1939 on canX.
-
-  Assigning addresses is done via
-  $ ip addr add dev canX j1939 0xXX
-  statically or
-  $ ip addr add dev canX j1939 name 0xXX
-  dynamically. In the latter case, address claiming must take place
-  before other traffic can leave.
-
-  Removing addresses is done similarly via
-  $ ip addr del dev canX j1939 0xXX
-  $ ip addr del dev canX j1939 name 0xXX
-
-  A static address cannot be assigned together with a 64bit name.
-
-4.2 API calls
+4.1 API calls
 
   Like TCP/IP and CAN, you first need to open a socket for communicating over a
   CAN network. To use j1939, include <include/linux/j1939.h>. From there,
@@ -285,7 +263,7 @@ This file contains
   When creating a socket, reasonable defaults have been set. Some options can be
   modified with setsockopt(2) & getsockopt(2).
 
-4.2.1 Message flags during sendmsg
+4.1.1 Message flags during sendmsg
 
   send(2), sendto(2) and sendmsg(2) take a 'flags' argument. J1939 interpretes
   these flags during outgoing traffic:
@@ -300,7 +278,7 @@ This file contains
     session to complete before proceeding.
     Traffic without MSG_SYN (on that very same socket) will still continue.
 
-4.2.2 SCM_J1939_DEST_ADDR & SCM_J1939_DEST_NAME
+4.1.2 SCM_J1939_DEST_ADDR & SCM_J1939_DEST_NAME
 
   Different received j1939 packets could have had different destionations:
   - broadcast packet, i.e. no destination address
@@ -314,12 +292,12 @@ This file contains
   with cmsg_level == SOL_J1939 && cmsg_type == SCM_J1939_DEST_ADDR
   or SCM_J1939_DEST_NAME. The returned data is a uint8_t/uint64_t.
 
-4.2.3 SCM_J1939_PRIORITY
+4.1.3 SCM_J1939_PRIORITY
 
   Attached to the msghdr is also the packet's priority on the bus. This is a
   uint8_t, packed as cmsg_type == SCM_J1939_PRIORITY.
 
-4.3 Dynamic Addressing
+4.2 Dynamic Addressing
 
   Distinction has to be made in and using the claimed address and doing an
   address claim. To use an already claimed address, one has to fill in the
@@ -356,14 +334,11 @@ This file contains
   (and any other participant on the bus) for this NAME.
 
 
-4.4 Send Examples
+4.3 Send Examples
 
-4.4.1 Static addressing
+4.3.1 Static addressing
 
   This example will send a pgn (0x12300) from SA 0x20 to DA 0x30.
-
-  Add the address to the system:
-  $ ip addr add j1939 0x20 dev can0
 
   Bind:
     struct sockaddr_can addr;
@@ -393,12 +368,9 @@ This file contains
 
     sendto(sk, data, sizeof(data), 0, (void *)&addr, sizeof(addr));
 
-4.4.2 Dynamic addressing
+4.3.2 Dynamic addressing
 
   This example will send a pgn (0x12300) from 12345678 to 9ABCDEF
-
-  Add the name to the system:
-  $ ip addr add j1939 name 12345678 dev can0
 
   Start an address claiming daemon (e.g. jacd)
   $ jacd -r 0x20-0x30 12345678 can0 &
@@ -424,7 +396,7 @@ This file contains
 
     sendto(sk, data, sizeof(data), 0, (void *)&addr, sizeof(addr));
 
-4.4.3 Mixed mode
+4.3.3 Mixed mode
 
   A scenario that sends a packet from a static address to a dynamic address
   or vice versa is called 'mixed mode' here.
@@ -549,23 +521,35 @@ This file contains
 
   Via these sysctl files, some parameters of the j1939 module can be tuned.
 
-7.1 /proc/sys/net/can-j1939/transport_max_payload_in_bytes [int]
+7.1 /proc/sys/net/can-j1939/transport_burst_count [int]
 
-  Is the maximum packet size to accept on both transmit & receive side.
-  Bigger packets will be rejected (local sender), aborted (local receiver)
-  or ignored (broadcasts & remote recievers in PROMISC).
+  TP block size?
+  (default: 255; min: 1; max: 255)
 
-7.2 /proc/sys/net/can-j1939/transport_cts_nr_frames [int]
+7.2 /proc/sys/net/can-j1939/transport_max_size [int]
 
-  Controls the number of packets to allow between consecutive CTS frames
-  (default 255).
-  This number is communicated within the CTS frame from receiver to transmitter.
-  Setting this has effect on received transport sessions only.
+  Is the maximum packet size to accept on both transmit & receive
+  side.  Bigger packets will be rejected (local sender), aborted
+  (local receiver) or ignored (broadcasts & remote recievers in
+  PROMISC). (default: (7 * 0x00ffffff); min: 8; max: (7 *
+  0x00ffffff))
 
-7.3 /proc/sys/net/can-j1939/transport_tx_retry_ms [int]
+7.3 /proc/sys/net/can-j1939/transport_packet_delay [int]
 
-  Controls how many time to wait before retrying to send an individual TP
-  flow or data packet after transmission failure (default 20).
+  Transmit packets with delay in milliseconds. For broadcast packets
+  this value is ignored and 50ms is used instead. (default: 0; min: 0;
+  max: 1250)
+
+7.4 /proc/sys/net/can-j1939/transport_padding [int]
+
+  If set to 1, make sure the packet size is not less then 8 Byte and
+  fill empty part with 0xff. (default: 1; min: 0; max: 1)
+
+7.5 /proc/sys/net/can-j1939/transport_retry_time [int]
+
+  Controls how many milliseconds to wait before retrying to send an
+  individual TP flow or data packet after transmission failure
+  (default: 20ms; min: 1ms; max: 1250ms).
 
 
 8. Credits

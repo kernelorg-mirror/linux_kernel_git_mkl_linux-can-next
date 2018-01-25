@@ -17,7 +17,6 @@
 #include <linux/kref.h>
 #include <linux/list.h>
 #include <linux/module.h>
-#include <linux/proc_fs.h>
 #include <linux/can/can-ml.h>
 #include <linux/can/j1939.h>
 
@@ -181,8 +180,6 @@ struct j1939_ecu *j1939_ecu_find_by_name(name_t name, int ifindex);
 /* find_by_name, with kref & read_lock taken */
 struct j1939_ecu *j1939_ecu_find_priv_default_tx(int ifindex, name_t *pname,
 						 u8 *paddr);
-extern struct proc_dir_entry *j1939_procdir;
-
 struct j1939_addr {
 	name_t src_name;
 	name_t dst_name;

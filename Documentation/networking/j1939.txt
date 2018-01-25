@@ -38,7 +38,13 @@ This file contains
 
   6 can-j1939 SYSCTL
 
-  7 Credits
+  7 can-j1939 procfs interface
+    7.1 /proc/net/can-j1939/ecu
+    7.2 /proc/net/can-j1939/filter
+    7.3 /proc/net/can-j1939/sock
+    7.4 /proc/net/can-j1939/transport
+
+  8 Credits
 
 ============================================================================
 
@@ -468,7 +474,50 @@ This file contains
   See section "SAE J1939" in "Documentation/sysctl/net.txt".
 
 
-7. Credits
+7. /proc/net/can-j1939 Interface.
+--------------------------------
+
+  Files giving you a view on the in-kernel operation of J1939 are located at:
+  /proc/net/j1939.
+
+7.1 /proc/net/can-j1939/ecu
+
+  This file gives an overview of the known ECU's to the kernel.
+  - iface : network interface they operate on.
+  - SA : current address.
+  - name : 64bit NAME
+  - flags : 'L' = local, 'R' = remote
+
+7.2 /proc/net/can-j1939/filter
+
+7.3 /proc/net/can-j1939/sock
+
+  This file gives a list of all j1939 sockets currently open.
+  - iface : network interface
+  - flags :
+    'b' : bound
+    'c' : connected
+    'P' : PROMISC
+    'o' : RECV_OWN
+    'd' : RECV_DEST
+    'p' : RECV_PRIO
+  - local: [NAME],SA
+  - remote: [NAME]/MASK,DA
+  - pgn : PGN
+  - prio : priority
+  - pending : # packets pending (see MSG_SYN on 4.2.1)
+
+7.4 /proc/net/can-j1939/transport
+
+  This file shows a list of pending transport sessions
+  - iface
+  - src : XX (addr) or XXXXXXXXXXXXXXXX (name)
+  - dst : XX or XXXXXXXXXXXXXXXX or '-' (broadcast)
+  - pgn :
+  - done/total : current # transferred bytes / total
+
+
+8. Credits
 --------------------------------
 
   Kurt Van Dijck (j1939 core, transport protocol, API)

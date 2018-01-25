@@ -1348,6 +1348,53 @@ int j1939tp_rmdev_notifier(struct net_device *netdev)
 	return NOTIFY_DONE;
 }
 
+/* PROC */
+static int j1939tp_proc_show_session(struct seq_file *sqf,
+				     struct session *session)
+{
+	seq_printf(sqf, "%i", session->skb_iif);
+	if (session->cb->addr.src_name)
+		seq_printf(sqf, "\t%016llx", session->cb->addr.src_name);
+	else
+		seq_printf(sqf, "\t%02x", session->cb->addr.sa);
+	if (session->cb->addr.dst_name)
+		seq_printf(sqf, "\t%016llx", session->cb->addr.dst_name);
+	else if (j1939_address_is_unicast(session->cb->addr.da))
+		seq_printf(sqf, "\t%02x", session->cb->addr.da);
+	else
+		seq_puts(sqf, "\t-");
+	seq_printf(sqf, "\t%05x\t%u/%u\n", session->cb->addr.pgn,
+		   session->pkt.done * 7, session->skb->len);
+	return 0;
+}
+
+static int j1939tp_proc_show(struct seq_file *sqf, void *v)
+{
+	struct session *session;
+
+	seq_puts(sqf, "iface\tsrc\tdst\tpgn\tdone/total\n");
+	j1939_sessionlist_lock();
+	list_for_each_entry(session, &tp_sessionq, list)
+		j1939tp_proc_show_session(sqf, session);
+	list_for_each_entry(session, &tp_extsessionq, list)
+		j1939tp_proc_show_session(sqf, session);
+	j1939_sessionlist_unlock();
+	return 0;
+}
+
+static int j1939tp_proc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, j1939tp_proc_show, NULL);
+}
+
+static const struct file_operations j1939tp_proc_ops = {
+	.owner = THIS_MODULE,
+	.open = j1939tp_proc_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 static struct ctl_table canj1939_sysctl_table[] = {
 	{
 		.procname	= "transport_burst_count",
@@ -1399,11 +1446,15 @@ static struct ctl_table_header *sysctl_hdr;
 /* module init */
 int __init j1939tp_module_init(void)
 {
-	sysctl_hdr = register_net_sysctl(&init_net, "net/can-j1939",
-					 canj1939_sysctl_table);
-	if (!sysctl_hdr)
+	if (!proc_create("transport", 0444, j1939_procdir, &j1939tp_proc_ops))
 		return -ENOMEM;
 
+	sysctl_hdr = register_net_sysctl(&init_net, "net/can-j1939",
+					 canj1939_sysctl_table);
+	if (!sysctl_hdr) {
+		remove_proc_entry("transport", j1939_procdir);
+		return -ENOMEM;
+	}
 	return 0;
 }
 
@@ -1414,6 +1465,7 @@ void j1939tp_module_exit(void)
 	wake_up_all(&tp_wait);
 
 	unregister_net_sysctl_table(sysctl_hdr);
+	remove_proc_entry("transport", j1939_procdir);
 	j1939_sessionlist_lock();
 	list_for_each_entry_safe(session, saved, &tp_extsessionq, list) {
 		list_del_init(&session->list);

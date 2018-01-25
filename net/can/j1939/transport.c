@@ -274,7 +274,7 @@ static inline unsigned int j1939etp_ctl_to_size(const u8 *dat)
  * reverse: swap cb's src & dst
  * there is no problem with matching broadcasts, since
  * broadcasts (no dst, no da) would never call this
- * with reverse == 1
+ * with reverse == true
  */
 static bool j1939tp_match(struct session *session, struct sk_buff *skb,
 			  bool reverse)

@@ -396,6 +396,8 @@ This tunable controls how many fragments to receive in a burst for the transport
 protocol. The value must be between 1 and 255. Transport protocol is more
 efficient with higher values, therefore, the default is 255.
 
+(default: 255; min: 1; max: 255)
+
 transport_max_size
 ------------------
 
@@ -405,6 +407,8 @@ This tunable controls the maximum size for packets to allocate.
 Packets that are announced with a bigger size are not received, i.e. aborted
 for private transport protocol sessions, and ignored for broadcasted sessions.
 
+(default: (7 * 0x00ffffff); min: 8; max: (7 * 0x00ffffff))
+
 transport_packet_delay
 ----------------------
 
@@ -412,6 +416,8 @@ This parameter controls the time in milliseconds between outgoing fragments
 of a single transport protocol session. This is normally 0, which indicates
 as fast as possible. Slower ECU's on the bus may require a delay in order
 to keep up receiving fragments.
+
+(default: 0ms; min: 0ms; max: 1250ms)
 
 transport_padding
 -----------------
@@ -422,6 +428,8 @@ This parameters (default 1) allow to turn off (0) padding. The CAN frame's DLC
 is then adjusted. This increases effiency (a tiny bit), makes the packets on
 the wire easier to read, but break strict compliancy to the standard.
 
+(default: 1; min: 0; max: 1)
+
 transport_retry_time
 --------------------
 
@@ -430,3 +438,5 @@ subsequent fragments will be delivered to best effert, including a retry when
 recoverable failures pass.
 This parameter controls the time before a retry is attempted. The time is
 expressed in milliseconds.
+
+(default: 20ms; min: 1ms; max: 1250ms)

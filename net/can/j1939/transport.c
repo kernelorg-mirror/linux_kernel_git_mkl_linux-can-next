@@ -1358,8 +1358,7 @@ static struct ctl_table canj1939_sysctl_table[] = {
 		.proc_handler	= proc_dointvec_minmax,
 		.extra1		= &block_min,
 		.extra2		= &block_max,
-	},
-	{
+	}, {
 		.procname	= "transport_max_size",
 		.data		= &max_packet_size,
 		.maxlen		= sizeof(int),
@@ -1367,8 +1366,7 @@ static struct ctl_table canj1939_sysctl_table[] = {
 		.proc_handler	= proc_dointvec_minmax,
 		.extra1		= &max_size_min,
 		.extra2		= &max_size_max,
-	},
-	{
+	}, {
 		.procname	= "transport_retry_time",
 		.data		= &retry_ms,
 		.maxlen		= sizeof(int),
@@ -1376,8 +1374,7 @@ static struct ctl_table canj1939_sysctl_table[] = {
 		.proc_handler	= proc_dointvec_minmax,
 		.extra1		= &retry_min,
 		.extra2		= &retry_max,
-	},
-	{
+	}, {
 		.procname	= "transport_packet_delay",
 		.data		= &packet_delay,
 		.maxlen		= sizeof(int),
@@ -1385,8 +1382,7 @@ static struct ctl_table canj1939_sysctl_table[] = {
 		.proc_handler	= proc_dointvec_minmax,
 		.extra1		= &packet_delay_min,
 		.extra2		= &packet_delay_max,
-	},
-	{
+	}, {
 		.procname	= "transport_padding",
 		.data		= &padding,
 		.maxlen		= sizeof(int),
@@ -1394,8 +1390,9 @@ static struct ctl_table canj1939_sysctl_table[] = {
 		.proc_handler	= proc_dointvec_minmax,
 		.extra1		= &padding_min,
 		.extra2		= &padding_max,
+	}, {
+		/* sentinel */
 	},
-	{},
 };
 
 static struct ctl_table_header *sysctl_hdr;

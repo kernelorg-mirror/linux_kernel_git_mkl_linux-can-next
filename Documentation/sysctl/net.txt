@@ -405,15 +405,6 @@ This tunable controls the maximum size for packets to allocate.
 Packets that are announced with a bigger size are not received, i.e. aborted
 for private transport protocol sessions, and ignored for broadcasted sessions.
 
-transport_retry_time
---------------------
-
-After the first fragment of a transport protocol sessions has been sent, the
-subsequent fragments will be delivered to best effert, including a retry when
-recoverable failures pass.
-This parameter controls the time before a retry is attempted. The time is
-expressed in milliseconds.
-
 transport_packet_delay
 ----------------------
 
@@ -430,3 +421,12 @@ the CAN frame, and to pad the unused bytes with 0xff.
 This parameters (default 1) allow to turn off (0) padding. The CAN frame's DLC
 is then adjusted. This increases effiency (a tiny bit), makes the packets on
 the wire easier to read, but break strict compliancy to the standard.
+
+transport_retry_time
+--------------------
+
+After the first fragment of a transport protocol sessions has been sent, the
+subsequent fragments will be delivered to best effert, including a retry when
+recoverable failures pass.
+This parameter controls the time before a retry is attempted. The time is
+expressed in milliseconds.

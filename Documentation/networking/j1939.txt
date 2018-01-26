@@ -37,11 +37,6 @@ This file contains
     5.4 SO_J1939_SEND_PRIO
 
   6 can-j1939 SYSCTL
-    6.1 /proc/sys/net/can-j1939/transport_burst_count
-    6.2 /proc/sys/net/can-j1939/transport_max_size
-    6.3 /proc/sys/net/can-j1939/transport_packet_delay
-    6.4 /proc/sys/net/can-j1939/transport_padding
-    6.5 /proc/sys/net/can-j1939/transport_retry_time
 
   7 Credits
 
@@ -468,39 +463,9 @@ This file contains
 
 
 6. /proc/sys/net/can-j1939 - SYSCTL
---------------------------------
+-----------------------------------
 
-  Via these sysctl files, some parameters of the j1939 module can be tuned.
-
-6.1 /proc/sys/net/can-j1939/transport_burst_count [int]
-
-  TP block size?
-  (default: 255; min: 1; max: 255)
-
-6.2 /proc/sys/net/can-j1939/transport_max_size [int]
-
-  Is the maximum packet size to accept on both transmit & receive
-  side.  Bigger packets will be rejected (local sender), aborted
-  (local receiver) or ignored (broadcasts & remote recievers in
-  PROMISC). (default: (7 * 0x00ffffff); min: 8; max: (7 *
-  0x00ffffff))
-
-6.3 /proc/sys/net/can-j1939/transport_packet_delay [int]
-
-  Transmit packets with delay in milliseconds. For broadcast packets
-  this value is ignored and 50ms is used instead. (default: 0; min: 0;
-  max: 1250)
-
-6.4 /proc/sys/net/can-j1939/transport_padding [int]
-
-  If set to 1, make sure the packet size is not less then 8 Byte and
-  fill empty part with 0xff. (default: 1; min: 0; max: 1)
-
-6.5 /proc/sys/net/can-j1939/transport_retry_time [int]
-
-  Controls how many milliseconds to wait before retrying to send an
-  individual TP flow or data packet after transmission failure
-  (default: 20ms; min: 1ms; max: 1250ms).
+  See section "SAE J1939" in "Documentation/sysctl/net.txt".
 
 
 7. Credits

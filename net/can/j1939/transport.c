@@ -58,14 +58,14 @@ static unsigned int padding = 1;
 /* the limit values for sysctl */
 static int block_min = 1;
 static int block_max = 255;
-static int max_size_min = 8;
 static int max_size_max = MAX_ETP_PACKET_SIZE;
-static int retry_min = 1;
-static int retry_max = 1250;
-static int packet_delay_min = 0;
+static int max_size_min = 8;
 static int packet_delay_max = 1250;
-static int padding_min = 0;
+static int packet_delay_min = 0;
 static int padding_max = 1;
+static int padding_min = 0;
+static int retry_max = 1250;
+static int retry_min = 1;
 
 struct session {
 	struct list_head list;
@@ -1367,14 +1367,6 @@ static struct ctl_table canj1939_sysctl_table[] = {
 		.extra1		= &max_size_min,
 		.extra2		= &max_size_max,
 	}, {
-		.procname	= "transport_retry_time",
-		.data		= &retry_ms,
-		.maxlen		= sizeof(int),
-		.mode		= 0644,
-		.proc_handler	= proc_dointvec_minmax,
-		.extra1		= &retry_min,
-		.extra2		= &retry_max,
-	}, {
 		.procname	= "transport_packet_delay",
 		.data		= &packet_delay,
 		.maxlen		= sizeof(int),
@@ -1390,6 +1382,14 @@ static struct ctl_table canj1939_sysctl_table[] = {
 		.proc_handler	= proc_dointvec_minmax,
 		.extra1		= &padding_min,
 		.extra2		= &padding_max,
+	}, {
+		.procname	= "transport_retry_time",
+		.data		= &retry_ms,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax,
+		.extra1		= &retry_min,
+		.extra2		= &retry_max,
 	}, {
 		/* sentinel */
 	},

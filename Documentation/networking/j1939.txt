@@ -36,9 +36,7 @@ This file contains
     5.3 SO_J1939_RECV_OWN
     5.4 SO_J1939_SEND_PRIO
 
-  6 can-j1939 SYSCTL
-
-  7 Credits
+  6 Credits
 
 ============================================================================
 
@@ -462,13 +460,7 @@ This file contains
   for you.
 
 
-6. /proc/sys/net/can-j1939 - SYSCTL
------------------------------------
-
-  See section "SAE J1939" in "Documentation/sysctl/net.txt".
-
-
-7. Credits
+6. Credits
 --------------------------------
 
   Kurt Van Dijck (j1939 core, transport protocol, API)

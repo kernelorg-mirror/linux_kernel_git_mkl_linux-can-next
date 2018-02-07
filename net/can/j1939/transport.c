@@ -54,6 +54,18 @@ static unsigned int retry_ms = 20;
 static unsigned int packet_delay;
 static unsigned int padding = 1;
 
+/* the limit values for sysctl */
+static int block_min = 1;
+static int block_max = 255;
+static int max_size_max = J1939_MAX_ETP_PACKET_SIZE;
+static int max_size_min = 8;
+static int packet_delay_max = 1250;
+static int packet_delay_min = 0;
+static int padding_max = 1;
+static int padding_min = 0;
+static int retry_max = 1250;
+static int retry_min = 1;
+
 struct session {
 	struct list_head list;
 	atomic_t refs;
@@ -1336,9 +1348,62 @@ int j1939tp_rmdev_notifier(struct net_device *netdev)
 	return NOTIFY_DONE;
 }
 
+static struct ctl_table canj1939_sysctl_table[] = {
+	{
+		.procname	= "transport_burst_count",
+		.data		= &block,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax,
+		.extra1		= &block_min,
+		.extra2		= &block_max,
+	}, {
+		.procname	= "transport_max_size",
+		.data		= &max_packet_size,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax,
+		.extra1		= &max_size_min,
+		.extra2		= &max_size_max,
+	}, {
+		.procname	= "transport_packet_delay",
+		.data		= &packet_delay,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax,
+		.extra1		= &packet_delay_min,
+		.extra2		= &packet_delay_max,
+	}, {
+		.procname	= "transport_padding",
+		.data		= &padding,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax,
+		.extra1		= &padding_min,
+		.extra2		= &padding_max,
+	}, {
+		.procname	= "transport_retry_time",
+		.data		= &retry_ms,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax,
+		.extra1		= &retry_min,
+		.extra2		= &retry_max,
+	}, {
+		/* sentinel */
+	},
+};
+
+static struct ctl_table_header *sysctl_hdr;
+
 /* module init */
 int __init j1939tp_module_init(void)
 {
+	sysctl_hdr = register_net_sysctl(&init_net, "net/can-j1939",
+					 canj1939_sysctl_table);
+	if (!sysctl_hdr)
+		return -ENOMEM;
+
 	return 0;
 }
 
@@ -1348,6 +1413,7 @@ void j1939tp_module_exit(void)
 
 	wake_up_all(&tp_wait);
 
+	unregister_net_sysctl_table(sysctl_hdr);
 	j1939_sessionlist_lock();
 	list_for_each_entry_safe(session, saved, &tp_extsessionq, list) {
 		list_del_init(&session->list);

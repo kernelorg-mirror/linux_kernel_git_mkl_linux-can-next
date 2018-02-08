@@ -94,8 +94,8 @@ struct session {
 /* forward declarations */
 static struct session *j1939_session_new(struct sk_buff *skb);
 static struct session *j1939_session_fresh_new(int size,
-					      struct sk_buff *rel_skb,
-					      pgn_t pgn);
+					       struct sk_buff *rel_skb,
+					       pgn_t pgn);
 static void j1939tp_del_work(struct work_struct *work);
 
 /* local variables */

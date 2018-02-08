@@ -230,7 +230,8 @@ int j1939_netdev_start(struct net_device *netdev)
 	spin_lock(&j1939_netdev_lock);
 	if (j1939_priv_get(netdev)) {
 		/* Someone was faster than us, use their priv and roll
-		 * back our's. */
+		 * back our's.
+		 */
 		spin_unlock(&j1939_netdev_lock);
 		goto out_rx_unregister;
 	}

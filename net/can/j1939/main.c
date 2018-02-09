@@ -142,7 +142,7 @@ int j1939_send(struct sk_buff *skb)
 	}
 
 	/* re-claim the CAN_HDR from the SKB */
-	cf = (void *)skb_push(skb, CAN_HDR);
+	cf = skb_push(skb, CAN_HDR);
 
 	/* make it a full can frame again */
 	skb_put(skb, CAN_FTR + (8 - dlc));

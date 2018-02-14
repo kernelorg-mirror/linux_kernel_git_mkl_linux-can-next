@@ -121,10 +121,20 @@ static inline struct list_head *sessionq(bool extd)
 static inline void j1939_session_destroy(struct session *session)
 {
 	kfree_skb(session->skb);
-	hrtimer_cancel(&session->rxtimer);
-	hrtimer_cancel(&session->txtimer);
-	tasklet_disable(&session->rxtask);
-	tasklet_disable(&session->txtask);
+
+	while (test_bit(TASKLET_STATE_SCHED, &session->rxtask.state) ||
+	       test_bit(TASKLET_STATE_RUN, &session->rxtask.state) ||
+	       hrtimer_active(&session->rxtimer)) {
+		hrtimer_cancel(&session->rxtimer);
+		tasklet_disable(&session->rxtask);
+	}
+	while (test_bit(TASKLET_STATE_SCHED, &session->txtask.state) ||
+	       test_bit(TASKLET_STATE_RUN, &session->txtask.state) ||
+	       hrtimer_active(&session->txtimer)) {
+		hrtimer_cancel(&session->txtimer);
+		tasklet_disable(&session->txtask);
+	}
+
 	kfree(session);
 }
 

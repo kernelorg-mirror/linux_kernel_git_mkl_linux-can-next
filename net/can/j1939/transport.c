@@ -1153,7 +1153,7 @@ int j1939_send_transport(struct sk_buff *skb)
 	if (!priv)
 		return -EINVAL;
 	if (j1939_address_is_unicast(cb->addr.da) &&
-			priv->ents[cb->addr.da].nusers)
+	    priv->ents[cb->addr.da].nusers)
 		cb->dst_flags |= ECU_LOCAL;
 	j1939_priv_put(priv);
 	/* src is always local, I'm sending ... */
@@ -1270,8 +1270,8 @@ int j1939_recv_transport(struct sk_buff *skb)
 }
 
 static struct session *j1939_session_fresh_new(int size,
-					      struct sk_buff *rel_skb,
-					      pgn_t pgn)
+					       struct sk_buff *rel_skb,
+					       pgn_t pgn)
 {
 	struct sk_buff *skb;
 	struct j1939_sk_buff_cb *cb;

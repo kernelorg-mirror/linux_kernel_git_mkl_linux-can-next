@@ -342,8 +342,7 @@ static void j1939sk_sock2sockaddr_can(struct sockaddr_can *addr,
 	}
 }
 
-static int j1939sk_getname(struct socket *sock, struct sockaddr *uaddr,
-			   int *len, int peer)
+static int j1939sk_getname(struct socket *sock, struct sockaddr *uaddr, int peer)
 {
 	struct sockaddr_can *addr = (struct sockaddr_can *)uaddr;
 	struct sock *sk = sock->sk;
@@ -358,7 +357,7 @@ static int j1939sk_getname(struct socket *sock, struct sockaddr *uaddr,
 	}
 
 	j1939sk_sock2sockaddr_can(addr, jsk, peer);
-	*len = J1939_MIN_NAMELEN;
+	ret = J1939_MIN_NAMELEN;
 
  failure:
 	release_sock(sk);

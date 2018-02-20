@@ -1345,9 +1345,9 @@ int j1939tp_rmdev_notifier(struct net_device *netdev)
 static int __net_init j1939tp_pernet_init(struct net *net)
 {
 	spin_lock_init(&net->can_j1939.tp_lock);
-	spin_lock_init(&net->can_j1939.tp_dellock);
 	INIT_LIST_HEAD(&net->can_j1939.tp_sessionq);
 	INIT_LIST_HEAD(&net->can_j1939.tp_extsessionq);
+	spin_lock_init(&net->can_j1939.tp_dellock);
 	INIT_LIST_HEAD(&net->can_j1939.tp_delsessionq);
 	INIT_WORK(&net->can_j1939.tp_delwork, j1939tp_del_work);
 	init_waitqueue_head(&net->can_j1939.tp_wait);

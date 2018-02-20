@@ -63,6 +63,8 @@ struct can_priv {
 	int (*do_set_data_bittiming)(struct net_device *dev);
 	int (*do_set_mode)(struct net_device *dev, enum can_mode mode);
 	int (*do_set_termination)(struct net_device *dev, u16 term);
+	int (*do_set_hw_filter)(struct net_device *dev, struct can_filter *hwf,
+				unsigned int hwf_cnt);
 	int (*do_get_state)(const struct net_device *dev,
 			    enum can_state *state);
 	int (*do_get_berr_counter)(const struct net_device *dev,

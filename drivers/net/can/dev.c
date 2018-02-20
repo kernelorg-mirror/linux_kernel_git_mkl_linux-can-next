@@ -870,6 +870,7 @@ static const struct nla_policy can_policy[IFLA_CAN_MAX + 1] = {
 				= { .len = sizeof(struct can_bittiming) },
 	[IFLA_CAN_DATA_BITTIMING_CONST]
 				= { .len = sizeof(struct can_bittiming_const) },
+	[IFLA_CAN_HW_FILTER]	= { .type = NLA_UNSPEC },
 };
 
 static int can_validate(struct nlattr *tb[], struct nlattr *data[],
@@ -1067,6 +1068,27 @@ static int can_changelink(struct net_device *dev, struct nlattr *tb[],
 			return err;
 
 		priv->termination = termval;
+	}
+
+	if (data[IFLA_CAN_HW_FILTER]) {
+		int len = nla_len(data[IFLA_CAN_HW_FILTER]);
+
+		if (!priv->do_set_hw_filter)
+			return -EOPNOTSUPP;
+
+		/* Do not allow changing HW filters while running */
+		if (dev->flags & IFF_UP)
+			return -EBUSY;
+
+		if (len % sizeof(struct can_filter))
+			return -EINVAL;
+
+		/* validate and store hw filters */
+		if (priv->do_set_hw_filter)
+			err = priv->do_set_hw_filter(dev, nla_data(data[IFLA_CAN_HW_FILTER]),
+						     len / sizeof(struct can_filter));
+		if (err)
+			return err;
 	}
 
 	return 0;

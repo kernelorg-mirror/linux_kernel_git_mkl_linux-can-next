@@ -199,6 +199,25 @@ static void j1939_priv_ac_task(unsigned long val)
 
 static DEFINE_SPINLOCK(j1939_netdev_lock);
 
+static struct j1939_priv *j1939_priv_create(struct net_device *netdev)
+{
+	struct j1939_priv *priv;
+
+	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+	if (!priv)
+		return NULL;
+
+	/* TODO: use tasklet_hrtimer_init() instead */
+	tasklet_init(&priv->ac_task, j1939_priv_ac_task, (unsigned long)priv);
+	rwlock_init(&priv->lock);
+	INIT_LIST_HEAD(&priv->ecus);
+	priv->netdev = netdev;
+	kref_init(&priv->kref);
+	dev_hold(netdev);
+
+	return priv;
+}
+
 void __j1939_priv_release(struct kref *kref)
 {
 	struct j1939_priv *priv = container_of(kref, struct j1939_priv, kref);
@@ -240,18 +259,9 @@ int j1939_netdev_start(struct net *net, struct net_device *netdev)
 	if (priv)
 		return 0;
 
-	/* create j1939_priv */
-	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+	priv = j1939_priv_create(netdev);
 	if (!priv)
 		return -ENOMEM;
-
-	/* TODO: use tasklet_hrtimer_init() instead */
-	tasklet_init(&priv->ac_task, j1939_priv_ac_task, (unsigned long)priv);
-	rwlock_init(&priv->lock);
-	INIT_LIST_HEAD(&priv->ecus);
-	priv->netdev = netdev;
-	kref_init(&priv->kref);
-	dev_hold(netdev);
 
 	/* add CAN handler */
 	ret = can_rx_register(net, netdev, J1939_CAN_ID, J1939_CAN_MASK,

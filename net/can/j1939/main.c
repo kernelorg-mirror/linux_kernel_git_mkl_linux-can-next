@@ -199,6 +199,36 @@ static void j1939_priv_ac_task(unsigned long val)
 
 static DEFINE_SPINLOCK(j1939_netdev_lock);
 
+void __j1939_priv_release(struct kref *kref)
+{
+	struct j1939_priv *priv = container_of(kref, struct j1939_priv, kref);
+	struct net_device *netdev = priv->netdev;
+	struct j1939_ecu *ecu;
+
+	can_rx_unregister(dev_net(netdev), netdev, J1939_CAN_ID, J1939_CAN_MASK,
+			  j1939_can_recv, priv);
+
+	tasklet_disable_nosync(&priv->ac_task);
+
+	/* remove pending transport protocol sessions */
+	j1939tp_rmdev_notifier(netdev);
+
+	/* cleanup priv */
+	write_lock_bh(&priv->lock);
+	/* TODO: list_for_each() */
+	while (!list_empty(&priv->ecus)) {
+		ecu = list_first_entry(&priv->ecus, struct j1939_ecu, list);
+		_j1939_ecu_unregister(ecu);
+	}
+	write_unlock_bh(&priv->lock);
+
+	/* unlink from netdev */
+	j1939_priv_set(netdev, NULL);
+
+	dev_put(netdev);
+	kfree(priv);
+}
+
 int j1939_netdev_start(struct net *net, struct net_device *netdev)
 {
 	struct j1939_priv *priv;
@@ -260,37 +290,6 @@ void j1939_netdev_stop(struct net_device *netdev)
 	priv = __j1939_priv_get(netdev);
 	j1939_priv_put(priv);
 	spin_unlock(&j1939_netdev_lock);
-}
-
-/* device interface */
-void __j1939_priv_release(struct kref *kref)
-{
-	struct j1939_priv *priv = container_of(kref, struct j1939_priv, kref);
-	struct net_device *netdev = priv->netdev;
-	struct j1939_ecu *ecu;
-
-	can_rx_unregister(dev_net(netdev), netdev, J1939_CAN_ID, J1939_CAN_MASK,
-			  j1939_can_recv, priv);
-
-	tasklet_disable_nosync(&priv->ac_task);
-
-	/* remove pending transport protocol sessions */
-	j1939tp_rmdev_notifier(netdev);
-
-	/* cleanup priv */
-	write_lock_bh(&priv->lock);
-	/* TODO: list_for_each() */
-	while (!list_empty(&priv->ecus)) {
-		ecu = list_first_entry(&priv->ecus, struct j1939_ecu, list);
-		_j1939_ecu_unregister(ecu);
-	}
-	write_unlock_bh(&priv->lock);
-
-	/* unlink from netdev */
-	j1939_priv_set(netdev, NULL);
-
-	dev_put(netdev);
-	kfree(priv);
 }
 
 struct j1939_priv *j1939_priv_get(struct net_device *dev)

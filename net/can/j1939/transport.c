@@ -304,7 +304,7 @@ static bool j1939tp_match(struct session *session, struct sk_buff *skb,
 	return true;
 }
 
-static struct session *_j1939tp_find(struct list_head *root,
+static struct session *_j1939tp_find(struct net *net, struct list_head *root,
 				     struct sk_buff *skb, bool reverse)
 {
 	struct session *session;
@@ -313,20 +313,19 @@ static struct session *_j1939tp_find(struct list_head *root,
 		j1939_session_get(session);
 		if (j1939tp_match(session, skb, reverse))
 			return session;
-		j1939_session_put(sock_net(skb->sk), session);
+		j1939_session_put(net, session);
 	}
 
 	return NULL;
 }
 
-static struct session *j1939tp_find(struct list_head *root,
+static struct session *j1939tp_find(struct net *net, struct list_head *root,
 				    struct sk_buff *skb, bool reverse)
 {
-	struct net *net = sock_net(skb->sk);
 	struct session *session;
 
 	j1939_sessionlist_lock(net);
-	session = _j1939tp_find(root, skb, reverse);
+	session = _j1939tp_find(net, root, skb, reverse);
 	j1939_sessionlist_unlock(net);
 
 	return session;
@@ -520,7 +519,7 @@ static enum hrtimer_restart j1939tp_rxtimer(struct hrtimer *hrtimer)
 static void j1939tp_rxtask(unsigned long val)
 {
 	struct session *session = (void *)val;
-	struct net *net = sock_net(session->skb->sk);
+	struct net *net = dev_net(session->skb->dev);
 
 	j1939_session_get(session);
 	pr_alert("%s: timeout on %i\n", __func__, session->skb_iif);
@@ -535,7 +534,7 @@ static void _j1939xtp_rx_bad_message(struct net *net, struct sk_buff *skb, bool 
 	pgn_t pgn;
 
 	pgn = j1939xtp_ctl_to_pgn(skb->data);
-	session = j1939tp_find(sessionq(net, extd), skb, reverse);
+	session = j1939tp_find(net, sessionq(net, extd), skb, reverse);
 	if (session /*&& (session->cb->addr.pgn == pgn)*/) {
 		/* do not allow TP control messages on 2 pgn's */
 		j1939_session_cancel(net, session, J1939_ABORT_FAULT);
@@ -563,7 +562,7 @@ static void _j1939xtp_rx_abort(struct net *net, struct sk_buff *skb, bool extd, 
 	pgn_t pgn;
 
 	pgn = j1939xtp_ctl_to_pgn(skb->data);
-	session = j1939tp_find(sessionq(net, extd), skb, reverse);
+	session = j1939tp_find(net, sessionq(net, extd), skb, reverse);
 	if (!session)
 		return;
 	if (session->transmission && !session->last_txcmd) {
@@ -598,7 +597,7 @@ static void j1939xtp_rx_eof(struct net *net, struct sk_buff *skb, bool extd)
 
 	/* end of tx cycle */
 	pgn = j1939xtp_ctl_to_pgn(skb->data);
-	session = j1939tp_find(sessionq(net, extd), skb, 1);
+	session = j1939tp_find(net, sessionq(net, extd), skb, 1);
 	if (!session) {
 		/* strange, we had EOF on closed connection
 		 * do nothing, as EOF closes the connection anyway
@@ -625,7 +624,7 @@ static void j1939xtp_rx_cts(struct net *net, struct sk_buff *skb, bool extd)
 
 	dat = skb->data;
 	pgn = j1939xtp_ctl_to_pgn(skb->data);
-	session = j1939tp_find(sessionq(net, extd), skb, 1);
+	session = j1939tp_find(net, sessionq(net, extd), skb, 1);
 	if (!session) {
 		/* 'CTS shall be ignored' */
 		return;
@@ -696,7 +695,7 @@ static void j1939xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 	/* TODO: abort RTS when a similar
 	 * TP is pending in the other direction
 	 */
-	session = j1939tp_find(sessionq(net, extd), skb, 0);
+	session = j1939tp_find(net, sessionq(net, extd), skb, 0);
 	if (session && !j1939tp_im_transmitter(skb)) {
 		/* RTS on pending connection */
 		j1939_session_cancel(net, session, J1939_ABORT_BUSY);
@@ -795,7 +794,7 @@ static void j1939xtp_rx_dpo(struct net *net, struct sk_buff *skb, bool extd)
 	const u8 *dat = skb->data;
 
 	pgn = j1939xtp_ctl_to_pgn(dat);
-	session = j1939tp_find(sessionq(net, extd), skb, 0);
+	session = j1939tp_find(net, sessionq(net, extd), skb, 0);
 	if (!session) {
 		pr_info("%s: %s\n", __func__, "no connection found");
 		return;
@@ -827,7 +826,7 @@ static void j1939xtp_rx_dat(struct net *net, struct sk_buff *skb, bool extd)
 	int do_cts_eof;
 	int packet;
 
-	session = j1939tp_find(sessionq(net, extd), skb, 0);
+	session = j1939tp_find(net, sessionq(net, extd), skb, 0);
 	if (!session) {
 		pr_info("%s:%s\n", __func__, "no connection found");
 		return;
@@ -1078,7 +1077,7 @@ static int j1939tp_txnext(struct net *net, struct session *session)
 static void j1939tp_txtask(unsigned long val)
 {
 	struct session *session = (void *)val;
-	struct net *net = sock_net(session->skb->sk);
+	struct net *net = dev_net(session->skb->dev);
 	int ret;
 
 	j1939_session_get(session);
@@ -1101,13 +1100,12 @@ static inline int j1939tp_tx_initial(struct net *net, struct session *session)
 }
 
 /* this call is to be used as probe within wait_event_xxx() */
-static int j1939_session_insert(struct session *session)
+static int j1939_session_insert(struct net *net, struct session *session)
 {
-	struct net *net = sock_net(session->skb->sk);
 	struct session *pending;
 
 	j1939_sessionlist_lock(net);
-	pending = _j1939tp_find(sessionq(net, session->extd), session->skb, 0);
+	pending = _j1939tp_find(net, sessionq(net, session->extd), session->skb, 0);
 	if (pending)
 		/* revert the effect of find() */
 		j1939_session_put(net, pending);
@@ -1171,10 +1169,10 @@ int j1939_send_transport(struct net *net, struct sk_buff *skb)
 
 	/* insert into queue, but avoid collision with pending session */
 	if (session->cb->msg_flags & MSG_DONTWAIT)
-		ret = j1939_session_insert(session) ? 0 : -EAGAIN;
+		ret = j1939_session_insert(net, session) ? 0 : -EAGAIN;
 	else
 		ret = wait_event_interruptible(net->can_j1939.tp_wait,
-					       j1939_session_insert(session));
+					       j1939_session_insert(net, session));
 	if (ret < 0)
 		goto failed;
 

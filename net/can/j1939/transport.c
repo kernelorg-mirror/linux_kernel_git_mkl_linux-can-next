@@ -1116,12 +1116,11 @@ static int j1939_session_insert(struct net *net, struct session *session)
 }
 
 /* j1939 main intf */
-int j1939_send_transport(struct net *net, struct sk_buff *skb)
+int j1939_send_transport(struct net *net, struct j1939_priv *priv, struct sk_buff *skb)
 {
 	struct j1939_sk_buff_cb *cb = j1939_get_cb(skb);
 	struct session *session;
 	int ret;
-	struct j1939_priv *priv;
 
 	if ((J1939_TP_PGN_DAT == cb->addr.pgn) || (J1939_TP_PGN_CTL == cb->addr.pgn) ||
 	    (J1939_ETP_PGN_DAT == cb->addr.pgn) || (J1939_ETP_PGN_CTL == cb->addr.pgn))
@@ -1137,18 +1136,14 @@ int j1939_send_transport(struct net *net, struct sk_buff *skb)
 	}
 
 	/* fill in addresses from names */
-	ret = j1939_fixup_address_claim(skb);
+	ret = j1939_fixup_address_claim(priv, skb);
 	if (unlikely(ret))
 		return ret;
 
 	/* fix dst_flags, it may be used there soon */
-	priv = j1939_priv_get_by_index(net, can_skb_prv(skb)->ifindex);
-	if (!priv)
-		return -EINVAL;
 	if (j1939_address_is_unicast(cb->addr.da) &&
 	    priv->ents[cb->addr.da].nusers)
 		cb->dst_flags |= ECU_LOCAL;
-	j1939_priv_put(priv);
 	/* src is always local, I'm sending ... */
 	cb->src_flags |= ECU_LOCAL;
 

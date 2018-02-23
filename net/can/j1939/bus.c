@@ -111,16 +111,12 @@ struct j1939_ecu *_j1939_ecu_find_by_addr(u8 sa, struct j1939_priv *priv)
 	return ecu;
 }
 
-u8 j1939_name_to_sa(struct net *net, name_t name, int ifindex)
+u8 j1939_name_to_sa(struct net *net, struct j1939_priv *priv, name_t name)
 {
 	struct j1939_ecu *ecu;
-	struct j1939_priv *priv;
 	int sa;
 
 	if (!name)
-		return J1939_NO_ADDR;
-	priv = j1939_priv_get_by_index(net, ifindex);
-	if (!priv)
 		return J1939_NO_ADDR;
 
 	sa = J1939_IDLE_ADDR;
@@ -134,7 +130,6 @@ u8 j1939_name_to_sa(struct net *net, name_t name, int ifindex)
 		}
 	}
 	read_unlock_bh(&priv->lock);
-	j1939_priv_put(priv);
 	return sa;
 }
 
@@ -158,20 +153,14 @@ static struct j1939_ecu *_j1939_ecu_find_by_name(name_t name,
 }
 
 /* ecu lookup by name */
-struct j1939_ecu *j1939_ecu_find_by_name(struct net *net, name_t name, int ifindex)
+struct j1939_ecu *j1939_ecu_find_by_name(struct net *net, struct j1939_priv *priv, name_t name)
 {
 	struct j1939_ecu *ecu;
-	struct j1939_priv *priv;
 
 	if (!name)
 		return NULL;
-	if (!ifindex)
-		return NULL;
-	priv = j1939_priv_get_by_index(net, ifindex);
-	if (!priv)
-		return NULL;
+
 	ecu = _j1939_ecu_find_by_name(name, priv);
-	j1939_priv_put(priv);
 	return ecu;
 }
 

@@ -175,9 +175,9 @@ static inline void j1939_ecu_remove_sa(struct j1939_ecu *ecu)
 	write_unlock_bh(&ecu->priv->lock);
 }
 
-u8 j1939_name_to_sa(struct net *net, name_t name, int ifindex);
+u8 j1939_name_to_sa(struct net *net, struct j1939_priv *priv, name_t name);
 struct j1939_ecu *_j1939_ecu_find_by_addr(u8 sa, struct j1939_priv *priv);
-struct j1939_ecu *j1939_ecu_find_by_name(struct net *net, name_t name, int ifindex);
+struct j1939_ecu *j1939_ecu_find_by_name(struct net *net, struct j1939_priv *priv, name_t name);
 /* find_by_name, with kref & read_lock taken */
 struct j1939_ecu *j1939_ecu_find_priv_default_tx(int ifindex, name_t *pname,
 						 u8 *paddr);
@@ -229,9 +229,9 @@ int j1939_send(struct net *net, struct sk_buff *);
 void j1939_recv(struct sk_buff *);
 
 /* stack entries */
-int j1939_send_transport(struct net *net, struct sk_buff *);
+int j1939_send_transport(struct net *net, struct j1939_priv *priv, struct sk_buff *);
 int j1939_recv_transport(struct net *net, struct sk_buff *);
-int j1939_fixup_address_claim(struct sk_buff *);
+int j1939_fixup_address_claim(struct j1939_priv *priv, struct sk_buff *);
 void j1939_recv_address_claim(struct sk_buff *, struct j1939_priv *priv);
 
 /* network management */

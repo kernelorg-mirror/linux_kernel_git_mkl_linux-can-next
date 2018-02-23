@@ -123,18 +123,29 @@ int j1939_send(struct net *net, struct sk_buff *skb)
 	int ret, dlc;
 	canid_t canid;
 	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
+	struct j1939_priv *priv;
 	struct can_frame *cf;
 
-	if (skb->len > 8)
+	priv = j1939_priv_get_by_index(net, skb->dev->ifindex);
+	if (!priv) {
+		ret = -EINVAL;
+		goto failed;
+	}
+
+	if (skb->len > 8) {
 		/* re-route via transport protocol */
-		return j1939_send_transport(net, skb);
+		ret = j1939_send_transport(net, priv, skb);
+		j1939_priv_put(priv);
+		return ret;
+	}
 
 	/* apply sanity checks */
 	skcb->addr.pgn &= (pgn_is_pdu1(skcb->addr.pgn)) ? 0x3ff00 : 0x3ffff;
 	if (skcb->priority > 7)
 		skcb->priority = 6;
 
-	ret = j1939_fixup_address_claim(skb);
+	ret = j1939_fixup_address_claim(priv, skb);
+	j1939_priv_put(priv);
 	if (unlikely(ret))
 		goto failed;
 	dlc = skb->len;

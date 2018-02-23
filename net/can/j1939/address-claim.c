@@ -76,7 +76,7 @@ static int j1939_verify_outgoing_address_claim(struct sk_buff *skb)
 	return 0;
 }
 
-int j1939_fixup_address_claim(struct sk_buff *skb)
+int j1939_fixup_address_claim(struct j1939_priv *priv, struct sk_buff *skb)
 {
 	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
 	int ret;
@@ -90,8 +90,7 @@ int j1939_fixup_address_claim(struct sk_buff *skb)
 		/* return both when failure & when successful */
 		if (ret < 0)
 			return ret;
-		ecu = j1939_ecu_find_by_name(sock_net(skb->sk), skcb->addr.src_name,
-					     skb->dev->ifindex);
+		ecu = j1939_ecu_find_by_name(sock_net(skb->sk), priv, skcb->addr.src_name);
 		if (!ecu)
 			return -ENODEV;
 
@@ -101,7 +100,7 @@ int j1939_fixup_address_claim(struct sk_buff *skb)
 		put_j1939_ecu(ecu);
 	} else if (skcb->addr.src_name) {
 		/* assign source address */
-		sa = j1939_name_to_sa(sock_net(skb->sk), skcb->addr.src_name, skb->dev->ifindex);
+		sa = j1939_name_to_sa(sock_net(skb->sk), priv, skcb->addr.src_name);
 		if (!j1939_address_is_unicast(sa) &&
 		    !ac_msg_is_request_for_ac(skb)) {
 			pr_notice("tx drop: invalid sa for name 0x%016llx\n",
@@ -113,7 +112,7 @@ int j1939_fixup_address_claim(struct sk_buff *skb)
 
 	/* assign destination address */
 	if (skcb->addr.dst_name) {
-		sa = j1939_name_to_sa(sock_net(skb->sk), skcb->addr.dst_name, skb->dev->ifindex);
+		sa = j1939_name_to_sa(sock_net(skb->sk), priv, skcb->addr.dst_name);
 		if (!j1939_address_is_unicast(sa)) {
 			pr_notice("tx drop: invalid da for name 0x%016llx\n",
 				     skcb->addr.dst_name);

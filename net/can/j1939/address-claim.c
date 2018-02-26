@@ -162,7 +162,7 @@ static void j1939_process_address_claim(struct sk_buff *skb, struct j1939_priv *
 	if (skcb->addr.sa != ecu->sa)
 		_j1939_ecu_remove_sa(ecu);
 	/* cancel pending (previous) address claim */
-	hrtimer_try_to_cancel(&ecu->ac_timer);
+	hrtimer_cancel(&ecu->ac_timer);
 	ecu->sa = skcb->addr.sa;
 
 	prev = priv->ents[skcb->addr.sa].ecu;
@@ -178,7 +178,7 @@ static void j1939_process_address_claim(struct sk_buff *skb, struct j1939_priv *
 
 	/* schedule timer in 250 msec to commit address change */
 	hrtimer_start(&ecu->ac_timer, ktime_set(0, 250000000),
-		      HRTIMER_MODE_REL);
+		      HRTIMER_MODE_REL_SOFT);
 	/* rxtime administration */
 	ecu->rxtime = ktime_get();
  done:

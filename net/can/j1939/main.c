@@ -179,29 +179,6 @@ int j1939_send(struct net *net, struct sk_buff *skb)
 }
 EXPORT_SYMBOL_GPL(j1939_send);
 
-/* iterate over ECUs,
- * and register flagged ECUs on their claimed SA
- */
-static void j1939_priv_ac_task(unsigned long val)
-{
-	struct j1939_priv *priv = (void *)val;
-	struct j1939_ecu *ecu;
-
-	write_lock_bh(&priv->lock);
-	list_for_each_entry(ecu, &priv->ecus, list) {
-		/* next 2 (read & set) could be merged into xxx? */
-		if (!atomic_read(&ecu->ac_delay_expired))
-			continue;
-
-		atomic_set(&ecu->ac_delay_expired, 0);
-		if (j1939_address_is_unicast(ecu->sa)) {
-			ecu->priv->ents[ecu->sa].ecu = ecu;
-			ecu->priv->ents[ecu->sa].nusers += ecu->nusers;
-		}
-	}
-	write_unlock_bh(&priv->lock);
-}
-
 /* NETDEV MANAGEMENT */
 
 /* values for can_rx_(un)register */
@@ -218,8 +195,6 @@ static struct j1939_priv *j1939_priv_create(struct net_device *netdev)
 	if (!priv)
 		return NULL;
 
-	/* TODO: use tasklet_hrtimer_init() instead */
-	tasklet_init(&priv->ac_task, j1939_priv_ac_task, (unsigned long)priv);
 	rwlock_init(&priv->lock);
 	INIT_LIST_HEAD(&priv->ecus);
 	priv->netdev = netdev;
@@ -237,8 +212,6 @@ void __j1939_priv_release(struct kref *kref)
 
 	can_rx_unregister(dev_net(netdev), netdev, J1939_CAN_ID, J1939_CAN_MASK,
 			  j1939_can_recv, priv);
-
-	tasklet_disable_nosync(&priv->ac_task);
 
 	/* remove pending transport protocol sessions */
 	j1939tp_rmdev_notifier(netdev);

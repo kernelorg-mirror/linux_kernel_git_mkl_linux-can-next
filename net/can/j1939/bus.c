@@ -31,9 +31,18 @@ static enum hrtimer_restart j1939_ecu_timer_handler(struct hrtimer *hrtimer)
 {
 	struct j1939_ecu *ecu =
 		container_of(hrtimer, struct j1939_ecu, ac_timer);
+	struct j1939_priv *priv = ecu->priv;
 
-	atomic_set(&ecu->ac_delay_expired, 1);
-	tasklet_schedule(&ecu->priv->ac_task);
+	write_lock_bh(&priv->lock);
+	/* TODO: can we test if ecu->sa is unicast before starting
+	 * the timer?
+	 */
+	if (j1939_address_is_unicast(ecu->sa)) {
+		priv->ents[ecu->sa].ecu = ecu;
+		priv->ents[ecu->sa].nusers += ecu->nusers;
+	}
+	write_unlock_bh(&priv->lock);
+
 	return HRTIMER_NORESTART;
 }
 
@@ -73,7 +82,7 @@ struct j1939_ecu *_j1939_ecu_get_register(struct j1939_priv *priv, name_t name,
 	ecu->sa = J1939_IDLE_ADDR;
 	ecu->name = name;
 
-	hrtimer_init(&ecu->ac_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	hrtimer_init(&ecu->ac_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL_SOFT);
 	ecu->ac_timer.function = j1939_ecu_timer_handler;
 	INIT_LIST_HEAD(&ecu->list);
 
@@ -90,7 +99,7 @@ struct j1939_ecu *_j1939_ecu_get_register(struct j1939_priv *priv, name_t name,
 void _j1939_ecu_unregister(struct j1939_ecu *ecu)
 {
 	ecu_dbg(ecu, "unregister\n");
-	hrtimer_try_to_cancel(&ecu->ac_timer);
+	hrtimer_cancel(&ecu->ac_timer);
 
 	_j1939_ecu_remove_sa(ecu);
 	list_del_init(&ecu->list);

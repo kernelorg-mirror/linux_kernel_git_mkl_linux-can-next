@@ -40,14 +40,7 @@ struct j1939_ecu {
 	name_t name;
 	u8 sa;
 
-	/* atomic flag, set by ac_timer
-	 * cleared/processed by segment's tasklet
-	 * indicates that this ecu successfully claimed @sa as its address
-	 * By communicating this from the ac_timer event to segments tasklet,
-	 * a context locking problem is solved. All other 'ecu readers'
-	 * must only lock with _bh, not with _irq.
-	 */
-	atomic_t ac_delay_expired;
+	/* indicates that this ecu successfully claimed @sa as its address */
 	struct hrtimer ac_timer;
 	struct kref kref;
 	struct j1939_priv *priv;
@@ -84,13 +77,6 @@ struct j1939_priv {
 		/* count users, to help transport protocol */
 		int nusers;
 	} ents[256];
-
-	/* tasklet to process ecu address claimed events.
-	 * These events raise in hardirq context. Signalling the event
-	 * and scheduling this tasklet successfully moves the
-	 * event to softirq context
-	 */
-	struct tasklet_struct ac_task;
 
 	struct kref kref;
 };

@@ -68,7 +68,7 @@ struct session {
 	int skb_iif;
 
 	/* all tx related stuff (last_txcmd, pkt.tx)
-	 * is protected (modified only) with the txtask tasklet
+	 * is protected (modified only) with the txtimer hrtimer
 	 * 'total' & 'block' are never changed,
 	 * last_cmd, last & block are protected by ->lock
 	 * this means that the tx may run after cts is received that should
@@ -86,9 +86,6 @@ struct session {
 		unsigned int dpo; /* for ETP */
 	} pkt;
 	struct hrtimer txtimer, rxtimer;
-
-	/* tasklets for execution of tx/rx timer handler in softirq */
-	struct tasklet_struct txtask, rxtask;
 };
 
 /* forward declarations */
@@ -96,6 +93,8 @@ static struct session *j1939_session_new(struct sk_buff *skb);
 static struct session *j1939_session_fresh_new(int size,
 					       struct sk_buff *rel_skb,
 					       pgn_t pgn);
+static int j1939tp_txnext(struct net *net, struct session *session);
+static inline void j1939tp_schedule_txtimer(struct session *session, int msec);
 
 /* helpers */
 static inline void fix_cb(struct j1939_sk_buff_cb *cb)
@@ -112,18 +111,8 @@ static inline void j1939_session_destroy(struct session *session)
 {
 	kfree_skb(session->skb);
 
-	while (test_bit(TASKLET_STATE_SCHED, &session->rxtask.state) ||
-	       test_bit(TASKLET_STATE_RUN, &session->rxtask.state) ||
-	       hrtimer_active(&session->rxtimer)) {
-		hrtimer_cancel(&session->rxtimer);
-		tasklet_disable(&session->rxtask);
-	}
-	while (test_bit(TASKLET_STATE_SCHED, &session->txtask.state) ||
-	       test_bit(TASKLET_STATE_RUN, &session->txtask.state) ||
-	       hrtimer_active(&session->txtimer)) {
-		hrtimer_cancel(&session->txtimer);
-		tasklet_disable(&session->txtask);
-	}
+	hrtimer_cancel(&session->rxtimer);
+	hrtimer_cancel(&session->txtimer);
 
 	kfree(session);
 }
@@ -161,10 +150,8 @@ static void j1939_session_put(struct net *net, struct session *session)
 		/* not the last one */
 		return;
 
-	hrtimer_try_to_cancel(&session->rxtimer);
-	hrtimer_try_to_cancel(&session->txtimer);
-	tasklet_disable_nosync(&session->rxtask);
-	tasklet_disable_nosync(&session->txtask);
+	hrtimer_cancel(&session->rxtimer);
+	hrtimer_cancel(&session->txtimer);
 
 	if (in_interrupt()) {
 		spin_lock_bh(&net->can_j1939.tp_dellock);
@@ -441,15 +428,22 @@ static int j1939xtp_tx_abort(struct sk_buff *related, bool extd,
 /* timer & scheduler functions */
 static inline void j1939_session_schedule_txnow(struct session *session)
 {
-	tasklet_schedule(&session->txtask);
+	hrtimer_start(&session->txtimer, ktime_set(0, 0),
+		      HRTIMER_MODE_REL_SOFT);
 }
 
 static enum hrtimer_restart j1939tp_txtimer(struct hrtimer *hrtimer)
 {
-	struct session *session;
+	struct session *session =
+		container_of(hrtimer, struct session, txtimer);
+	struct net *net = dev_net(session->skb->dev);
+	int ret;
 
-	session = container_of(hrtimer, struct session, txtimer);
-	j1939_session_schedule_txnow(session);
+	j1939_session_get(session);
+	ret = j1939tp_txnext(net, session);
+	if (ret < 0)
+		j1939tp_schedule_txtimer(session, retry_ms ?: 20);
+	j1939_session_put(net, session);
 
 	return HRTIMER_NORESTART;
 }
@@ -458,14 +452,14 @@ static inline void j1939tp_schedule_txtimer(struct session *session, int msec)
 {
 	hrtimer_start(&session->txtimer,
 		      ktime_set(msec / 1000, (msec % 1000) * 1000000UL),
-		      HRTIMER_MODE_REL);
+		      HRTIMER_MODE_REL_SOFT);
 }
 
 static inline void j1939tp_set_rxtimeout(struct session *session, int msec)
 {
 	hrtimer_start(&session->rxtimer,
 		      ktime_set(msec / 1000, (msec % 1000) * 1000000UL),
-		      HRTIMER_MODE_REL);
+		      HRTIMER_MODE_REL_SOFT);
 }
 
 /* session completion functions */
@@ -511,20 +505,14 @@ static enum hrtimer_restart j1939tp_rxtimer(struct hrtimer *hrtimer)
 {
 	struct session *session = container_of(hrtimer, struct session,
 					       rxtimer);
-
-	tasklet_schedule(&session->rxtask);
-	return HRTIMER_NORESTART;
-}
-
-static void j1939tp_rxtask(unsigned long val)
-{
-	struct session *session = (void *)val;
 	struct net *net = dev_net(session->skb->dev);
 
 	j1939_session_get(session);
 	pr_alert("%s: timeout on %i\n", __func__, session->skb_iif);
 	j1939_session_cancel(net, session, J1939_ABORT_TIMEOUT);
 	j1939_session_put(net, session);
+
+	return HRTIMER_NORESTART;
 }
 
 /* receive packet functions */
@@ -653,7 +641,7 @@ static void j1939xtp_rx_cts(struct net *net, struct sk_buff *skb, bool extd)
 		if (session->pkt.last > session->pkt.total)
 			/* safety measure */
 			session->pkt.last = session->pkt.total;
-		/* TODO: do not set tx here, do it in txtask */
+		/* TODO: do not set tx here, do it in txtimer */
 		session->pkt.tx = session->pkt.done;
 	}
 
@@ -1074,19 +1062,6 @@ static int j1939tp_txnext(struct net *net, struct session *session)
 	return ret;
 }
 
-static void j1939tp_txtask(unsigned long val)
-{
-	struct session *session = (void *)val;
-	struct net *net = dev_net(session->skb->dev);
-	int ret;
-
-	j1939_session_get(session);
-	ret = j1939tp_txnext(net, session);
-	if (ret < 0)
-		j1939tp_schedule_txtimer(session, retry_ms ?: 20);
-	j1939_session_put(net, session);
-}
-
 static inline int j1939tp_tx_initial(struct net *net, struct session *session)
 {
 	int ret;
@@ -1304,12 +1279,13 @@ static struct session *j1939_session_new(struct sk_buff *skb)
 	session->skb = skb;
 
 	session->cb = j1939_get_cb(session->skb);
-	hrtimer_init(&session->txtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	hrtimer_init(&session->txtimer, CLOCK_MONOTONIC,
+		     HRTIMER_MODE_REL_SOFT);
 	session->txtimer.function = j1939tp_txtimer;
-	hrtimer_init(&session->rxtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	hrtimer_init(&session->rxtimer, CLOCK_MONOTONIC,
+		     HRTIMER_MODE_REL_SOFT);
 	session->rxtimer.function = j1939tp_rxtimer;
-	tasklet_init(&session->txtask, j1939tp_txtask, (unsigned long)session);
-	tasklet_init(&session->rxtask, j1939tp_rxtask, (unsigned long)session);
+
 	return session;
 }
 

@@ -233,7 +233,7 @@ void __j1939_priv_release(struct kref *kref)
 {
 	struct j1939_priv *priv = container_of(kref, struct j1939_priv, kref);
 	struct net_device *netdev = priv->netdev;
-	struct j1939_ecu *ecu;
+	struct j1939_ecu *ecu, *tmp;
 
 	can_rx_unregister(dev_net(netdev), netdev, J1939_CAN_ID, J1939_CAN_MASK,
 			  j1939_can_recv, priv);
@@ -245,11 +245,8 @@ void __j1939_priv_release(struct kref *kref)
 
 	/* cleanup priv */
 	write_lock_bh(&priv->lock);
-	/* TODO: list_for_each() */
-	while (!list_empty(&priv->ecus)) {
-		ecu = list_first_entry(&priv->ecus, struct j1939_ecu, list);
+	list_for_each_entry_safe(ecu, tmp, &priv->ecus, list)
 		_j1939_ecu_unregister(ecu);
-	}
 	write_unlock_bh(&priv->lock);
 
 	/* unlink from netdev */

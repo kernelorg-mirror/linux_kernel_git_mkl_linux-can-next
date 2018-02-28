@@ -81,9 +81,9 @@ struct j1939_priv {
 	struct kref kref;
 };
 
-void put_j1939_ecu(struct j1939_ecu *ecu);
+void j1939_ecu_put(struct j1939_ecu *ecu);
 
-static inline void get_j1939_ecu(struct j1939_ecu *dut)
+static inline void j1939_ecu_get(struct j1939_ecu *dut)
 {
 	kref_get(&dut->kref);
 }

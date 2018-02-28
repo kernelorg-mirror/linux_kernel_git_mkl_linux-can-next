@@ -97,7 +97,7 @@ int j1939_fixup_address_claim(struct j1939_priv *priv, struct sk_buff *skb)
 		if (ecu->sa != skcb->addr.sa)
 			/* hold further traffic for ecu, remove from parent */
 			j1939_ecu_remove_sa(ecu);
-		put_j1939_ecu(ecu);
+		j1939_ecu_put(ecu);
 	} else if (skcb->addr.src_name) {
 		/* assign source address */
 		sa = j1939_name_to_sa(sock_net(skb->sk), priv, skcb->addr.src_name);
@@ -199,7 +199,7 @@ void j1939_recv_address_claim(struct sk_buff *skb, struct j1939_priv *priv)
 			/* source administration */
 			ecu->rxtime = ktime_get();
 			skcb->addr.src_name = ecu->name;
-			put_j1939_ecu(ecu);
+			j1939_ecu_put(ecu);
 		}
 	}
 
@@ -207,6 +207,6 @@ void j1939_recv_address_claim(struct sk_buff *skb, struct j1939_priv *priv)
 	ecu = j1939_ecu_get_by_addr(priv, skcb->addr.da);
 	if (ecu) {
 		skcb->addr.dst_name = ecu->name;
-		put_j1939_ecu(ecu);
+		j1939_ecu_put(ecu);
 	}
 }

@@ -53,7 +53,7 @@ static void cb_put_j1939_ecu(struct kref *kref)
 	kfree(ecu);
 }
 
-void put_j1939_ecu(struct j1939_ecu *ecu)
+void j1939_ecu_put(struct j1939_ecu *ecu)
 {
 	kref_put(&ecu->kref, cb_put_j1939_ecu);
 }
@@ -103,7 +103,7 @@ void _j1939_ecu_unregister(struct j1939_ecu *ecu)
 
 	_j1939_ecu_remove_sa(ecu);
 	list_del_init(&ecu->list);
-	put_j1939_ecu(ecu);
+	j1939_ecu_put(ecu);
 }
 
 struct j1939_ecu *j1939_ecu_get_by_addr(struct j1939_priv *priv, u8 sa)
@@ -115,7 +115,7 @@ struct j1939_ecu *j1939_ecu_get_by_addr(struct j1939_priv *priv, u8 sa)
 	read_lock_bh(&priv->lock);
 	ecu = priv->ents[sa].ecu;
 	if (ecu)
-		get_j1939_ecu(ecu);
+		j1939_ecu_get(ecu);
 	read_unlock_bh(&priv->lock);
 	return ecu;
 }
@@ -151,7 +151,7 @@ static struct j1939_ecu *_j1939_ecu_find_by_name(name_t name,
 	read_lock_bh(&priv->lock);
 	list_for_each_entry(ecu, &priv->ecus, list) {
 		if (ecu->name == name) {
-			get_j1939_ecu(ecu);
+			j1939_ecu_get(ecu);
 			goto found_on_intf;
 		}
 	}
@@ -207,7 +207,7 @@ void j1939_name_local_get(struct j1939_priv *priv, name_t name)
 	ecu = _j1939_ecu_get_register(priv, name, true);
 	/* TODO: do proper error handling and pass error down the callstack */
 	if (!IS_ERR(ecu)) {
-		get_j1939_ecu(ecu);
+		j1939_ecu_get(ecu);
 		++ecu->nusers;
 		if (priv->ents[ecu->sa].ecu == ecu)
 			/* ecu's sa is active already */
@@ -230,7 +230,7 @@ void j1939_name_local_put(struct j1939_priv *priv, name_t name)
 		if (priv->ents[ecu->sa].ecu == ecu)
 			/* ecu's sa is active already */
 			--priv->ents[ecu->sa].nusers;
-		put_j1939_ecu(ecu);
+		j1939_ecu_put(ecu);
 	}
 	write_unlock_bh(&priv->lock);
 }

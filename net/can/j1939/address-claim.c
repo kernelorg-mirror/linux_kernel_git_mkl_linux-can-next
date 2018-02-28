@@ -194,7 +194,7 @@ void j1939_recv_address_claim(struct sk_buff *skb, struct j1939_priv *priv)
 	if (skcb->addr.pgn == PGN_ADDRESS_CLAIMED) {
 		j1939_process_address_claim(skb, priv);
 	} else if (j1939_address_is_unicast(skcb->addr.sa)) {
-		ecu = _j1939_ecu_find_by_addr(skcb->addr.sa, priv);
+		ecu = j1939_ecu_get_by_addr(priv, skcb->addr.sa);
 		if (ecu) {
 			/* source administration */
 			ecu->rxtime = ktime_get();
@@ -204,7 +204,7 @@ void j1939_recv_address_claim(struct sk_buff *skb, struct j1939_priv *priv)
 	}
 
 	/* assign destination stuff */
-	ecu = _j1939_ecu_find_by_addr(skcb->addr.da, priv);
+	ecu = j1939_ecu_get_by_addr(priv, skcb->addr.da);
 	if (ecu) {
 		skcb->addr.dst_name = ecu->name;
 		put_j1939_ecu(ecu);

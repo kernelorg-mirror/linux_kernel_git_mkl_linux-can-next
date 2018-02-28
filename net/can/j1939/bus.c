@@ -97,7 +97,7 @@ void _j1939_ecu_unregister(struct j1939_ecu *ecu)
 	put_j1939_ecu(ecu);
 }
 
-struct j1939_ecu *_j1939_ecu_find_by_addr(u8 sa, struct j1939_priv *priv)
+struct j1939_ecu *j1939_ecu_get_by_addr(struct j1939_priv *priv, u8 sa)
 {
 	struct j1939_ecu *ecu;
 

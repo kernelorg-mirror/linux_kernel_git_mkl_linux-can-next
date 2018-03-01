@@ -327,59 +327,17 @@ static void j1939_skbcb_swap(struct j1939_sk_buff_cb *cb)
 	swap(cb->dst_flags, cb->src_flags);
 }
 
-/* TP transmit packet functions */
-static int j1939tp_tx_dat(struct sk_buff *related, bool extd,
-			  const u8 *dat, int len)
+static struct sk_buff *j1939tp_tx_dat_prep(struct sk_buff *related,
+					   bool extd, bool ctl, bool swap_src_dst)
 {
 	struct sk_buff *skb;
 	struct j1939_sk_buff_cb *skb_cb;
-	u8 *skdat;
 
 	skb = alloc_skb(sizeof(struct can_frame) + sizeof(struct can_skb_priv),
 			GFP_ATOMIC);
-	if (unlikely(!skb)) {
-		pr_alert("%s: out of memory?\n", __func__);
-		return -ENOMEM;
-	}
-	can_skb_reserve(skb);
-	can_skb_prv(skb)->ifindex = can_skb_prv(related)->ifindex;
-	/* reserve CAN header */
-	skb_reserve(skb, offsetof(struct can_frame, data));
+	if (unlikely(!skb))
+		return ERR_PTR(-ENOMEM);
 
-	skb->dev = related->dev;
-	skb->protocol = related->protocol;
-	skb->pkt_type = related->pkt_type;
-	skb->ip_summed = related->ip_summed;
-
-	memcpy(skb->cb, related->cb, sizeof(skb->cb));
-	skb_cb = j1939_get_cb(skb);
-	fix_cb(skb_cb);
-	/* fix pgn */
-	skb_cb->addr.pgn = extd ? J1939_ETP_PGN_DAT : J1939_TP_PGN_DAT;
-
-	skdat = skb_put(skb, len);
-	memcpy(skdat, dat, len);
-	if (padding && len < 8)
-		memset(skb_put(skb, 8 - len), 0xff, 8 - len);
-	return j1939_send(dev_net(skb->dev), skb);
-}
-
-static int j1939xtp_do_tx_ctl(struct sk_buff *related, bool extd,
-			      bool swap_src_dst, pgn_t pgn, const u8 *dat)
-{
-	struct sk_buff *skb;
-	struct j1939_sk_buff_cb *skb_cb;
-	u8 *skdat;
-
-	if (!j1939tp_im_involved(related, swap_src_dst))
-		return 0;
-
-	skb = alloc_skb(sizeof(struct can_frame) + sizeof(struct can_skb_priv),
-			GFP_ATOMIC);
-	if (unlikely(!skb)) {
-		pr_alert("%s: out of memory?\n", __func__);
-		return -ENOMEM;
-	}
 	skb->dev = related->dev;
 	can_skb_reserve(skb);
 	can_skb_prv(skb)->ifindex = can_skb_prv(related)->ifindex;
@@ -394,7 +352,46 @@ static int j1939xtp_do_tx_ctl(struct sk_buff *related, bool extd,
 	fix_cb(skb_cb);
 	if (swap_src_dst)
 		j1939_skbcb_swap(skb_cb);
-	skb_cb->addr.pgn = extd ? J1939_ETP_PGN_CTL : J1939_TP_PGN_CTL;
+
+	if (ctl)
+		skb_cb->addr.pgn = extd ? J1939_ETP_PGN_CTL : J1939_TP_PGN_CTL;
+	else
+		skb_cb->addr.pgn = extd ? J1939_ETP_PGN_DAT : J1939_TP_PGN_DAT;
+
+	return skb;
+}
+
+/* TP transmit packet functions */
+static int j1939tp_tx_dat(struct sk_buff *related, bool extd,
+			  const u8 *dat, int len)
+{
+	struct sk_buff *skb;
+	u8 *skdat;
+
+	skb = j1939tp_tx_dat_prep(related, extd, false, false);
+	if (IS_ERR(skb))
+		return PTR_ERR(skb);
+
+	skdat = skb_put(skb, len);
+	memcpy(skdat, dat, len);
+	if (padding && len < 8)
+		memset(skb_put(skb, 8 - len), 0xff, 8 - len);
+
+	return j1939_send(dev_net(skb->dev), skb);
+}
+
+static int j1939xtp_do_tx_ctl(struct sk_buff *related, bool extd,
+			      bool swap_src_dst, pgn_t pgn, const u8 *dat)
+{
+	struct sk_buff *skb;
+	u8 *skdat;
+
+	if (!j1939tp_im_involved(related, swap_src_dst))
+		return 0;
+
+	skb = j1939tp_tx_dat_prep(related, extd, true, swap_src_dst);
+	if (IS_ERR(skb))
+		return PTR_ERR(skb);
 
 	skdat = skb_put(skb, 8);
 	memcpy(skdat, dat, 5);

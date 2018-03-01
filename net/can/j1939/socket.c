@@ -198,17 +198,9 @@ static int j1939sk_init(struct sock *sk)
 	return 0;
 }
 
-static int j1939sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
+static int j1939sk_sanity_check(struct sockaddr_can *addr, int len)
 {
-	struct sockaddr_can *addr = (struct sockaddr_can *)uaddr;
-	struct j1939_sock *jsk = j1939_sk(sock->sk);
-	struct sock *sk = sock->sk;
-	struct net *net = sock_net(sk);
-	struct net_device *netdev;
-	struct j1939_priv *priv;
-	int ret = 0;
-
-	if (!uaddr)
+	if (!addr)
 		return -EDESTADDRREQ;
 	if (len < J1939_MIN_NAMELEN)
 		return -EINVAL;
@@ -219,6 +211,23 @@ static int j1939sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 	if (pgn_is_valid(addr->can_addr.j1939.pgn) &&
 	    !pgn_is_clean_pdu(addr->can_addr.j1939.pgn))
 		return -EINVAL;
+
+	return 0;
+}
+
+static int j1939sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
+{
+	struct sockaddr_can *addr = (struct sockaddr_can *)uaddr;
+	struct j1939_sock *jsk = j1939_sk(sock->sk);
+	struct sock *sk = sock->sk;
+	struct net *net = sock_net(sk);
+	struct net_device *netdev;
+	struct j1939_priv *priv;
+	int ret = 0;
+
+	ret = j1939sk_sanity_check(addr, len);
+	if (ret)
+		return ret;
 
 	lock_sock(sock->sk);
 
@@ -290,17 +299,10 @@ static int j1939sk_connect(struct socket *sock, struct sockaddr *uaddr,
 	struct j1939_sock *jsk = j1939_sk(sock->sk);
 	int ret = 0;
 
-	if (!uaddr)
-		return -EDESTADDRREQ;
-	if (len < J1939_MIN_NAMELEN)
-		return -EINVAL;
-	if (addr->can_family != AF_CAN)
-		return -EINVAL;
-	if (!addr->can_ifindex)
-		return -ENODEV;
-	if (pgn_is_valid(addr->can_addr.j1939.pgn) &&
-	    !pgn_is_clean_pdu(addr->can_addr.j1939.pgn))
-		return -EINVAL;
+
+	ret = j1939sk_sanity_check(addr, len);
+	if (ret)
+		return ret;
 
 	lock_sock(sock->sk);
 

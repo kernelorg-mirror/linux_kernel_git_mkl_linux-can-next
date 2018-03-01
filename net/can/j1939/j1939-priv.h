@@ -88,10 +88,8 @@ static inline void j1939_ecu_get(struct j1939_ecu *dut)
 }
 
 /* keep the cache of what is local */
-void j1939_addr_local_get(struct j1939_priv *priv, u8 sa);
-void j1939_addr_local_put(struct j1939_priv *priv, u8 sa);
-void j1939_name_local_get(struct j1939_priv *priv, name_t name);
-void j1939_name_local_put(struct j1939_priv *priv, name_t name);
+int j1939_local_get(struct j1939_priv *priv, name_t name, u8 sa);
+void j1939_local_put(struct j1939_priv *priv, name_t name, u8 sa);
 
 /* conversion function between (struct sock | struct sk_buff)->sk_priority
  * from linux and j1939 priority field

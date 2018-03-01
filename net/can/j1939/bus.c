@@ -182,59 +182,61 @@ struct j1939_ecu *j1939_ecu_find_by_name(struct net *net, struct j1939_priv *pri
  * These functions originate from userspace manipulating sockets,
  * so locking is straigforward
  */
-void j1939_addr_local_get(struct j1939_priv *priv, u8 sa)
-{
-	if (!j1939_address_is_unicast(sa))
-		return;
-	write_lock_bh(&priv->lock);
-	++priv->ents[sa].nusers;
-	write_unlock_bh(&priv->lock);
-}
 
-void j1939_addr_local_put(struct j1939_priv *priv, u8 sa)
-{
-	if (!j1939_address_is_unicast(sa))
-		return;
-	write_lock_bh(&priv->lock);
-	--priv->ents[sa].nusers;
-	write_unlock_bh(&priv->lock);
-}
-
-void j1939_name_local_get(struct j1939_priv *priv, name_t name)
+int j1939_local_get(struct j1939_priv *priv, name_t name, u8 sa)
 {
 	struct j1939_ecu *ecu;
-
-	if (!name)
-		return;
+	int err = 0;
 
 	write_lock_bh(&priv->lock);
+
+	if (j1939_address_is_unicast(sa))
+		priv->ents[sa].nusers++;
+
+	if (!name)
+		goto done;
+
 	ecu = _j1939_ecu_get_register(priv, name, true);
-	/* TODO: do proper error handling and pass error down the callstack */
-	if (!IS_ERR(ecu)) {
-		j1939_ecu_get(ecu);
-		++ecu->nusers;
-		if (priv->ents[ecu->sa].ecu == ecu)
-			/* ecu's sa is active already */
-			++priv->ents[ecu->sa].nusers;
-	}
+	err = PTR_ERR_OR_ZERO(ecu);
+	if (err)
+		goto done;
+
+	j1939_ecu_get(ecu);
+	ecu->nusers++;
+	/* TODO: do we care if ecu->sa != sa? */
+	if (priv->ents[ecu->sa].ecu == ecu)
+		/* ecu's sa is active already */
+		priv->ents[ecu->sa].nusers++;
+
+done:
 	write_unlock_bh(&priv->lock);
+
+	return err;
 }
 
-void j1939_name_local_put(struct j1939_priv *priv, name_t name)
+void j1939_local_put(struct j1939_priv *priv, name_t name, u8 sa)
 {
 	struct j1939_ecu *ecu;
 
-	if (!name)
-		return;
-
 	write_lock_bh(&priv->lock);
+
+	if (j1939_address_is_unicast(sa))
+		priv->ents[sa].nusers--;
+
+	if (!name)
+		goto done;
+
 	ecu = _j1939_ecu_get_register(priv, name, false);
-	if (!IS_ERR(ecu)) {
-		--ecu->nusers;
-		if (priv->ents[ecu->sa].ecu == ecu)
-			/* ecu's sa is active already */
-			--priv->ents[ecu->sa].nusers;
-		j1939_ecu_put(ecu);
-	}
+	if (WARN_ON_ONCE(PTR_ERR_OR_ZERO(ecu)))
+		goto done;
+
+	ecu->nusers--;
+	/* TODO: do we care if ecu->sa != sa? */
+	if (priv->ents[ecu->sa].ecu == ecu)
+		/* ecu's sa is active already */
+		priv->ents[ecu->sa].nusers--;
+	j1939_ecu_put(ecu);
+
+done:
 	write_unlock_bh(&priv->lock);
 }

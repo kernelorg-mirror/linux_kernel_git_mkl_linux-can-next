@@ -63,6 +63,8 @@ struct j1939_ecu *_j1939_ecu_get_register(struct j1939_priv *priv, name_t name,
 {
 	struct j1939_ecu *ecu, *dut;
 
+	lockdep_assert_held(&priv->lock);
+
 	/* find existing */
 	/* test for existing name */
 	list_for_each_entry(dut, &priv->ecus, list) {

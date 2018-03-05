@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-/*
- * j1939-priv.h
+/* j1939-priv.h
  *
  * Copyright (c) 2010-2011 EIA Electronics
  *
@@ -134,8 +133,7 @@ static inline bool pgn_is_valid(pgn_t pgn)
 	return pgn <= PGN_MAX;
 }
 
-/* test function to avoid non-zero DA placeholder
- * for pdu1 pgn's */
+/* test function to avoid non-zero DA placeholder for pdu1 pgn's */
 static inline bool pgn_is_clean_pdu(pgn_t pgn)
 {
 	return pgn_is_pdu1(pgn) ? !(pgn & 0xff) : 1;
@@ -211,14 +209,14 @@ static inline int j1939cb_is_broadcast(const struct j1939_sk_buff_cb *skcb)
 	return (!skcb->addr.dst_name && (skcb->addr.da == 0xff));
 }
 
-int j1939_send(struct net *net, struct sk_buff *);
-void j1939_recv(struct sk_buff *);
+int j1939_send(struct net *net, struct sk_buff *skb);
+void j1939_recv(struct sk_buff *skb);
 
 /* stack entries */
-int j1939_send_transport(struct net *net, struct j1939_priv *priv, struct sk_buff *);
-int j1939_recv_transport(struct net *net, struct sk_buff *);
-int j1939_fixup_address_claim(struct j1939_priv *priv, struct sk_buff *);
-void j1939_recv_address_claim(struct sk_buff *, struct j1939_priv *priv);
+int j1939_send_transport(struct net *net, struct j1939_priv *priv, struct sk_buff *skb);
+int j1939_recv_transport(struct net *net, struct sk_buff *skb);
+int j1939_fixup_address_claim(struct j1939_priv *priv, struct sk_buff *skb);
+void j1939_recv_address_claim(struct sk_buff *skb, struct j1939_priv *priv);
 
 /* network management */
 
@@ -230,15 +228,14 @@ struct j1939_ecu *_j1939_ecu_get_register(struct j1939_priv *priv,
 					  name_t name, bool create_if_necessary);
 
 /* unregister must be called with lock held */
-void _j1939_ecu_unregister(struct j1939_ecu *);
+void _j1939_ecu_unregister(struct j1939_ecu *ecu);
 
-int j1939_netdev_start(struct net *, struct net_device *);
-void j1939_netdev_stop(struct net_device *);
+int j1939_netdev_start(struct net *net, struct net_device *netdev);
+void j1939_netdev_stop(struct net_device *netdev);
 
 void __j1939_priv_release(struct kref *kref);
 struct j1939_priv *j1939_priv_get(struct net_device *dev);
 struct j1939_priv *j1939_priv_get_by_index(struct net *net, int ifindex);
-
 
 static inline void j1939_priv_set(struct net_device *dev, struct j1939_priv *priv)
 {

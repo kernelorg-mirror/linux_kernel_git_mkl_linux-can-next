@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-/*
- * Copyright (c) 2010-2011 EIA Electronics
+/* Copyright (c) 2010-2011 EIA Electronics
  *
  * Authors:
  * Kurt Van Dijck <kurt.van.dijck@eia.be>
@@ -22,9 +21,12 @@
 
 #include "j1939-priv.h"
 
-#define ecu_dbg(ecu, fmt, ...) \
-	pr_debug("j1939-%i,%016llx,%02x: " fmt, (ecu)->priv->netdev->ifindex, \
-		(ecu)->name, (ecu)->sa, ##__VA_ARGS__)
+#define ecu_dbg(_ecu, fmt, ...) \
+{ \
+	struct j1939_ecu *ecu = _ecu; \
+	pr_debug("j1939-%i,%016llx,%02x: " fmt, ecu->priv->netdev->ifindex, \
+		 ecu->name, ecu->sa, ##__VA_ARGS__); \
+}
 
 /* ECU device interface */
 static enum hrtimer_restart j1939_ecu_timer_handler(struct hrtimer *hrtimer)

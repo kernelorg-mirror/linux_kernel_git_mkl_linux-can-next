@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-/*
- * Copyright (c) 2010-2011 EIA Electronics
+/* Copyright (c) 2010-2011 EIA Electronics
  *
  * Authors:
  * Kurt Van Dijck <kurt.van.dijck@eia.be>

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-/*
- * Copyright (c) 2010-2011 EIA Electronics
+/* Copyright (c) 2010-2011 EIA Electronics
  *
  * Authors:
  * Pieter Beyens <pieter.beyens@eia.be>
@@ -41,7 +40,7 @@ static inline int ac_msg_is_request_for_ac(struct sk_buff *skb)
 	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
 	int req_pgn;
 
-	if ((skb->len < 3) || (skcb->addr.pgn != PGN_REQUEST))
+	if (skb->len < 3 || skcb->addr.pgn != PGN_REQUEST)
 		return 0;
 
 	req_pgn = skb->data[0] | (skb->data[1] << 8) | (skb->data[2] << 16);
@@ -69,7 +68,7 @@ static int j1939_verify_outgoing_address_claim(struct sk_buff *skb)
 	}
 
 	/* ac must always be a broadcast */
-	if (skcb->addr.dst_name || (skcb->addr.da != J1939_NO_ADDR)) {
+	if (skcb->addr.dst_name || skcb->addr.da != J1939_NO_ADDR) {
 		pr_notice("tx address claim with dest, not broadcast\n");
 		return -EPROTO;
 	}
@@ -90,7 +89,8 @@ int j1939_fixup_address_claim(struct j1939_priv *priv, struct sk_buff *skb)
 		/* return both when failure & when successful */
 		if (ret < 0)
 			return ret;
-		ecu = j1939_ecu_find_by_name(sock_net(skb->sk), priv, skcb->addr.src_name);
+		ecu = j1939_ecu_find_by_name(sock_net(skb->sk), priv,
+					     skcb->addr.src_name);
 		if (!ecu)
 			return -ENODEV;
 
@@ -100,11 +100,12 @@ int j1939_fixup_address_claim(struct j1939_priv *priv, struct sk_buff *skb)
 		j1939_ecu_put(ecu);
 	} else if (skcb->addr.src_name) {
 		/* assign source address */
-		sa = j1939_name_to_sa(sock_net(skb->sk), priv, skcb->addr.src_name);
+		sa = j1939_name_to_sa(sock_net(skb->sk), priv,
+				      skcb->addr.src_name);
 		if (!j1939_address_is_unicast(sa) &&
 		    !ac_msg_is_request_for_ac(skb)) {
 			pr_notice("tx drop: invalid sa for name 0x%016llx\n",
-				     skcb->addr.src_name);
+				  skcb->addr.src_name);
 			return -EADDRNOTAVAIL;
 		}
 		skcb->addr.sa = sa;
@@ -112,10 +113,11 @@ int j1939_fixup_address_claim(struct j1939_priv *priv, struct sk_buff *skb)
 
 	/* assign destination address */
 	if (skcb->addr.dst_name) {
-		sa = j1939_name_to_sa(sock_net(skb->sk), priv, skcb->addr.dst_name);
+		sa = j1939_name_to_sa(sock_net(skb->sk), priv,
+				      skcb->addr.dst_name);
 		if (!j1939_address_is_unicast(sa)) {
 			pr_notice("tx drop: invalid da for name 0x%016llx\n",
-				     skcb->addr.dst_name);
+				  skcb->addr.dst_name);
 			return -EADDRNOTAVAIL;
 		}
 		skcb->addr.da = sa;

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-/*
- * Copyright (c) 2010-2011 EIA Electronics
+/* Copyright (c) 2010-2011 EIA Electronics
  *
  * Authors:
  * Kurt Van Dijck <kurt.van.dijck@eia.be>
@@ -70,7 +69,7 @@ static inline int j1939_sock_pending_add_first(struct sock *sk)
 	/* atomic_cmpxchg returns the old value
 	 * When it was 0, it is exchanged with 1 and this function
 	 * succeeded. (return 1)
-	 * When it was != 0, it is not exchanged, and this fuction
+	 * When it was != 0, it is not exchanged, and this function
 	 * fails (returns 0).
 	 */
 	return !atomic_cmpxchg(&jsk->skb_pending, 0, 1);
@@ -109,7 +108,8 @@ static inline bool packet_match(const struct j1939_sk_buff_cb *skcb,
 			continue;
 		if ((skcb->addr.sa & f->addr_mask) != (f->addr & f->addr_mask))
 			continue;
-		if ((skcb->addr.src_name & f->name_mask) != (f->name & f->name_mask))
+		if ((skcb->addr.src_name & f->name_mask) !=
+		    (f->name & f->name_mask))
 			continue;
 		return true;
 	}
@@ -125,14 +125,14 @@ static void j1939sk_recv_skb(struct sk_buff *oskb, struct j1939_sock *jsk)
 	if (!(jsk->state & (J1939_SOCK_BOUND | J1939_SOCK_CONNECTED)))
 		return;
 	if (jsk->sk.sk_bound_dev_if &&
-	    (jsk->sk.sk_bound_dev_if != oskb->skb_iif))
+	    jsk->sk.sk_bound_dev_if != oskb->skb_iif)
 		/* this socket does not take packets from this iface */
 		return;
 	if (!(jsk->state & J1939_SOCK_PROMISC)) {
 		if (jsk->addr.src_name) {
 			/* reject message for other destinations */
 			if (skcb->addr.dst_name &&
-			    (skcb->addr.dst_name != jsk->addr.src_name))
+			    skcb->addr.dst_name != jsk->addr.src_name)
 				/* the msg is not destined for the name
 				 * that the socket is bound to
 				 */
@@ -140,7 +140,7 @@ static void j1939sk_recv_skb(struct sk_buff *oskb, struct j1939_sock *jsk)
 		} else {
 			/* reject messages for other destination addresses */
 			if (j1939_address_is_unicast(skcb->addr.da) &&
-			    (skcb->addr.da != jsk->addr.sa))
+			    skcb->addr.da != jsk->addr.sa)
 				/* the msg is not destined for the name
 				 * that the socket is bound to
 				 */
@@ -148,7 +148,7 @@ static void j1939sk_recv_skb(struct sk_buff *oskb, struct j1939_sock *jsk)
 		}
 	}
 
-	if ((skcb->insock == &jsk->sk) && !(jsk->state & J1939_SOCK_RECV_OWN))
+	if (skcb->insock == &jsk->sk && !(jsk->state & J1939_SOCK_RECV_OWN))
 		/* own message */
 		return;
 
@@ -299,7 +299,6 @@ static int j1939sk_connect(struct socket *sock, struct sockaddr *uaddr,
 	struct j1939_sock *jsk = j1939_sk(sock->sk);
 	int ret = 0;
 
-
 	ret = j1939sk_sanity_check(addr, len);
 	if (ret)
 		return ret;
@@ -388,7 +387,8 @@ static int j1939sk_release(struct socket *sock)
 		list_del_init(&jsk->list);
 		spin_unlock_bh(&j1939_socks_lock);
 
-		netdev = dev_get_by_index(sock_net(sk), jsk->sk.sk_bound_dev_if);
+		netdev = dev_get_by_index(sock_net(sk),
+					  jsk->sk.sk_bound_dev_if);
 		if (netdev) {
 			priv = j1939_priv_get(netdev);
 			j1939_addr_local_put(priv, jsk->addr.sa);
@@ -444,7 +444,8 @@ static int j1939sk_setsockopt(struct socket *sock, int level, int optname,
 			if (optlen % sizeof(*filters) != 0)
 				return -EINVAL;
 
-			if (optlen > J1939_FILTER_MAX * sizeof(struct j1939_filter))
+			if (optlen > J1939_FILTER_MAX *
+			    sizeof(struct j1939_filter))
 				return -EINVAL;
 
 			count = optlen / sizeof(*filters);
@@ -461,17 +462,19 @@ static int j1939sk_setsockopt(struct socket *sock, int level, int optname,
 		kfree(ofilters);
 		return 0;
 	case SO_J1939_PROMISC:
-		return j1939sk_setsockopt_flag(jsk, optval, optlen, J1939_SOCK_PROMISC);
+		return j1939sk_setsockopt_flag(jsk, optval, optlen,
+					       J1939_SOCK_PROMISC);
 	case SO_J1939_RECV_OWN:
-		return j1939sk_setsockopt_flag(jsk, optval, optlen, J1939_SOCK_RECV_OWN);
+		return j1939sk_setsockopt_flag(jsk, optval, optlen,
+					       J1939_SOCK_RECV_OWN);
 	case SO_J1939_SEND_PRIO:
 		if (optlen != sizeof(tmp))
 			return -EINVAL;
 		if (copy_from_user(&tmp, optval, optlen))
 			return -EFAULT;
-		if ((tmp < 0) || (tmp > 7))
+		if (tmp < 0 || tmp > 7)
 			return -EDOM;
-		if ((tmp < 2) && !capable(CAP_NET_ADMIN))
+		if (tmp < 2 && !capable(CAP_NET_ADMIN))
 			return -EPERM;
 		lock_sock(&jsk->sk);
 		jsk->sk.sk_priority = j1939_to_sk_priority(tmp);
@@ -618,7 +621,7 @@ static int j1939sk_sendmsg(struct socket *sock, struct msghdr *msg, size_t size)
 		    !pgn_is_clean_pdu(addr->can_addr.j1939.pgn))
 			return -EINVAL;
 		/* TODO: always check if ifindex is correct? */
-		if (addr->can_ifindex && (ifindex != addr->can_ifindex))
+		if (addr->can_ifindex && ifindex != addr->can_ifindex)
 			return -EBADFD;
 	}
 
@@ -656,7 +659,7 @@ static int j1939sk_sendmsg(struct socket *sock, struct msghdr *msg, size_t size)
 		struct sockaddr_can *addr = msg->msg_name;
 
 		if (addr->can_addr.j1939.name ||
-		    (addr->can_addr.j1939.addr != J1939_NO_ADDR)) {
+		    addr->can_addr.j1939.addr != J1939_NO_ADDR) {
 			skcb->addr.dst_name = addr->can_addr.j1939.name;
 			skcb->addr.da = addr->can_addr.j1939.addr;
 		}

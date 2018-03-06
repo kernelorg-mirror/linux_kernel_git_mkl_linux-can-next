@@ -90,15 +90,15 @@ static void j1939_ecu_get(struct j1939_ecu *dut)
 struct j1939_ecu *_j1939_ecu_get_register(struct j1939_priv *priv, name_t name,
 					  bool create_if_necessary)
 {
-	struct j1939_ecu *ecu, *dut;
+	struct j1939_ecu *ecu;
 
 	lockdep_assert_held(&priv->lock);
 
 	/* find existing */
 	/* test for existing name */
-	list_for_each_entry(dut, &priv->ecus, list) {
-		if (dut->name == name)
-			return dut;
+	list_for_each_entry(ecu, &priv->ecus, list) {
+		if (ecu->name == name)
+			return ecu;
 	}
 
 	if (!create_if_necessary)

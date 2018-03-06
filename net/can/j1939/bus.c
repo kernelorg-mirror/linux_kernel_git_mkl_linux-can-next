@@ -155,7 +155,7 @@ struct j1939_ecu *j1939_ecu_get_by_addr(struct j1939_priv *priv, u8 sa)
 	return ecu;
 }
 
-u8 j1939_name_to_sa(struct net *net, struct j1939_priv *priv, name_t name)
+u8 j1939_name_to_sa(struct j1939_priv *priv, name_t name)
 {
 	struct j1939_ecu *ecu;
 	int sa;

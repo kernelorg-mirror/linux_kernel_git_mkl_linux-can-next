@@ -82,11 +82,6 @@ struct j1939_priv {
 
 void j1939_ecu_put(struct j1939_ecu *ecu);
 
-static inline void j1939_ecu_get(struct j1939_ecu *dut)
-{
-	kref_get(&dut->kref);
-}
-
 /* keep the cache of what is local */
 int j1939_local_get(struct j1939_priv *priv, name_t name, u8 sa);
 void j1939_local_put(struct j1939_priv *priv, name_t name, u8 sa);

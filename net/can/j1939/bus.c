@@ -60,6 +60,11 @@ void j1939_ecu_put(struct j1939_ecu *ecu)
 	kref_put(&ecu->kref, cb_put_j1939_ecu);
 }
 
+static void j1939_ecu_get(struct j1939_ecu *dut)
+{
+	kref_get(&dut->kref);
+}
+
 struct j1939_ecu *_j1939_ecu_get_register(struct j1939_priv *priv, name_t name,
 					  bool create_if_necessary)
 {

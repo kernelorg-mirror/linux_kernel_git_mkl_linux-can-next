@@ -35,13 +35,13 @@ static inline name_t candata_to_name(const struct sk_buff *skb)
 	return le64_to_cpup((__le64 *)skb->data);
 }
 
-static inline int ac_msg_is_request_for_ac(struct sk_buff *skb)
+static inline bool ac_msg_is_request_for_ac(struct sk_buff *skb)
 {
 	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
 	int req_pgn;
 
 	if (skb->len < 3 || skcb->addr.pgn != PGN_REQUEST)
-		return 0;
+		return false;
 
 	req_pgn = skb->data[0] | (skb->data[1] << 8) | (skb->data[2] << 16);
 

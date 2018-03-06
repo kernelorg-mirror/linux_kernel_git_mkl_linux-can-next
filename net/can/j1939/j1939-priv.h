@@ -206,8 +206,8 @@ void j1939_recv(struct sk_buff *skb);
 /* stack entries */
 int j1939_send_transport(struct net *net, struct j1939_priv *priv, struct sk_buff *skb);
 int j1939_recv_transport(struct net *net, struct sk_buff *skb);
-int j1939_fixup_address_claim(struct j1939_priv *priv, struct sk_buff *skb);
-void j1939_recv_address_claim(struct sk_buff *skb, struct j1939_priv *priv);
+int j1939_address_claim_fixup(struct j1939_priv *priv, struct sk_buff *skb);
+void j1939_address_claim_recv(struct sk_buff *skb, struct j1939_priv *priv);
 
 /* network management */
 

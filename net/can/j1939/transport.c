@@ -1114,7 +1114,7 @@ int j1939_send_transport(struct net *net, struct j1939_priv *priv, struct sk_buf
 	}
 
 	/* fill in addresses from names */
-	ret = j1939_fixup_address_claim(priv, skb);
+	ret = j1939_address_claim_fixup(priv, skb);
 	if (unlikely(ret))
 		return ret;
 

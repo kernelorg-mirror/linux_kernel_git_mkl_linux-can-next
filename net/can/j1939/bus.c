@@ -179,7 +179,7 @@ u8 j1939_name_to_sa(struct j1939_priv *priv, name_t name)
 }
 
 /* ecu lookup by name */
-struct j1939_ecu *j1939_ecu_find_by_name(struct j1939_priv *priv, name_t name)
+struct j1939_ecu *j1939_ecu_get_by_name(struct j1939_priv *priv, name_t name)
 {
 	struct j1939_ecu *ecu = NULL;
 

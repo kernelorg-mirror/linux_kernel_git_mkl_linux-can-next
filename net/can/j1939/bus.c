@@ -178,11 +178,13 @@ u8 j1939_name_to_sa(struct j1939_priv *priv, name_t name)
 	return sa;
 }
 
-/* ecu lookup helper */
-static struct j1939_ecu *_j1939_ecu_find_by_name(name_t name,
-						 struct j1939_priv *priv)
+/* ecu lookup by name */
+struct j1939_ecu *j1939_ecu_find_by_name(struct net *net, struct j1939_priv *priv, name_t name)
 {
-	struct j1939_ecu *ecu;
+	struct j1939_ecu *ecu = NULL;
+
+	if (!name)
+		return NULL;
 
 	read_lock_bh(&priv->lock);
 	list_for_each_entry(ecu, &priv->ecus, list) {
@@ -191,21 +193,9 @@ static struct j1939_ecu *_j1939_ecu_find_by_name(name_t name,
 			goto found_on_intf;
 		}
 	}
-	ecu = NULL;
+
  found_on_intf:
 	read_unlock_bh(&priv->lock);
-	return ecu;
-}
-
-/* ecu lookup by name */
-struct j1939_ecu *j1939_ecu_find_by_name(struct net *net, struct j1939_priv *priv, name_t name)
-{
-	struct j1939_ecu *ecu;
-
-	if (!name)
-		return NULL;
-
-	ecu = _j1939_ecu_find_by_name(name, priv);
 	return ecu;
 }
 

@@ -258,8 +258,8 @@ void j1939_local_put(struct j1939_priv *priv, name_t name, u8 sa)
 	if (!name)
 		goto done;
 
-	ecu = _j1939_ecu_get_register(priv, name, false);
-	if (WARN_ON_ONCE(PTR_ERR_OR_ZERO(ecu)))
+	ecu = __j1939_ecu_get_by_name(priv, name);
+	if (WARN_ON_ONCE(!ecu))
 		goto done;
 
 	ecu->nusers--;

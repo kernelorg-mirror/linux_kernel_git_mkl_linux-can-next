@@ -123,11 +123,13 @@ struct j1939_ecu *j1939_ecu_get_by_addr(struct j1939_priv *priv, u8 sa)
 
 	if (!j1939_address_is_unicast(sa))
 		return NULL;
+
 	read_lock_bh(&priv->lock);
 	ecu = priv->ents[sa].ecu;
 	if (ecu)
 		j1939_ecu_get(ecu);
 	read_unlock_bh(&priv->lock);
+
 	return ecu;
 }
 
@@ -150,6 +152,7 @@ u8 j1939_name_to_sa(struct net *net, struct j1939_priv *priv, name_t name)
 		}
 	}
 	read_unlock_bh(&priv->lock);
+
 	return sa;
 }
 

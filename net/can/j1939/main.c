@@ -96,7 +96,7 @@ static void j1939_can_recv(struct sk_buff *iskb, void *data)
 	read_unlock_bh(&priv->lock);
 
 	/* deliver into the j1939 stack ... */
-	j1939_address_claim_recv(skb, priv);
+	j1939_address_claim_recv(priv, skb);
 
 	if (j1939_recv_transport(net, skb))
 		/* this means the transport layer processed the message */

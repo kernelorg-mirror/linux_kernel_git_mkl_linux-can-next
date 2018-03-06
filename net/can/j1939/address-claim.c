@@ -125,7 +125,7 @@ int j1939_address_claim_fixup(struct j1939_priv *priv, struct sk_buff *skb)
 	return 0;
 }
 
-static void j1939_address_claim_process(struct sk_buff *skb, struct j1939_priv *priv)
+static void j1939_address_claim_process(struct j1939_priv *priv, struct sk_buff *skb)
 {
 	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
 	struct j1939_ecu *ecu, *prev;
@@ -185,14 +185,14 @@ static void j1939_address_claim_process(struct sk_buff *skb, struct j1939_priv *
 	write_unlock_bh(&priv->lock);
 }
 
-void j1939_address_claim_recv(struct sk_buff *skb, struct j1939_priv *priv)
+void j1939_address_claim_recv(struct j1939_priv *priv, struct sk_buff *skb)
 {
 	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
 	struct j1939_ecu *ecu;
 
 	/* network mgmt */
 	if (skcb->addr.pgn == PGN_ADDRESS_CLAIMED) {
-		j1939_address_claim_process(skb, priv);
+		j1939_address_claim_process(priv, skb);
 	} else if (j1939_address_is_unicast(skcb->addr.sa)) {
 		ecu = j1939_ecu_get_by_addr(priv, skcb->addr.sa);
 		if (ecu) {

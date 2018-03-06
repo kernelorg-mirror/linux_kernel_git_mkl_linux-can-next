@@ -155,6 +155,27 @@ struct j1939_ecu *j1939_ecu_get_by_addr(struct j1939_priv *priv, u8 sa)
 	return ecu;
 }
 
+struct j1939_ecu *j1939_ecu_get_by_name(struct j1939_priv *priv, name_t name)
+{
+	struct j1939_ecu *ecu = NULL;
+
+	if (!name)
+		return NULL;
+
+	read_lock_bh(&priv->lock);
+	list_for_each_entry(ecu, &priv->ecus, list) {
+		if (ecu->name == name) {
+			j1939_ecu_get(ecu);
+			goto found_on_intf;
+		}
+	}
+
+ found_on_intf:
+	read_unlock_bh(&priv->lock);
+
+	return ecu;
+}
+
 u8 j1939_name_to_sa(struct j1939_priv *priv, name_t name)
 {
 	struct j1939_ecu *ecu;
@@ -176,27 +197,6 @@ u8 j1939_name_to_sa(struct j1939_priv *priv, name_t name)
 	read_unlock_bh(&priv->lock);
 
 	return sa;
-}
-
-/* ecu lookup by name */
-struct j1939_ecu *j1939_ecu_get_by_name(struct j1939_priv *priv, name_t name)
-{
-	struct j1939_ecu *ecu = NULL;
-
-	if (!name)
-		return NULL;
-
-	read_lock_bh(&priv->lock);
-	list_for_each_entry(ecu, &priv->ecus, list) {
-		if (ecu->name == name) {
-			j1939_ecu_get(ecu);
-			goto found_on_intf;
-		}
-	}
-
- found_on_intf:
-	read_unlock_bh(&priv->lock);
-	return ecu;
 }
 
 /* TX addr/name accounting

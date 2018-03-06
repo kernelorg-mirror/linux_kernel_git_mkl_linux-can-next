@@ -89,8 +89,7 @@ int j1939_address_claim_fixup(struct j1939_priv *priv, struct sk_buff *skb)
 		/* return both when failure & when successful */
 		if (ret < 0)
 			return ret;
-		ecu = j1939_ecu_find_by_name(sock_net(skb->sk), priv,
-					     skcb->addr.src_name);
+		ecu = j1939_ecu_find_by_name(priv, skcb->addr.src_name);
 		if (!ecu)
 			return -ENODEV;
 

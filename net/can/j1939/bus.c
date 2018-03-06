@@ -107,6 +107,8 @@ struct j1939_ecu *_j1939_ecu_get_register(struct j1939_priv *priv, name_t name,
 
 void _j1939_ecu_unregister(struct j1939_ecu *ecu)
 {
+	lockdep_assert_held(&ecu->priv->lock);
+
 	ecu_dbg(ecu, "unregister\n");
 	hrtimer_cancel(&ecu->ac_timer);
 

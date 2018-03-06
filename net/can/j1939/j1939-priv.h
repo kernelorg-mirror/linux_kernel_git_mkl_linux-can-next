@@ -135,6 +135,8 @@ static inline bool pgn_is_clean_pdu(pgn_t pgn)
 /* utility to correctly unregister a SA */
 static inline void _j1939_ecu_remove_sa(struct j1939_ecu *ecu)
 {
+	lockdep_assert_held(&ecu->priv->lock);
+
 	if (!j1939_address_is_unicast(ecu->sa))
 		return;
 	if (ecu->priv && ecu->priv->ents[ecu->sa].ecu == ecu) {

@@ -155,23 +155,33 @@ struct j1939_ecu *j1939_ecu_get_by_addr(struct j1939_priv *priv, u8 sa)
 	return ecu;
 }
 
-struct j1939_ecu *j1939_ecu_get_by_name(struct j1939_priv *priv, name_t name)
+/* get pointer to ecu without increasing ref counter */
+static struct j1939_ecu *__j1939_ecu_get_by_name(struct j1939_priv *priv, name_t name)
 {
 	struct j1939_ecu *ecu = NULL;
 
-	if (!name)
-		return NULL;
-
 	read_lock_bh(&priv->lock);
 	list_for_each_entry(ecu, &priv->ecus, list) {
-		if (ecu->name == name) {
-			j1939_ecu_get(ecu);
+		if (ecu->name == name)
 			goto found_on_intf;
-		}
 	}
 
  found_on_intf:
 	read_unlock_bh(&priv->lock);
+
+	return ecu;
+}
+
+struct j1939_ecu *j1939_ecu_get_by_name(struct j1939_priv *priv, name_t name)
+{
+	struct j1939_ecu *ecu;
+
+	if (!name)
+		return NULL;
+
+	ecu = __j1939_ecu_get_by_name(priv, name);
+	if (ecu)
+		j1939_ecu_get(ecu);
 
 	return ecu;
 }

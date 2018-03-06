@@ -29,6 +29,28 @@
 }
 
 /* ECU device interface */
+void _j1939_ecu_remove_sa(struct j1939_ecu *ecu)
+{
+	lockdep_assert_held(&ecu->priv->lock);
+
+	if (!j1939_address_is_unicast(ecu->sa))
+		return;
+	if (ecu->priv && ecu->priv->ents[ecu->sa].ecu == ecu) {
+		ecu->priv->ents[ecu->sa].ecu = NULL;
+		ecu->priv->ents[ecu->sa].nusers -= ecu->nusers;
+	}
+}
+
+void j1939_ecu_remove_sa(struct j1939_ecu *ecu)
+{
+	if (!j1939_address_is_unicast(ecu->sa))
+		return;
+
+	write_lock_bh(&ecu->priv->lock);
+	_j1939_ecu_remove_sa(ecu);
+	write_unlock_bh(&ecu->priv->lock);
+}
+
 static enum hrtimer_restart j1939_ecu_timer_handler(struct hrtimer *hrtimer)
 {
 	struct j1939_ecu *ecu =

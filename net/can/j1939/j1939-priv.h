@@ -131,26 +131,8 @@ static inline bool pgn_is_clean_pdu(pgn_t pgn)
 }
 
 /* utility to correctly unregister a SA */
-static inline void _j1939_ecu_remove_sa(struct j1939_ecu *ecu)
-{
-	lockdep_assert_held(&ecu->priv->lock);
-
-	if (!j1939_address_is_unicast(ecu->sa))
-		return;
-	if (ecu->priv && ecu->priv->ents[ecu->sa].ecu == ecu) {
-		ecu->priv->ents[ecu->sa].ecu = NULL;
-		ecu->priv->ents[ecu->sa].nusers -= ecu->nusers;
-	}
-}
-
-static inline void j1939_ecu_remove_sa(struct j1939_ecu *ecu)
-{
-	if (!j1939_address_is_unicast(ecu->sa))
-		return;
-	write_lock_bh(&ecu->priv->lock);
-	_j1939_ecu_remove_sa(ecu);
-	write_unlock_bh(&ecu->priv->lock);
-}
+void _j1939_ecu_remove_sa(struct j1939_ecu *ecu);
+void j1939_ecu_remove_sa(struct j1939_ecu *ecu);
 
 u8 j1939_name_to_sa(struct net *net, struct j1939_priv *priv, name_t name);
 struct j1939_ecu *j1939_ecu_get_by_addr(struct j1939_priv *priv, u8 sa);

@@ -261,6 +261,14 @@ int j1939_netdev_start(struct net *net, struct net_device *netdev)
 	return ret;
 }
 
+/* get pointer to priv without increasing ref counter */
+static inline struct j1939_priv *__j1939_priv_get(struct net_device *dev)
+{
+	struct can_ml_priv *can_ml_priv = dev->ml_priv;
+
+	return can_ml_priv->j1939_priv;
+}
+
 void j1939_netdev_stop(struct net_device *netdev)
 {
 	struct j1939_priv *priv;

@@ -48,7 +48,6 @@ static void j1939_can_recv(struct sk_buff *iskb, void *data)
 	struct sk_buff *skb;
 	struct j1939_sk_buff_cb *skcb;
 	struct can_frame *cf;
-	struct addr_ent *paddr;
 
 	/* create a copy of the skb
 	 * j1939 only delivers the real data bytes,
@@ -85,16 +84,6 @@ static void j1939_can_recv(struct sk_buff *iskb, void *data)
 		/* set broadcast address */
 		skcb->addr.da = J1939_NO_ADDR;
 	}
-
-	/* update local rxtime cache */
-	write_lock_bh(&priv->lock);
-	if (j1939_address_is_unicast(skcb->addr.sa)) {
-		paddr = &priv->ents[skcb->addr.sa];
-		paddr->rxtime = ktime_get();
-		if (paddr->ecu && skcb->addr.pgn != PGN_ADDRESS_CLAIMED)
-			paddr->ecu->rxtime = paddr->rxtime;
-	}
-	write_unlock_bh(&priv->lock);
 
 	/* update localflags */
 	read_lock_bh(&priv->lock);

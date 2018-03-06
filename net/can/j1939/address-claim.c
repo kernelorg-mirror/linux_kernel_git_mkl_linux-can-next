@@ -181,8 +181,6 @@ static void j1939_process_address_claim(struct sk_buff *skb, struct j1939_priv *
 	/* schedule timer in 250 msec to commit address change */
 	hrtimer_start(&ecu->ac_timer, ktime_set(0, 250000000),
 		      HRTIMER_MODE_REL_SOFT);
-	/* rxtime administration */
-	ecu->rxtime = ktime_get();
  done:
 	write_unlock_bh(&priv->lock);
 }
@@ -199,7 +197,6 @@ void j1939_recv_address_claim(struct sk_buff *skb, struct j1939_priv *priv)
 		ecu = j1939_ecu_get_by_addr(priv, skcb->addr.sa);
 		if (ecu) {
 			/* source administration */
-			ecu->rxtime = ktime_get();
 			skcb->addr.src_name = ecu->name;
 			j1939_ecu_put(ecu);
 		}

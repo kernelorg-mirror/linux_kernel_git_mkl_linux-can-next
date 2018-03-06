@@ -35,7 +35,6 @@
 /* j1939 devices */
 struct j1939_ecu {
 	struct list_head list;
-	ktime_t rxtime;
 	name_t name;
 	u8 sa;
 
@@ -71,7 +70,6 @@ struct j1939_priv {
 	 * don't use directly, use j1939_ecu_set_address() instead
 	 */
 	struct addr_ent {
-		ktime_t rxtime;
 		struct j1939_ecu *ecu;
 		/* count users, to help transport protocol */
 		int nusers;

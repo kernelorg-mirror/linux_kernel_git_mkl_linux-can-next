@@ -222,15 +222,15 @@ static inline void j1939_priv_put(struct j1939_priv *priv)
 
 /* notify/alert all j1939 sockets bound to ifindex */
 void j1939sk_netdev_event(struct net_device *netdev, int error_code);
-int j1939tp_rmdev_notifier(struct net_device *netdev);
+int j1939_tp_rmdev_notifier(struct net_device *netdev);
 
 /* decrement pending skb for a j1939 socket */
 void j1939_sock_pending_del(struct sock *sk);
 
 /* separate module-init/modules-exit's */
-__init int j1939tp_module_init(void);
+__init int j1939_tp_module_init(void);
 
-void j1939tp_module_exit(void);
+void j1939_tp_module_exit(void);
 
 /* CAN protocol */
 extern const struct can_proto j1939_can_proto;

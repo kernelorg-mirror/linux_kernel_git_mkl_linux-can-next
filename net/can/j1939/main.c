@@ -202,7 +202,7 @@ void __j1939_priv_release(struct kref *kref)
 			  j1939_can_recv, priv);
 
 	/* remove pending transport protocol sessions */
-	j1939tp_rmdev_notifier(netdev);
+	j1939_tp_rmdev_notifier(netdev);
 
 	/* cleanup priv */
 	write_lock_bh(&priv->lock);
@@ -321,7 +321,7 @@ static int j1939_netdev_notify(struct notifier_block *nb,
 
 	switch (msg) {
 	case NETDEV_UNREGISTER:
-		j1939tp_rmdev_notifier(netdev);
+		j1939_tp_rmdev_notifier(netdev);
 		j1939sk_netdev_event(netdev, ENODEV);
 		break;
 
@@ -353,7 +353,7 @@ static __init int j1939_module_init(void)
 		pr_err("can: registration of j1939 protocol failed\n");
 		goto fail_sk;
 	}
-	ret = j1939tp_module_init();
+	ret = j1939_tp_module_init();
 	if (ret < 0)
 		goto fail_tp;
 
@@ -369,7 +369,7 @@ static __init int j1939_module_init(void)
 
 static __exit void j1939_module_exit(void)
 {
-	j1939tp_module_exit();
+	j1939_tp_module_exit();
 
 	can_proto_unregister(&j1939_can_proto);
 

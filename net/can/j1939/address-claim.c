@@ -35,7 +35,7 @@ static inline name_t candata_to_name(const struct sk_buff *skb)
 	return le64_to_cpup((__le64 *)skb->data);
 }
 
-static inline bool j1939_address_claim_msg_is_request(struct sk_buff *skb)
+static inline bool j1939_ac_msg_is_request(struct sk_buff *skb)
 {
 	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
 	int req_pgn;
@@ -48,7 +48,7 @@ static inline bool j1939_address_claim_msg_is_request(struct sk_buff *skb)
 	return req_pgn == PGN_ADDRESS_CLAIMED;
 }
 
-static int j1939_address_claim_verify_outgoing(struct sk_buff *skb)
+static int j1939_ac_verify_outgoing(struct sk_buff *skb)
 {
 	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
 
@@ -75,7 +75,7 @@ static int j1939_address_claim_verify_outgoing(struct sk_buff *skb)
 	return 0;
 }
 
-int j1939_address_claim_fixup(struct j1939_priv *priv, struct sk_buff *skb)
+int j1939_ac_fixup(struct j1939_priv *priv, struct sk_buff *skb)
 {
 	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
 	int ret;
@@ -85,7 +85,7 @@ int j1939_address_claim_fixup(struct j1939_priv *priv, struct sk_buff *skb)
 	if (skcb->addr.pgn == PGN_ADDRESS_CLAIMED) {
 		struct j1939_ecu *ecu;
 
-		ret = j1939_address_claim_verify_outgoing(skb);
+		ret = j1939_ac_verify_outgoing(skb);
 		/* return both when failure & when successful */
 		if (ret < 0)
 			return ret;
@@ -101,7 +101,7 @@ int j1939_address_claim_fixup(struct j1939_priv *priv, struct sk_buff *skb)
 		/* assign source address */
 		sa = j1939_name_to_sa(priv, skcb->addr.src_name);
 		if (!j1939_address_is_unicast(sa) &&
-		    !j1939_address_claim_msg_is_request(skb)) {
+		    !j1939_ac_msg_is_request(skb)) {
 			pr_notice("tx drop: invalid sa for name 0x%016llx\n",
 				  skcb->addr.src_name);
 			return -EADDRNOTAVAIL;
@@ -122,7 +122,7 @@ int j1939_address_claim_fixup(struct j1939_priv *priv, struct sk_buff *skb)
 	return 0;
 }
 
-static void j1939_address_claim_process(struct j1939_priv *priv, struct sk_buff *skb)
+static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 {
 	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
 	struct j1939_ecu *ecu, *prev;
@@ -182,14 +182,14 @@ static void j1939_address_claim_process(struct j1939_priv *priv, struct sk_buff 
 	write_unlock_bh(&priv->lock);
 }
 
-void j1939_address_claim_recv(struct j1939_priv *priv, struct sk_buff *skb)
+void j1939_ac_recv(struct j1939_priv *priv, struct sk_buff *skb)
 {
 	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
 	struct j1939_ecu *ecu;
 
 	/* network mgmt */
 	if (skcb->addr.pgn == PGN_ADDRESS_CLAIMED) {
-		j1939_address_claim_process(priv, skb);
+		j1939_ac_process(priv, skb);
 	} else if (j1939_address_is_unicast(skcb->addr.sa)) {
 		ecu = j1939_ecu_get_by_addr(priv, skcb->addr.sa);
 		if (ecu) {

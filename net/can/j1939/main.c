@@ -96,7 +96,7 @@ static void j1939_can_recv(struct sk_buff *iskb, void *data)
 	read_unlock_bh(&priv->lock);
 
 	/* deliver into the j1939 stack ... */
-	j1939_address_claim_recv(priv, skb);
+	j1939_ac_recv(priv, skb);
 
 	if (j1939_recv_transport(net, skb))
 		/* this means the transport layer processed the message */
@@ -132,7 +132,7 @@ int j1939_send(struct net *net, struct sk_buff *skb)
 	if (skcb->priority > 7)
 		skcb->priority = 6;
 
-	ret = j1939_address_claim_fixup(priv, skb);
+	ret = j1939_ac_fixup(priv, skb);
 	j1939_priv_put(priv);
 	if (unlikely(ret))
 		goto failed;

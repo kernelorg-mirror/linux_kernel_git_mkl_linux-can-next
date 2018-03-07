@@ -35,7 +35,7 @@
 #define J1939_ETP_CMD_RTS 0x14
 #define J1939_ETP_CMD_CTS 0x15
 #define J1939_ETP_CMD_DPO 0x16
-#define J1939_CMD_EOF 0x17
+#define J1939_ETP_CMD_EOF 0x17
 #define J1939_ETP_CMD_ABORT 0xff
 
 #define J1939_ABORT_BUSY 1
@@ -993,7 +993,7 @@ static int j1939_tp_txnext(struct net *net, struct session *session)
 		    j1939_tp_im_receiver(session->skb)) {
 			if (session->pkt.done >= session->pkt.total) {
 				if (session->extd) {
-					dat[0] = J1939_CMD_EOF;
+					dat[0] = J1939_ETP_CMD_EOF;
 					dat[1] = session->skb->len >> 0;
 					dat[2] = session->skb->len >> 8;
 					dat[3] = session->skb->len >> 16;
@@ -1191,7 +1191,7 @@ int j1939_recv_transport(struct net *net, struct sk_buff *skb)
 		case J1939_ETP_CMD_DPO:
 			j1939xtp_rx_dpo(net, skb, J1939_EXTENDED);
 			break;
-		case J1939_CMD_EOF:
+		case J1939_ETP_CMD_EOF:
 			j1939xtp_rx_eof(net, skb, J1939_EXTENDED);
 			break;
 		case J1939_ETP_CMD_ABORT:

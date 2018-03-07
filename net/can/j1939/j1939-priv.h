@@ -30,8 +30,6 @@
 #define PGN_ADDRESS_CLAIMED 0x0ee00
 #define PGN_MAX 0x3ffff
 
-#define SA_MAX_UNICAST 0xfd
-
 /* j1939 devices */
 struct j1939_ecu {
 	struct list_head list;
@@ -109,7 +107,7 @@ static inline bool j1939_address_is_valid(u8 sa)
 
 static inline bool j1939_address_is_unicast(u8 sa)
 {
-	return sa <= SA_MAX_UNICAST;
+	return sa <= J1939_MAX_UNICAST_ADDR;
 }
 
 static inline bool pgn_is_pdu1(pgn_t pgn)

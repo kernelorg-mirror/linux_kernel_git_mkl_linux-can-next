@@ -16,7 +16,7 @@
 #include <linux/socket.h>
 #include <linux/can.h>
 
-#define J1939_IDLE_ADDR	0xfe
+#define J1939_IDLE_ADDR 0xfe
 #define J1939_NO_ADDR 0xff
 #define J1939_NO_NAME 0
 #define J1939_NO_PGN 0x40000

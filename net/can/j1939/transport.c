@@ -236,12 +236,12 @@ static inline unsigned int j1939_tp_ctl_to_size(const u8 *dat)
 	return (dat[2] << 8) + (dat[1] << 0);
 }
 
-static inline unsigned int j1939etp_ctl_to_packet(const u8 *dat)
+static inline unsigned int j1939_etp_ctl_to_packet(const u8 *dat)
 {
 	return (dat[4] << 16) | (dat[3] << 8) | (dat[2] << 0);
 }
 
-static inline unsigned int j1939etp_ctl_to_size(const u8 *dat)
+static inline unsigned int j1939_etp_ctl_to_size(const u8 *dat)
 {
 	return (dat[4] << 24) | (dat[3] << 16) |
 		(dat[2] << 8) | (dat[1] << 0);
@@ -626,7 +626,7 @@ static void j1939xtp_rx_cts(struct net *net, struct sk_buff *skb, bool extd)
 	}
 
 	j1939_session_lock(session);
-	pkt = extd ? j1939etp_ctl_to_packet(dat) : dat[2];
+	pkt = extd ? j1939_etp_ctl_to_packet(dat) : dat[2];
 	if (!dat[0]) {
 		hrtimer_cancel(&session->txtimer);
 	} else if (!pkt) {
@@ -714,7 +714,7 @@ static void j1939xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 		int abort = 0;
 
 		if (extd) {
-			len = j1939etp_ctl_to_size(dat);
+			len = j1939_etp_ctl_to_size(dat);
 			if (len > J1939_MAX_ETP_PACKET_SIZE)
 				abort = J1939_ABORT_FAULT;
 			else if (max_packet_size && (len > max_packet_size))
@@ -797,7 +797,7 @@ static void j1939xtp_rx_dpo(struct net *net, struct sk_buff *skb, bool extd)
 	}
 
 	/* transmitted without problems */
-	session->pkt.dpo = j1939etp_ctl_to_packet(skb->data);
+	session->pkt.dpo = j1939_etp_ctl_to_packet(skb->data);
 	session->last_cmd = dat[0];
 	j1939_tp_set_rxtimeout(session, 750);
 	j1939_session_put(net, session); /* ~j1939_tp_find */

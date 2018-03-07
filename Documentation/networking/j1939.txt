@@ -46,7 +46,7 @@ This file contains
   SAE J1939 defines a higher layer protocol on CAN. It implements a more
   sophisticated addressing scheme and extends the maximum packet size above
   8 bytes. Several derived specifications exists, which differ from the
-  original j1939 on the application level, like MilCAN, NMEA2000 and
+  original j1939 on the application level, like MilCAN A, NMEA2000 and
   especially ISO-11783 (ISOBUS). This last one specifies the so-called ETP
   (Extended Transport Protocol) which is has been included in this
   implementation. This inclusion results in a maximum packet size of

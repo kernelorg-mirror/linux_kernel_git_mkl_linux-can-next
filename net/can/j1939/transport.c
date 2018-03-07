@@ -926,7 +926,7 @@ static int j1939_tp_txnext(struct net *net, struct session *session)
 		if (dat[0] == session->last_txcmd)
 			/* done already */
 			break;
-		ret = j1939_tp_tx_ctl(session, 0, dat);
+		ret = j1939_tp_tx_ctl(session, false, dat);
 		if (ret < 0)
 			goto failed;
 		session->last_txcmd = dat[0];
@@ -959,7 +959,7 @@ static int j1939_tp_txnext(struct net *net, struct session *session)
 		if (dat[0] == session->last_txcmd)
 			/* done already */
 			break;
-		ret = j1939_tp_tx_ctl(session, 1, dat);
+		ret = j1939_tp_tx_ctl(session, true, dat);
 		if (ret < 0)
 			goto failed;
 		if (len)
@@ -978,7 +978,7 @@ static int j1939_tp_txnext(struct net *net, struct session *session)
 			dat[2] = (pkt >> 0);
 			dat[3] = (pkt >> 8);
 			dat[4] = (pkt >> 16);
-			ret = j1939_tp_tx_ctl(session, 0, dat);
+			ret = j1939_tp_tx_ctl(session, false, dat);
 			if (ret < 0)
 				goto failed;
 			session->last_txcmd = dat[0];
@@ -1007,7 +1007,7 @@ static int j1939_tp_txnext(struct net *net, struct session *session)
 				if (dat[0] == session->last_txcmd)
 					/* done already */
 					break;
-				ret = j1939_tp_tx_ctl(session, 1, dat);
+				ret = j1939_tp_tx_ctl(session, true, dat);
 				if (ret < 0)
 					goto failed;
 				session->last_txcmd = dat[0];

@@ -117,7 +117,7 @@ static inline bool packet_match(const struct j1939_sk_buff_cb *skcb,
 }
 
 /* callback per socket, called from j1939_recv */
-static void j1939sk_recv_skb(struct sk_buff *oskb, struct j1939_sock *jsk)
+static void j1939_sk_recv_skb(struct sk_buff *oskb, struct j1939_sock *jsk)
 {
 	struct sk_buff *skb;
 	struct j1939_sk_buff_cb *skcb = j1939_get_cb(oskb);
@@ -177,13 +177,13 @@ void j1939_recv(struct sk_buff *skb)
 
 	spin_lock_bh(&j1939_socks_lock);
 	list_for_each_entry(jsk, &j1939_socks, list) {
-		j1939sk_recv_skb(skb, jsk);
+		j1939_sk_recv_skb(skb, jsk);
 	}
 	spin_unlock_bh(&j1939_socks_lock);
 }
 EXPORT_SYMBOL_GPL(j1939_recv);
 
-static int j1939sk_init(struct sock *sk)
+static int j1939_sk_init(struct sock *sk)
 {
 	struct j1939_sock *jsk = j1939_sk(sk);
 
@@ -198,7 +198,7 @@ static int j1939sk_init(struct sock *sk)
 	return 0;
 }
 
-static int j1939sk_sanity_check(struct sockaddr_can *addr, int len)
+static int j1939_sk_sanity_check(struct sockaddr_can *addr, int len)
 {
 	if (!addr)
 		return -EDESTADDRREQ;
@@ -215,7 +215,7 @@ static int j1939sk_sanity_check(struct sockaddr_can *addr, int len)
 	return 0;
 }
 
-static int j1939sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
+static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 {
 	struct sockaddr_can *addr = (struct sockaddr_can *)uaddr;
 	struct j1939_sock *jsk = j1939_sk(sock->sk);
@@ -225,7 +225,7 @@ static int j1939sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 	struct j1939_priv *priv;
 	int ret = 0;
 
-	ret = j1939sk_sanity_check(addr, len);
+	ret = j1939_sk_sanity_check(addr, len);
 	if (ret)
 		return ret;
 
@@ -294,14 +294,14 @@ static int j1939sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 	return ret;
 }
 
-static int j1939sk_connect(struct socket *sock, struct sockaddr *uaddr,
+static int j1939_sk_connect(struct socket *sock, struct sockaddr *uaddr,
 			   int len, int flags)
 {
 	struct sockaddr_can *addr = (struct sockaddr_can *)uaddr;
 	struct j1939_sock *jsk = j1939_sk(sock->sk);
 	int ret = 0;
 
-	ret = j1939sk_sanity_check(addr, len);
+	ret = j1939_sk_sanity_check(addr, len);
 	if (ret)
 		return ret;
 
@@ -332,7 +332,7 @@ static int j1939sk_connect(struct socket *sock, struct sockaddr *uaddr,
 	return ret;
 }
 
-static void j1939sk_sock2sockaddr_can(struct sockaddr_can *addr,
+static void j1939_sk_sock2sockaddr_can(struct sockaddr_can *addr,
 				      const struct j1939_sock *jsk, int peer)
 {
 	addr->can_family = AF_CAN;
@@ -347,7 +347,7 @@ static void j1939sk_sock2sockaddr_can(struct sockaddr_can *addr,
 	}
 }
 
-static int j1939sk_getname(struct socket *sock, struct sockaddr *uaddr, int peer)
+static int j1939_sk_getname(struct socket *sock, struct sockaddr *uaddr, int peer)
 {
 	struct sockaddr_can *addr = (struct sockaddr_can *)uaddr;
 	struct sock *sk = sock->sk;
@@ -361,7 +361,7 @@ static int j1939sk_getname(struct socket *sock, struct sockaddr *uaddr, int peer
 		goto failure;
 	}
 
-	j1939sk_sock2sockaddr_can(addr, jsk, peer);
+	j1939_sk_sock2sockaddr_can(addr, jsk, peer);
 	ret = J1939_MIN_NAMELEN;
 
  failure:
@@ -370,7 +370,7 @@ static int j1939sk_getname(struct socket *sock, struct sockaddr *uaddr, int peer
 	return ret;
 }
 
-static int j1939sk_release(struct socket *sock)
+static int j1939_sk_release(struct socket *sock)
 {
 	struct sock *sk = sock->sk;
 	struct j1939_sock *jsk;
@@ -410,7 +410,7 @@ static int j1939sk_release(struct socket *sock)
 	return 0;
 }
 
-static int j1939sk_setsockopt_flag(struct j1939_sock *jsk, char __user *optval,
+static int j1939_sk_setsockopt_flag(struct j1939_sock *jsk, char __user *optval,
 				   unsigned int optlen, int flag)
 {
 	int tmp;
@@ -428,7 +428,7 @@ static int j1939sk_setsockopt_flag(struct j1939_sock *jsk, char __user *optval,
 	return tmp;
 }
 
-static int j1939sk_setsockopt(struct socket *sock, int level, int optname,
+static int j1939_sk_setsockopt(struct socket *sock, int level, int optname,
 			      char __user *optval, unsigned int optlen)
 {
 	struct sock *sk = sock->sk;
@@ -463,10 +463,10 @@ static int j1939sk_setsockopt(struct socket *sock, int level, int optname,
 		kfree(ofilters);
 		return 0;
 	case SO_J1939_PROMISC:
-		return j1939sk_setsockopt_flag(jsk, optval, optlen,
+		return j1939_sk_setsockopt_flag(jsk, optval, optlen,
 					       J1939_SOCK_PROMISC);
 	case SO_J1939_RECV_OWN:
-		return j1939sk_setsockopt_flag(jsk, optval, optlen,
+		return j1939_sk_setsockopt_flag(jsk, optval, optlen,
 					       J1939_SOCK_RECV_OWN);
 	case SO_J1939_SEND_PRIO:
 		if (optlen != sizeof(tmp))
@@ -486,7 +486,7 @@ static int j1939sk_setsockopt(struct socket *sock, int level, int optname,
 	}
 }
 
-static int j1939sk_getsockopt(struct socket *sock, int level, int optname,
+static int j1939_sk_getsockopt(struct socket *sock, int level, int optname,
 			      char __user *optval, int __user *optlen)
 {
 	struct sock *sk = sock->sk;
@@ -537,7 +537,7 @@ static int j1939sk_getsockopt(struct socket *sock, int level, int optname,
 	return ret;
 }
 
-static int j1939sk_recvmsg(struct socket *sock, struct msghdr *msg,
+static int j1939_sk_recvmsg(struct socket *sock, struct msghdr *msg,
 			   size_t size, int flags)
 {
 	struct sock *sk = sock->sk;
@@ -591,7 +591,7 @@ static int j1939sk_recvmsg(struct socket *sock, struct msghdr *msg,
 	return size;
 }
 
-static int j1939sk_sendmsg(struct socket *sock, struct msghdr *msg, size_t size)
+static int j1939_sk_sendmsg(struct socket *sock, struct msghdr *msg, size_t size)
 {
 	struct sock *sk = sock->sk;
 	struct j1939_sock *jsk = j1939_sk(sk);
@@ -701,7 +701,7 @@ static int j1939sk_sendmsg(struct socket *sock, struct msghdr *msg, size_t size)
 	return ret;
 }
 
-void j1939sk_netdev_event(struct net_device *netdev, int error_code)
+void j1939_sk_netdev_event(struct net_device *netdev, int error_code)
 {
 	struct j1939_sock *jsk;
 
@@ -730,20 +730,20 @@ void j1939sk_netdev_event(struct net_device *netdev, int error_code)
 
 static const struct proto_ops j1939_ops = {
 	.family = PF_CAN,
-	.release = j1939sk_release,
-	.bind = j1939sk_bind,
-	.connect = j1939sk_connect,
+	.release = j1939_sk_release,
+	.bind = j1939_sk_bind,
+	.connect = j1939_sk_connect,
 	.socketpair = sock_no_socketpair,
 	.accept = sock_no_accept,
-	.getname = j1939sk_getname,
+	.getname = j1939_sk_getname,
 	.poll = datagram_poll,
 	.ioctl = can_ioctl,
 	.listen = sock_no_listen,
 	.shutdown = sock_no_shutdown,
-	.setsockopt = j1939sk_setsockopt,
-	.getsockopt = j1939sk_getsockopt,
-	.sendmsg = j1939sk_sendmsg,
-	.recvmsg = j1939sk_recvmsg,
+	.setsockopt = j1939_sk_setsockopt,
+	.getsockopt = j1939_sk_getsockopt,
+	.sendmsg = j1939_sk_sendmsg,
+	.recvmsg = j1939_sk_recvmsg,
 	.mmap = sock_no_mmap,
 	.sendpage = sock_no_sendpage,
 };
@@ -752,7 +752,7 @@ static struct proto j1939_proto __read_mostly = {
 	.name = "CAN_J1939",
 	.owner = THIS_MODULE,
 	.obj_size = sizeof(struct j1939_sock),
-	.init = j1939sk_init,
+	.init = j1939_sk_init,
 };
 
 const struct can_proto j1939_can_proto = {

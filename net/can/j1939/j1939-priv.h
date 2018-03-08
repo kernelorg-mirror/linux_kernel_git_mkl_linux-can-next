@@ -221,7 +221,7 @@ static inline void j1939_priv_put(struct j1939_priv *priv)
 }
 
 /* notify/alert all j1939 sockets bound to ifindex */
-void j1939sk_netdev_event(struct net_device *netdev, int error_code);
+void j1939_sk_netdev_event(struct net_device *netdev, int error_code);
 int j1939_tp_rmdev_notifier(struct net_device *netdev);
 
 /* decrement pending skb for a j1939 socket */

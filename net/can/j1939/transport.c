@@ -298,10 +298,12 @@ static bool j1939_tp_match(struct session *session, struct sk_buff *skb,
 	return true;
 }
 
-static struct session *_j1939_tp_find(struct net *net, struct list_head *root,
+static struct session *j1939_tp_find_locked(struct net *net, struct list_head *root,
 				     struct sk_buff *skb, bool reverse)
 {
 	struct session *session;
+
+	lockdep_assert_held(&net->can_j1939.tp_lock);
 
 	list_for_each_entry(session, root, list) {
 		j1939_session_get(session);
@@ -319,7 +321,7 @@ static struct session *j1939_tp_find(struct net *net, struct list_head *root,
 	struct session *session;
 
 	j1939_sessionlist_lock(net);
-	session = _j1939_tp_find(net, root, skb, reverse);
+	session = j1939_tp_find_locked(net, root, skb, reverse);
 	j1939_sessionlist_unlock(net);
 
 	return session;
@@ -1085,7 +1087,7 @@ static int j1939_session_insert(struct net *net, struct session *session)
 	struct session *pending;
 
 	j1939_sessionlist_lock(net);
-	pending = _j1939_tp_find(net, sessionq(net, session->extd),
+	pending = j1939_tp_find_locked(net, sessionq(net, session->extd),
 				session->skb, false);
 	if (pending)
 		/* revert the effect of find() */

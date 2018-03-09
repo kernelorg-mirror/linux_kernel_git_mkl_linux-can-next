@@ -26,9 +26,9 @@
 
 /* TODO: return ENETRESET on busoff. */
 
-#define PGN_REQUEST 0x0ea00
-#define PGN_ADDRESS_CLAIMED 0x0ee00
-#define PGN_MAX 0x3ffff
+#define J1939_PGN_REQUEST 0x0ea00
+#define J1939_PGN_ADDRESS_CLAIMED 0x0ee00
+#define J1939_PGN_MAX 0x3ffff
 
 /* j1939 devices */
 struct j1939_ecu {

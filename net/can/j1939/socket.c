@@ -79,7 +79,7 @@ static inline int j1939_to_sk_priority(priority_t j1939_prio)
 /* function to see if pgn is to be evaluated */
 static inline bool pgn_is_valid(pgn_t pgn)
 {
-	return pgn <= PGN_MAX;
+	return pgn <= J1939_PGN_MAX;
 }
 
 /* test function to avoid non-zero DA placeholder for pdu1 pgn's */

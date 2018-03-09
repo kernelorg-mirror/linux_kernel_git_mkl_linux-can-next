@@ -40,12 +40,12 @@ static inline bool j1939_ac_msg_is_request(struct sk_buff *skb)
 	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
 	int req_pgn;
 
-	if (skb->len < 3 || skcb->addr.pgn != PGN_REQUEST)
+	if (skb->len < 3 || skcb->addr.pgn != J1939_PGN_REQUEST)
 		return false;
 
 	req_pgn = skb->data[0] | (skb->data[1] << 8) | (skb->data[2] << 16);
 
-	return req_pgn == PGN_ADDRESS_CLAIMED;
+	return req_pgn == J1939_PGN_ADDRESS_CLAIMED;
 }
 
 static int j1939_ac_verify_outgoing(struct sk_buff *skb)
@@ -82,7 +82,7 @@ int j1939_ac_fixup(struct j1939_priv *priv, struct sk_buff *skb)
 	u8 sa;
 
 	/* network mgmt: address claiming msgs */
-	if (skcb->addr.pgn == PGN_ADDRESS_CLAIMED) {
+	if (skcb->addr.pgn == J1939_PGN_ADDRESS_CLAIMED) {
 		struct j1939_ecu *ecu;
 
 		ret = j1939_ac_verify_outgoing(skb);
@@ -188,7 +188,7 @@ void j1939_ac_recv(struct j1939_priv *priv, struct sk_buff *skb)
 	struct j1939_ecu *ecu;
 
 	/* network mgmt */
-	if (skcb->addr.pgn == PGN_ADDRESS_CLAIMED) {
+	if (skcb->addr.pgn == J1939_PGN_ADDRESS_CLAIMED) {
 		j1939_ac_process(priv, skb);
 	} else if (j1939_address_is_unicast(skcb->addr.sa)) {
 		ecu = j1939_ecu_get_by_addr(priv, skcb->addr.sa);

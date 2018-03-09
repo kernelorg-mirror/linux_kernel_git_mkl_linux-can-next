@@ -281,7 +281,11 @@ int j1939_send(struct net *net, struct sk_buff *skb)
 	}
 
 	/* apply sanity checks */
-	skcb->addr.pgn &= (j1939_pgn_is_pdu1(skcb->addr.pgn)) ? 0x3ff00 : J1939_PGN_MAX;
+	if (j1939_pgn_is_pdu1(skcb->addr.pgn))
+		skcb->addr.pgn &= 0x3ff00;
+	else
+		skcb->addr.pgn &= J1939_PGN_MAX;
+
 	if (skcb->priority > 7)
 		skcb->priority = 6;
 

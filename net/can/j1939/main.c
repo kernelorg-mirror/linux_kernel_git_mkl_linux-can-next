@@ -106,67 +106,6 @@ static void j1939_can_recv(struct sk_buff *iskb, void *data)
 	kfree_skb(skb);
 }
 
-int j1939_send(struct net *net, struct sk_buff *skb)
-{
-	int ret, dlc;
-	canid_t canid;
-	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
-	struct j1939_priv *priv;
-	struct can_frame *cf;
-
-	priv = j1939_priv_get_by_index(net, skb->dev->ifindex);
-	if (!priv) {
-		ret = -EINVAL;
-		goto failed;
-	}
-
-	if (skb->len > 8) {
-		/* re-route via transport protocol */
-		ret = j1939_send_transport(net, priv, skb);
-		j1939_priv_put(priv);
-		return ret;
-	}
-
-	/* apply sanity checks */
-	skcb->addr.pgn &= (j1939_pgn_is_pdu1(skcb->addr.pgn)) ? 0x3ff00 : 0x3ffff;
-	if (skcb->priority > 7)
-		skcb->priority = 6;
-
-	ret = j1939_ac_fixup(priv, skb);
-	j1939_priv_put(priv);
-	if (unlikely(ret))
-		goto failed;
-	dlc = skb->len;
-	if (dlc > 8) {
-		ret = -EMSGSIZE;
-		goto failed;
-	}
-
-	/* re-claim the CAN_HDR from the SKB */
-	cf = skb_push(skb, CAN_HDR);
-
-	/* make it a full can frame again */
-	skb_put(skb, CAN_FTR + (8 - dlc));
-
-	canid = CAN_EFF_FLAG |
-		(skcb->addr.sa) |
-		((skcb->priority & 0x7) << 26);
-	if (j1939_pgn_is_pdu1(skcb->addr.pgn))
-		canid |= ((skcb->addr.pgn & 0x3ff00) << 8) |
-			(skcb->addr.da << 8);
-	else
-		canid |= ((skcb->addr.pgn & J1939_PGN_MAX) << 8);
-
-	cf->can_id = canid;
-	cf->can_dlc = dlc;
-
-	return can_send(skb, 1);
- failed:
-	consume_skb(skb);
-	return ret;
-}
-EXPORT_SYMBOL_GPL(j1939_send);
-
 /* NETDEV MANAGEMENT */
 
 /* values for can_rx_(un)register */
@@ -293,7 +232,7 @@ struct j1939_priv *j1939_priv_get(struct net_device *dev)
 	return priv;
 }
 
-struct j1939_priv *j1939_priv_get_by_index(struct net *net, int ifindex)
+static struct j1939_priv *j1939_priv_get_by_index(struct net *net, int ifindex)
 {
 	struct j1939_priv *priv;
 	struct net_device *netdev;
@@ -307,6 +246,67 @@ struct j1939_priv *j1939_priv_get_by_index(struct net *net, int ifindex)
 
 	return priv;
 }
+
+int j1939_send(struct net *net, struct sk_buff *skb)
+{
+	int ret, dlc;
+	canid_t canid;
+	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
+	struct j1939_priv *priv;
+	struct can_frame *cf;
+
+	priv = j1939_priv_get_by_index(net, skb->dev->ifindex);
+	if (!priv) {
+		ret = -EINVAL;
+		goto failed;
+	}
+
+	if (skb->len > 8) {
+		/* re-route via transport protocol */
+		ret = j1939_send_transport(net, priv, skb);
+		j1939_priv_put(priv);
+		return ret;
+	}
+
+	/* apply sanity checks */
+	skcb->addr.pgn &= (j1939_pgn_is_pdu1(skcb->addr.pgn)) ? 0x3ff00 : 0x3ffff;
+	if (skcb->priority > 7)
+		skcb->priority = 6;
+
+	ret = j1939_ac_fixup(priv, skb);
+	j1939_priv_put(priv);
+	if (unlikely(ret))
+		goto failed;
+	dlc = skb->len;
+	if (dlc > 8) {
+		ret = -EMSGSIZE;
+		goto failed;
+	}
+
+	/* re-claim the CAN_HDR from the SKB */
+	cf = skb_push(skb, CAN_HDR);
+
+	/* make it a full can frame again */
+	skb_put(skb, CAN_FTR + (8 - dlc));
+
+	canid = CAN_EFF_FLAG |
+		(skcb->addr.sa) |
+		((skcb->priority & 0x7) << 26);
+	if (j1939_pgn_is_pdu1(skcb->addr.pgn))
+		canid |= ((skcb->addr.pgn & 0x3ff00) << 8) |
+			(skcb->addr.da << 8);
+	else
+		canid |= ((skcb->addr.pgn & J1939_PGN_MAX) << 8);
+
+	cf->can_id = canid;
+	cf->can_dlc = dlc;
+
+	return can_send(skb, 1);
+ failed:
+	consume_skb(skb);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(j1939_send);
 
 static int j1939_netdev_notify(struct notifier_block *nb,
 			       unsigned long msg, void *data)

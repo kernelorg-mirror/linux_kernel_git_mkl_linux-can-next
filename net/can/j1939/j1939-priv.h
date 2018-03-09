@@ -175,7 +175,6 @@ void j1939_netdev_stop(struct net_device *netdev);
 
 void __j1939_priv_release(struct kref *kref);
 struct j1939_priv *j1939_priv_get(struct net_device *dev);
-struct j1939_priv *j1939_priv_get_by_index(struct net *net, int ifindex);
 
 static inline void j1939_priv_set(struct net_device *dev, struct j1939_priv *priv)
 {

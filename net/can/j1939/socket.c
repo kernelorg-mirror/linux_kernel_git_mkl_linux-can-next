@@ -58,6 +58,11 @@ static inline struct j1939_sock *j1939_sk(const struct sock *sk)
 	return container_of(sk, struct j1939_sock, sk);
 }
 
+static inline int j1939_to_sk_priority(priority_t j1939_prio)
+{
+	return 7 - j1939_prio;
+}
+
 /* function to see if pgn is to be evaluated */
 static inline bool pgn_is_valid(pgn_t pgn)
 {

@@ -173,13 +173,8 @@ void _j1939_ecu_unregister(struct j1939_ecu *ecu);
 int j1939_netdev_start(struct net *net, struct net_device *netdev);
 void j1939_netdev_stop(struct net_device *netdev);
 
-void __j1939_priv_release(struct kref *kref);
 struct j1939_priv *j1939_priv_get(struct net_device *dev);
-
-static inline void j1939_priv_put(struct j1939_priv *priv)
-{
-	kref_put(&priv->kref, __j1939_priv_release);
-}
+void j1939_priv_put(struct j1939_priv *priv);
 
 /* notify/alert all j1939 sockets bound to ifindex */
 void j1939_sk_netdev_event(struct net_device *netdev, int error_code);

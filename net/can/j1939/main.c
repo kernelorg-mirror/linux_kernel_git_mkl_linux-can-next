@@ -138,7 +138,7 @@ static inline void j1939_priv_set(struct net_device *dev, struct j1939_priv *pri
 	can_ml_priv->j1939_priv = priv;
 }
 
-void __j1939_priv_release(struct kref *kref)
+static void __j1939_priv_release(struct kref *kref)
 {
 	struct j1939_priv *priv = container_of(kref, struct j1939_priv, kref);
 	struct net_device *netdev = priv->netdev;
@@ -161,6 +161,11 @@ void __j1939_priv_release(struct kref *kref)
 
 	dev_put(netdev);
 	kfree(priv);
+}
+
+void j1939_priv_put(struct j1939_priv *priv)
+{
+	kref_put(&priv->kref, __j1939_priv_release);
 }
 
 int j1939_netdev_start(struct net *net, struct net_device *netdev)

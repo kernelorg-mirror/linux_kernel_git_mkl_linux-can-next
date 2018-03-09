@@ -58,6 +58,12 @@ static inline struct j1939_sock *j1939_sk(const struct sock *sk)
 	return container_of(sk, struct j1939_sock, sk);
 }
 
+/* function to see if pgn is to be evaluated */
+static inline bool pgn_is_valid(pgn_t pgn)
+{
+	return pgn <= PGN_MAX;
+}
+
 /* test function to avoid non-zero DA placeholder for pdu1 pgn's */
 static inline bool pgn_is_clean_pdu(pgn_t pgn)
 {

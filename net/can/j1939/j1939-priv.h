@@ -116,12 +116,6 @@ static inline bool pgn_is_pdu1(pgn_t pgn)
 	return (pgn & 0xff00) < 0xf000;
 }
 
-/* function to see if pgn is to be evaluated */
-static inline bool pgn_is_valid(pgn_t pgn)
-{
-	return pgn <= PGN_MAX;
-}
-
 /* utility to correctly unregister a SA */
 void _j1939_ecu_remove_sa(struct j1939_ecu *ecu);
 void j1939_ecu_remove_sa(struct j1939_ecu *ecu);

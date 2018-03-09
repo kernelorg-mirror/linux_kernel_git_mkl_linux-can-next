@@ -67,7 +67,7 @@ struct j1939_priv {
 	 * also protected by the above lock
 	 * don't use directly, use j1939_ecu_set_address() instead
 	 */
-	struct addr_ent {
+	struct j1939_addr_ent {
 		struct j1939_ecu *ecu;
 		/* count users, to help transport protocol */
 		int nusers;

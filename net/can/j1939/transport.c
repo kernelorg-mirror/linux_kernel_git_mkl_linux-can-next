@@ -226,7 +226,7 @@ static inline pgn_t j1939xtp_ctl_to_pgn(const u8 *dat)
 	pgn_t pgn;
 
 	pgn = (dat[7] << 16) | (dat[6] << 8) | (dat[5] << 0);
-	if (pgn_is_pdu1(pgn))
+	if (j1939_pgn_is_pdu1(pgn))
 		pgn &= 0xffff00;
 	return pgn;
 }

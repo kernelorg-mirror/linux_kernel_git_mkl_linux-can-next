@@ -92,7 +92,7 @@ static inline bool j1939_address_is_unicast(u8 sa)
 	return sa <= J1939_MAX_UNICAST_ADDR;
 }
 
-static inline bool pgn_is_pdu1(pgn_t pgn)
+static inline bool j1939_pgn_is_pdu1(pgn_t pgn)
 {
 	/* ignore dp & res bits for this */
 	return (pgn & 0xff00) < 0xf000;

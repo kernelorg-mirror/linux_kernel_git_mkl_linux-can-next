@@ -85,7 +85,7 @@ static inline bool pgn_is_valid(pgn_t pgn)
 /* test function to avoid non-zero DA placeholder for pdu1 pgn's */
 static inline bool pgn_is_clean_pdu(pgn_t pgn)
 {
-	if (pgn_is_pdu1(pgn))
+	if (j1939_pgn_is_pdu1(pgn))
 		return !(pgn & 0xff);
 	else
 		return true;

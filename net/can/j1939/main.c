@@ -75,7 +75,7 @@ static void j1939_can_recv(struct sk_buff *iskb, void *data)
 	skcb->priority = (cf->can_id >> 26) & 0x7;
 	skcb->addr.sa = cf->can_id;
 	skcb->addr.pgn = (cf->can_id >> 8) & J1939_PGN_MAX;
-	if (pgn_is_pdu1(skcb->addr.pgn)) {
+	if (j1939_pgn_is_pdu1(skcb->addr.pgn)) {
 		/* Type 1: with destination address */
 		skcb->addr.da = skcb->addr.pgn;
 		/* normalize pgn: strip dst address */
@@ -128,7 +128,7 @@ int j1939_send(struct net *net, struct sk_buff *skb)
 	}
 
 	/* apply sanity checks */
-	skcb->addr.pgn &= (pgn_is_pdu1(skcb->addr.pgn)) ? 0x3ff00 : 0x3ffff;
+	skcb->addr.pgn &= (j1939_pgn_is_pdu1(skcb->addr.pgn)) ? 0x3ff00 : 0x3ffff;
 	if (skcb->priority > 7)
 		skcb->priority = 6;
 
@@ -151,7 +151,7 @@ int j1939_send(struct net *net, struct sk_buff *skb)
 	canid = CAN_EFF_FLAG |
 		(skcb->addr.sa) |
 		((skcb->priority & 0x7) << 26);
-	if (pgn_is_pdu1(skcb->addr.pgn))
+	if (j1939_pgn_is_pdu1(skcb->addr.pgn))
 		canid |= ((skcb->addr.pgn & 0x3ff00) << 8) |
 			(skcb->addr.da << 8);
 	else

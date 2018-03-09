@@ -117,6 +117,11 @@ static inline void j1939_session_destroy(struct session *session)
 	kfree(session);
 }
 
+static inline int j1939_cb_is_broadcast(const struct j1939_sk_buff_cb *skcb)
+{
+	return (!skcb->addr.dst_name && (skcb->addr.da == 0xff));
+}
+
 /* clean up work queue */
 static void j1939_tp_del_work(struct work_struct *work)
 {
@@ -490,7 +495,7 @@ static inline void j1939_session_completed(struct net *net, struct session *sess
 static void j1939_session_cancel(struct net *net, struct session *session, int err)
 {
 	if (err >= 0 && j1939_tp_im_involved_anydir(session->skb)) {
-		if (!j1939cb_is_broadcast(session->cb)) {
+		if (!j1939_cb_is_broadcast(session->cb)) {
 			/* do not send aborts on incoming broadcasts */
 			j1939_xtp_tx_abort(session->skb, session->extd,
 					  !(session->cb->src_flags & J1939_ECU_LOCAL),
@@ -673,7 +678,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 	dat = skb->data;
 	pgn = j1939_xtp_ctl_to_pgn(dat);
 
-	if (dat[0] == J1939_TP_CMD_RTS && j1939cb_is_broadcast(cb)) {
+	if (dat[0] == J1939_TP_CMD_RTS && j1939_cb_is_broadcast(cb)) {
 		pr_alert("%s: rts without destination (%i %02x)\n", __func__,
 			 skb->skb_iif, cb->addr.sa);
 		return;
@@ -862,7 +867,7 @@ static void j1939_xtp_rx_dat(struct net *net, struct sk_buff *skb, bool extd)
 	if (packet == session->pkt.done)
 		++session->pkt.done;
 
-	if (!extd && j1939cb_is_broadcast(session->cb)) {
+	if (!extd && j1939_cb_is_broadcast(session->cb)) {
 		final = session->pkt.done >= session->pkt.total;
 		do_cts_eof = 0;
 	} else {
@@ -915,7 +920,7 @@ static int j1939_tp_txnext(struct net *net, struct session *session)
 			dat[2] = (session->skb->len >> 8);
 			dat[3] = (session->skb->len >> 16);
 			dat[4] = (session->skb->len >> 24);
-		} else if (j1939cb_is_broadcast(session->cb)) {
+		} else if (j1939_cb_is_broadcast(session->cb)) {
 			dat[0] = J1939_TP_CMD_BAM;
 			/* fake cts for broadcast */
 			session->pkt.tx = 0;
@@ -989,7 +994,7 @@ static int j1939_tp_txnext(struct net *net, struct session *session)
 	case J1939_TP_CMD_CTS: /* fallthrough */
 	case 0xff: /* did some data */			/* FIXME: let David Jander recheck this */
 	case J1939_ETP_CMD_DPO: /* fallthrough */
-		if ((session->extd || !j1939cb_is_broadcast(session->cb)) &&
+		if ((session->extd || !j1939_cb_is_broadcast(session->cb)) &&
 		    j1939_tp_im_receiver(session->skb)) {
 			if (session->pkt.done >= session->pkt.total) {
 				if (session->extd) {
@@ -1025,7 +1030,7 @@ static int j1939_tp_txnext(struct net *net, struct session *session)
 		tpdat = session->skb->data;
 		ret = 0;
 		pkt_done = 0;
-		pkt_end = (!session->extd && j1939cb_is_broadcast(session->cb))
+		pkt_end = (!session->extd && j1939_cb_is_broadcast(session->cb))
 			? session->pkt.total : session->pkt.last;
 
 		while (session->pkt.tx < pkt_end) {
@@ -1042,7 +1047,7 @@ static int j1939_tp_txnext(struct net *net, struct session *session)
 			session->last_txcmd = 0xff;
 			++pkt_done;
 			++session->pkt.tx;
-			pdelay = j1939cb_is_broadcast(session->cb) ? 50 :
+			pdelay = j1939_cb_is_broadcast(session->cb) ? 50 :
 				packet_delay;
 			if (session->pkt.tx < session->pkt.total && pdelay) {
 				j1939_tp_schedule_txtimer(session, pdelay);
@@ -1109,7 +1114,7 @@ int j1939_send_transport(struct net *net, struct j1939_priv *priv, struct sk_buf
 		return -EMSGSIZE;
 
 	if (skb->len > J1939_MAX_TP_PACKET_SIZE) {
-		if (j1939cb_is_broadcast(cb))
+		if (j1939_cb_is_broadcast(cb))
 			return -EDESTADDRREQ;
 	}
 
@@ -1137,7 +1142,7 @@ int j1939_send_transport(struct net *net, struct j1939_priv *priv, struct sk_buf
 	session->pkt.total = (skb->len + 6) / 7;
 	session->pkt.block = session->extd ? 255 :
 		min(block ?: 255, session->pkt.total);
-	if (j1939cb_is_broadcast(session->cb))
+	if (j1939_cb_is_broadcast(session->cb))
 		/* set the end-packet for broadcast */
 		session->pkt.last = session->pkt.total;
 

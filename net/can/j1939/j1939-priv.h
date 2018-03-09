@@ -144,11 +144,6 @@ static inline struct j1939_sk_buff_cb *j1939_get_cb(struct sk_buff *skb)
 	return (struct j1939_sk_buff_cb *)skb->cb;
 }
 
-static inline int j1939cb_is_broadcast(const struct j1939_sk_buff_cb *skcb)
-{
-	return (!skcb->addr.dst_name && (skcb->addr.da == 0xff));
-}
-
 int j1939_send(struct net *net, struct sk_buff *skb);
 void j1939_recv(struct sk_buff *skb);
 

@@ -196,7 +196,7 @@ static inline int j1939_tp_im_receiver(struct sk_buff *skb)
 {
 	struct j1939_sk_buff_cb *cb = j1939_get_cb(skb);
 
-	return cb->dst_flags & ECU_LOCAL;
+	return cb->dst_flags & J1939_ECU_LOCAL;
 }
 
 /* see if we are sender */
@@ -204,7 +204,7 @@ static inline int j1939_tp_im_transmitter(struct sk_buff *skb)
 {
 	struct j1939_sk_buff_cb *cb = j1939_get_cb(skb);
 
-	return cb->src_flags & ECU_LOCAL;
+	return cb->src_flags & J1939_ECU_LOCAL;
 }
 
 /* see if we are involved as either receiver or transmitter */
@@ -217,7 +217,7 @@ static int j1939_tp_im_involved_anydir(struct sk_buff *skb)
 {
 	struct j1939_sk_buff_cb *cb = j1939_get_cb(skb);
 
-	return (cb->src_flags | cb->dst_flags) & ECU_LOCAL;
+	return (cb->src_flags | cb->dst_flags) & J1939_ECU_LOCAL;
 }
 
 /* extract pgn from flow-ctl message */
@@ -493,7 +493,7 @@ static void j1939_session_cancel(struct net *net, struct session *session, int e
 		if (!j1939cb_is_broadcast(session->cb)) {
 			/* do not send aborts on incoming broadcasts */
 			j1939xtp_tx_abort(session->skb, session->extd,
-					  !(session->cb->src_flags & ECU_LOCAL),
+					  !(session->cb->src_flags & J1939_ECU_LOCAL),
 					  err, session->cb->addr.pgn);
 		}
 	}
@@ -1121,9 +1121,9 @@ int j1939_send_transport(struct net *net, struct j1939_priv *priv, struct sk_buf
 	/* fix dst_flags, it may be used there soon */
 	if (j1939_address_is_unicast(cb->addr.da) &&
 	    priv->ents[cb->addr.da].nusers)
-		cb->dst_flags |= ECU_LOCAL;
+		cb->dst_flags |= J1939_ECU_LOCAL;
 	/* src is always local, I'm sending ... */
-	cb->src_flags |= ECU_LOCAL;
+	cb->src_flags |= J1939_ECU_LOCAL;
 
 	/* prepare new session */
 	session = j1939_session_new(skb);

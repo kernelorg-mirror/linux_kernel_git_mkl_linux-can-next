@@ -123,10 +123,9 @@ struct j1939_sk_buff_cb {
 	/* Flags for quick lookups during skb processing
 	 * These are set in the receive path only
 	 */
+#define J1939_ECU_LOCAL	BIT(0)
 	int src_flags;
 	int dst_flags;
-
-#define ECU_LOCAL 1
 
 	/* for tx, MSG_SYN will be used to sync on sockets */
 	int msg_flags;

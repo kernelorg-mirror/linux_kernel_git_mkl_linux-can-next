@@ -153,7 +153,7 @@ static void __j1939_priv_release(struct kref *kref)
 	/* cleanup priv */
 	write_lock_bh(&priv->lock);
 	list_for_each_entry_safe(ecu, tmp, &priv->ecus, list)
-		_j1939_ecu_unregister(ecu);
+		j1939_ecu_unregister_locked(ecu);
 	write_unlock_bh(&priv->lock);
 
 	/* unlink from netdev */

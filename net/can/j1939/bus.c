@@ -127,7 +127,7 @@ struct j1939_ecu *j1939_ecu_get_register_locked(struct j1939_priv *priv, name_t 
 	return ecu;
 }
 
-void _j1939_ecu_unregister(struct j1939_ecu *ecu)
+void j1939_ecu_unregister_locked(struct j1939_ecu *ecu)
 {
 	lockdep_assert_held(&ecu->priv->lock);
 

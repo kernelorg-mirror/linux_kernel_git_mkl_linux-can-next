@@ -153,7 +153,7 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 		goto done;
 
 	if (skcb->addr.sa >= J1939_IDLE_ADDR) {
-		_j1939_ecu_unregister(ecu);
+		j1939_ecu_unregister_locked(ecu);
 		goto done;
 	}
 
@@ -167,11 +167,11 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 	prev = priv->ents[skcb->addr.sa].ecu;
 	if (prev && prev != ecu) {
 		if (ecu->name > prev->name) {
-			_j1939_ecu_unregister(ecu);
+			j1939_ecu_unregister_locked(ecu);
 			goto done;
 		} else {
 			/* kick prev */
-			_j1939_ecu_unregister(prev);
+			j1939_ecu_unregister_locked(prev);
 		}
 	}
 

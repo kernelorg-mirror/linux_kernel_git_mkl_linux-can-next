@@ -163,7 +163,7 @@ struct j1939_ecu *j1939_ecu_get_register_locked(struct j1939_priv *priv,
 					  name_t name, bool create_if_necessary);
 
 /* unregister must be called with lock held */
-void _j1939_ecu_unregister(struct j1939_ecu *ecu);
+void j1939_ecu_unregister_locked(struct j1939_ecu *ecu);
 
 int j1939_netdev_start(struct net *net, struct net_device *netdev);
 void j1939_netdev_stop(struct net_device *netdev);

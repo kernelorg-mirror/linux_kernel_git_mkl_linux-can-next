@@ -61,7 +61,10 @@ static inline struct j1939_sock *j1939_sk(const struct sock *sk)
 /* test function to avoid non-zero DA placeholder for pdu1 pgn's */
 static inline bool pgn_is_clean_pdu(pgn_t pgn)
 {
-	return pgn_is_pdu1(pgn) ? !(pgn & 0xff) : true;
+	if (pgn_is_pdu1(pgn))
+		return !(pgn & 0xff);
+	else
+		return true;
 }
 
 /* j1939_sock_pending_add_first

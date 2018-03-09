@@ -29,7 +29,7 @@
 }
 
 /* ECU device interface */
-void _j1939_ecu_remove_sa(struct j1939_ecu *ecu)
+void j1939_ecu_remove_sa_locked(struct j1939_ecu *ecu)
 {
 	lockdep_assert_held(&ecu->priv->lock);
 
@@ -47,7 +47,7 @@ void j1939_ecu_remove_sa(struct j1939_ecu *ecu)
 		return;
 
 	write_lock_bh(&ecu->priv->lock);
-	_j1939_ecu_remove_sa(ecu);
+	j1939_ecu_remove_sa_locked(ecu);
 	write_unlock_bh(&ecu->priv->lock);
 }
 
@@ -134,7 +134,7 @@ void j1939_ecu_unregister_locked(struct j1939_ecu *ecu)
 	ecu_dbg(ecu, "unregister\n");
 	hrtimer_cancel(&ecu->ac_timer);
 
-	_j1939_ecu_remove_sa(ecu);
+	j1939_ecu_remove_sa_locked(ecu);
 	list_del_init(&ecu->list);
 	j1939_ecu_put(ecu);
 }

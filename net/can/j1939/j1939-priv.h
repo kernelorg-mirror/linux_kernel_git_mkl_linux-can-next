@@ -99,7 +99,7 @@ static inline bool j1939_pgn_is_pdu1(pgn_t pgn)
 }
 
 /* utility to correctly unregister a SA */
-void _j1939_ecu_remove_sa(struct j1939_ecu *ecu);
+void j1939_ecu_remove_sa_locked(struct j1939_ecu *ecu);
 void j1939_ecu_remove_sa(struct j1939_ecu *ecu);
 
 u8 j1939_name_to_sa(struct j1939_priv *priv, name_t name);

@@ -82,19 +82,6 @@ void j1939_ecu_put(struct j1939_ecu *ecu);
 int j1939_local_get(struct j1939_priv *priv, name_t name, u8 sa);
 void j1939_local_put(struct j1939_priv *priv, name_t name, u8 sa);
 
-/* conversion function between (struct sock | struct sk_buff)->sk_priority
- * from linux and j1939 priority field
- */
-static inline priority_t j1939_prio(int sk_priority)
-{
-	if (sk_priority < 0)
-		return 6; /* default */
-	else if (sk_priority > 7)
-		return 0;
-	else
-		return 7 - sk_priority;
-}
-
 static inline bool j1939_address_is_valid(u8 sa)
 {
 	return sa != J1939_NO_ADDR;

@@ -87,7 +87,7 @@ static void j1939_ecu_get(struct j1939_ecu *ecu)
 	kref_get(&ecu->kref);
 }
 
-struct j1939_ecu *_j1939_ecu_get_register(struct j1939_priv *priv, name_t name,
+struct j1939_ecu *j1939_ecu_get_register_locked(struct j1939_priv *priv, name_t name,
 					  bool create_if_necessary)
 {
 	struct j1939_ecu *ecu;
@@ -228,7 +228,7 @@ int j1939_local_get(struct j1939_priv *priv, name_t name, u8 sa)
 	if (!name)
 		goto done;
 
-	ecu = _j1939_ecu_get_register(priv, name, true);
+	ecu = j1939_ecu_get_register_locked(priv, name, true);
 	err = PTR_ERR_OR_ZERO(ecu);
 	if (err)
 		goto done;

@@ -176,13 +176,6 @@ void j1939_netdev_stop(struct net_device *netdev);
 void __j1939_priv_release(struct kref *kref);
 struct j1939_priv *j1939_priv_get(struct net_device *dev);
 
-static inline void j1939_priv_set(struct net_device *dev, struct j1939_priv *priv)
-{
-	struct can_ml_priv *can_ml_priv = dev->ml_priv;
-
-	can_ml_priv->j1939_priv = priv;
-}
-
 static inline void j1939_priv_put(struct j1939_priv *priv)
 {
 	kref_put(&priv->kref, __j1939_priv_release);

@@ -131,6 +131,13 @@ static struct j1939_priv *j1939_priv_create(struct net_device *netdev)
 	return priv;
 }
 
+static inline void j1939_priv_set(struct net_device *dev, struct j1939_priv *priv)
+{
+	struct can_ml_priv *can_ml_priv = dev->ml_priv;
+
+	can_ml_priv->j1939_priv = priv;
+}
+
 void __j1939_priv_release(struct kref *kref)
 {
 	struct j1939_priv *priv = container_of(kref, struct j1939_priv, kref);

@@ -122,12 +122,6 @@ static inline bool pgn_is_valid(pgn_t pgn)
 	return pgn <= PGN_MAX;
 }
 
-/* test function to avoid non-zero DA placeholder for pdu1 pgn's */
-static inline bool pgn_is_clean_pdu(pgn_t pgn)
-{
-	return pgn_is_pdu1(pgn) ? !(pgn & 0xff) : true;
-}
-
 /* utility to correctly unregister a SA */
 void _j1939_ecu_remove_sa(struct j1939_ecu *ecu);
 void j1939_ecu_remove_sa(struct j1939_ecu *ecu);

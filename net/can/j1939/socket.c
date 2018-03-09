@@ -58,6 +58,12 @@ static inline struct j1939_sock *j1939_sk(const struct sock *sk)
 	return container_of(sk, struct j1939_sock, sk);
 }
 
+/* test function to avoid non-zero DA placeholder for pdu1 pgn's */
+static inline bool pgn_is_clean_pdu(pgn_t pgn)
+{
+	return pgn_is_pdu1(pgn) ? !(pgn & 0xff) : true;
+}
+
 /* j1939_sock_pending_add_first
  * Succeeds when the first pending SKB is scheduled
  * Fails when SKB are already pending

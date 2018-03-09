@@ -117,7 +117,7 @@ static inline void j1939_session_destroy(struct session *session)
 	kfree(session);
 }
 
-static inline int j1939_cb_is_broadcast(const struct j1939_sk_buff_cb *skcb)
+static inline bool j1939_cb_is_broadcast(const struct j1939_sk_buff_cb *skcb)
 {
 	return (!skcb->addr.dst_name && (skcb->addr.da == 0xff));
 }

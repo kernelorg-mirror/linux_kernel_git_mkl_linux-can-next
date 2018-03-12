@@ -101,7 +101,7 @@ static inline void j1939_fix_cb(struct j1939_sk_buff_cb *cb)
 	cb->msg_flags &= ~MSG_SYN;
 }
 
-static inline struct list_head *sessionq(struct net *net, bool extd)
+static inline struct list_head *j1939_sessionq(struct net *net, bool extd)
 {
 	return extd ? &net->can_j1939.tp_extsessionq :
 		&net->can_j1939.tp_sessionq;
@@ -528,7 +528,7 @@ static void _j1939_xtp_rx_bad_message(struct net *net, struct sk_buff *skb, bool
 	pgn_t pgn;
 
 	pgn = j1939_xtp_ctl_to_pgn(skb->data);
-	session = j1939_tp_find(net, sessionq(net, extd), skb, reverse);
+	session = j1939_tp_find(net, j1939_sessionq(net, extd), skb, reverse);
 	if (session /*&& (session->cb->addr.pgn == pgn)*/) {
 		/* do not allow TP control messages on 2 pgn's */
 		j1939_session_cancel(net, session, J1939_ABORT_FAULT);
@@ -556,7 +556,7 @@ static void _j1939_xtp_rx_abort(struct net *net, struct sk_buff *skb, bool extd,
 	pgn_t pgn;
 
 	pgn = j1939_xtp_ctl_to_pgn(skb->data);
-	session = j1939_tp_find(net, sessionq(net, extd), skb, reverse);
+	session = j1939_tp_find(net, j1939_sessionq(net, extd), skb, reverse);
 	if (!session)
 		return;
 	if (session->transmission && !session->last_txcmd) {
@@ -591,7 +591,7 @@ static void j1939_xtp_rx_eof(struct net *net, struct sk_buff *skb, bool extd)
 
 	/* end of tx cycle */
 	pgn = j1939_xtp_ctl_to_pgn(skb->data);
-	session = j1939_tp_find(net, sessionq(net, extd), skb, true);
+	session = j1939_tp_find(net, j1939_sessionq(net, extd), skb, true);
 	if (!session) {
 		/* strange, we had EOF on closed connection
 		 * do nothing, as EOF closes the connection anyway
@@ -618,7 +618,7 @@ static void j1939_xtp_rx_cts(struct net *net, struct sk_buff *skb, bool extd)
 
 	dat = skb->data;
 	pgn = j1939_xtp_ctl_to_pgn(skb->data);
-	session = j1939_tp_find(net, sessionq(net, extd), skb, true);
+	session = j1939_tp_find(net, j1939_sessionq(net, extd), skb, true);
 	if (!session) {
 		/* 'CTS shall be ignored' */
 		return;
@@ -689,7 +689,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 	/* TODO: abort RTS when a similar
 	 * TP is pending in the other direction
 	 */
-	session = j1939_tp_find(net, sessionq(net, extd), skb, false);
+	session = j1939_tp_find(net, j1939_sessionq(net, extd), skb, false);
 	if (session && !j1939_tp_im_transmitter(skb)) {
 		/* RTS on pending connection */
 		j1939_session_cancel(net, session, J1939_ABORT_BUSY);
@@ -762,7 +762,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 		session->pkt.tx = 0;
 		j1939_session_get(session); /* equivalent to j1939_tp_find() */
 		j1939_sessionlist_lock(net);
-		list_add_tail(&session->list, sessionq(net, extd));
+		list_add_tail(&session->list, j1939_sessionq(net, extd));
 		j1939_sessionlist_unlock(net);
 	}
 	session->last_cmd = dat[0];
@@ -789,7 +789,7 @@ static void j1939_xtp_rx_dpo(struct net *net, struct sk_buff *skb, bool extd)
 	const u8 *dat = skb->data;
 
 	pgn = j1939_xtp_ctl_to_pgn(dat);
-	session = j1939_tp_find(net, sessionq(net, extd), skb, false);
+	session = j1939_tp_find(net, j1939_sessionq(net, extd), skb, false);
 	if (!session) {
 		pr_info("%s: %s\n", __func__, "no connection found");
 		return;
@@ -821,7 +821,7 @@ static void j1939_xtp_rx_dat(struct net *net, struct sk_buff *skb, bool extd)
 	int do_cts_eof;
 	int packet;
 
-	session = j1939_tp_find(net, sessionq(net, extd), skb, false);
+	session = j1939_tp_find(net, j1939_sessionq(net, extd), skb, false);
 	if (!session) {
 		pr_info("%s:%s\n", __func__, "no connection found");
 		return;
@@ -1087,13 +1087,13 @@ static int j1939_session_insert(struct net *net, struct session *session)
 	struct session *pending;
 
 	j1939_sessionlist_lock(net);
-	pending = j1939_tp_find_locked(net, sessionq(net, session->extd),
+	pending = j1939_tp_find_locked(net, j1939_sessionq(net, session->extd),
 				session->skb, false);
 	if (pending)
 		/* revert the effect of find() */
 		j1939_session_put(net, pending);
 	else
-		list_add_tail(&session->list, sessionq(net, session->extd));
+		list_add_tail(&session->list, j1939_sessionq(net, session->extd));
 	j1939_sessionlist_unlock(net);
 	return pending ? 0 : 1;
 }

@@ -33,10 +33,10 @@ MODULE_ALIAS("can-proto-" __stringify(CAN_J1939));
 /* LOWLEVEL CAN interface */
 
 /* CAN_HDR: #bytes before can_frame data part */
-#define CAN_HDR (offsetof(struct can_frame, data))
+#define J1939_CAN_HDR (offsetof(struct can_frame, data))
 
 /* CAN_FTR: #bytes beyond data part */
-#define CAN_FTR (sizeof(struct can_frame) - CAN_HDR - \
+#define J1939_CAN_FTR (sizeof(struct can_frame) - J1939_CAN_HDR - \
 		 sizeof(((struct can_frame *)0)->data))
 
 /* lowest layer */
@@ -61,7 +61,7 @@ static void j1939_can_recv(struct sk_buff *iskb, void *data)
 	 * returns the actual payload
 	 */
 	cf = (void *)skb->data;
-	skb_pull(skb, CAN_HDR);
+	skb_pull(skb, J1939_CAN_HDR);
 
 	/* fix length, set to dlc, with 8 maximum */
 	skb_trim(skb, min_t(uint8_t, cf->can_dlc, 8));
@@ -300,10 +300,10 @@ int j1939_send(struct net *net, struct sk_buff *skb)
 	}
 
 	/* re-claim the CAN_HDR from the SKB */
-	cf = skb_push(skb, CAN_HDR);
+	cf = skb_push(skb, J1939_CAN_HDR);
 
 	/* make it a full can frame again */
-	skb_put(skb, CAN_FTR + (8 - dlc));
+	skb_put(skb, J1939_CAN_FTR + (8 - dlc));
 
 	canid = CAN_EFF_FLAG |
 		(skcb->addr.sa) |

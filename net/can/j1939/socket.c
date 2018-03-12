@@ -77,7 +77,7 @@ static inline int j1939_to_sk_priority(priority_t j1939_prio)
 }
 
 /* function to see if pgn is to be evaluated */
-static inline bool pgn_is_valid(pgn_t pgn)
+static inline bool j1939_pgn_is_valid(pgn_t pgn)
 {
 	return pgn <= J1939_PGN_MAX;
 }
@@ -241,7 +241,7 @@ static int j1939_sk_sanity_check(struct sockaddr_can *addr, int len)
 		return -EINVAL;
 	if (!addr->can_ifindex)
 		return -ENODEV;
-	if (pgn_is_valid(addr->can_addr.j1939.pgn) &&
+	if (j1939_pgn_is_valid(addr->can_addr.j1939.pgn) &&
 	    !j1939_pgn_is_clean_pdu(addr->can_addr.j1939.pgn))
 		return -EINVAL;
 
@@ -298,7 +298,7 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 	}
 
 	/* set default transmit pgn */
-	if (pgn_is_valid(addr->can_addr.j1939.pgn))
+	if (j1939_pgn_is_valid(addr->can_addr.j1939.pgn))
 		jsk->addr.pgn = addr->can_addr.j1939.pgn;
 	jsk->addr.src_name = addr->can_addr.j1939.name;
 	jsk->addr.sa = addr->can_addr.j1939.addr;
@@ -355,7 +355,7 @@ static int j1939_sk_connect(struct socket *sock, struct sockaddr *uaddr,
 	jsk->addr.dst_name = addr->can_addr.j1939.name;
 	jsk->addr.da = addr->can_addr.j1939.addr;
 
-	if (pgn_is_valid(addr->can_addr.j1939.pgn))
+	if (j1939_pgn_is_valid(addr->can_addr.j1939.pgn))
 		jsk->addr.pgn = addr->can_addr.j1939.pgn;
 
 	jsk->state |= J1939_SOCK_CONNECTED;
@@ -651,7 +651,7 @@ static int j1939_sk_sendmsg(struct socket *sock, struct msghdr *msg, size_t size
 			return -EINVAL;
 		if (addr->can_family != AF_CAN)
 			return -EINVAL;
-		if (pgn_is_valid(addr->can_addr.j1939.pgn) &&
+		if (j1939_pgn_is_valid(addr->can_addr.j1939.pgn) &&
 		    !j1939_pgn_is_clean_pdu(addr->can_addr.j1939.pgn))
 			return -EINVAL;
 		/* TODO: always check if ifindex is correct? */
@@ -697,10 +697,10 @@ static int j1939_sk_sendmsg(struct socket *sock, struct msghdr *msg, size_t size
 			skcb->addr.dst_name = addr->can_addr.j1939.name;
 			skcb->addr.da = addr->can_addr.j1939.addr;
 		}
-		if (pgn_is_valid(addr->can_addr.j1939.pgn))
+		if (j1939_pgn_is_valid(addr->can_addr.j1939.pgn))
 			skcb->addr.pgn = addr->can_addr.j1939.pgn;
 	}
-	if (!pgn_is_valid(skcb->addr.pgn)) {
+	if (!j1939_pgn_is_valid(skcb->addr.pgn)) {
 		ret = -EINVAL;
 		goto free_skb;
 	}

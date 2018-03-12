@@ -160,7 +160,7 @@ void j1939_ac_recv(struct j1939_priv *priv, struct sk_buff *skb);
  * when a matching ecu already exists, then that is returned
  */
 struct j1939_ecu *j1939_ecu_get_register_locked(struct j1939_priv *priv,
-					  name_t name, bool create_if_necessary);
+						name_t name, bool create_if_necessary);
 
 /* unregister must be called with lock held */
 void j1939_ecu_unregister_locked(struct j1939_ecu *ecu);

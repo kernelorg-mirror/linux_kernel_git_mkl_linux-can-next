@@ -328,7 +328,7 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 }
 
 static int j1939_sk_connect(struct socket *sock, struct sockaddr *uaddr,
-			   int len, int flags)
+			    int len, int flags)
 {
 	struct sockaddr_can *addr = (struct sockaddr_can *)uaddr;
 	struct j1939_sock *jsk = j1939_sk(sock->sk);
@@ -366,7 +366,7 @@ static int j1939_sk_connect(struct socket *sock, struct sockaddr *uaddr,
 }
 
 static void j1939_sk_sock2sockaddr_can(struct sockaddr_can *addr,
-				      const struct j1939_sock *jsk, int peer)
+				       const struct j1939_sock *jsk, int peer)
 {
 	addr->can_family = AF_CAN;
 	addr->can_ifindex = jsk->sk.sk_bound_dev_if;
@@ -444,7 +444,7 @@ static int j1939_sk_release(struct socket *sock)
 }
 
 static int j1939_sk_setsockopt_flag(struct j1939_sock *jsk, char __user *optval,
-				   unsigned int optlen, int flag)
+				    unsigned int optlen, int flag)
 {
 	int tmp;
 
@@ -462,7 +462,7 @@ static int j1939_sk_setsockopt_flag(struct j1939_sock *jsk, char __user *optval,
 }
 
 static int j1939_sk_setsockopt(struct socket *sock, int level, int optname,
-			      char __user *optval, unsigned int optlen)
+			       char __user *optval, unsigned int optlen)
 {
 	struct sock *sk = sock->sk;
 	struct j1939_sock *jsk = j1939_sk(sk);
@@ -497,10 +497,10 @@ static int j1939_sk_setsockopt(struct socket *sock, int level, int optname,
 		return 0;
 	case SO_J1939_PROMISC:
 		return j1939_sk_setsockopt_flag(jsk, optval, optlen,
-					       J1939_SOCK_PROMISC);
+						J1939_SOCK_PROMISC);
 	case SO_J1939_RECV_OWN:
 		return j1939_sk_setsockopt_flag(jsk, optval, optlen,
-					       J1939_SOCK_RECV_OWN);
+						J1939_SOCK_RECV_OWN);
 	case SO_J1939_SEND_PRIO:
 		if (optlen != sizeof(tmp))
 			return -EINVAL;
@@ -520,7 +520,7 @@ static int j1939_sk_setsockopt(struct socket *sock, int level, int optname,
 }
 
 static int j1939_sk_getsockopt(struct socket *sock, int level, int optname,
-			      char __user *optval, int __user *optlen)
+			       char __user *optval, int __user *optlen)
 {
 	struct sock *sk = sock->sk;
 	struct j1939_sock *jsk = j1939_sk(sk);
@@ -571,7 +571,7 @@ static int j1939_sk_getsockopt(struct socket *sock, int level, int optname,
 }
 
 static int j1939_sk_recvmsg(struct socket *sock, struct msghdr *msg,
-			   size_t size, int flags)
+			    size_t size, int flags)
 {
 	struct sock *sk = sock->sk;
 	struct sk_buff *skb;

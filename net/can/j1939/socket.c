@@ -83,7 +83,7 @@ static inline bool pgn_is_valid(pgn_t pgn)
 }
 
 /* test function to avoid non-zero DA placeholder for pdu1 pgn's */
-static inline bool pgn_is_clean_pdu(pgn_t pgn)
+static inline bool j1939_pgn_is_clean_pdu(pgn_t pgn)
 {
 	if (j1939_pgn_is_pdu1(pgn))
 		return !(pgn & 0xff);
@@ -242,7 +242,7 @@ static int j1939_sk_sanity_check(struct sockaddr_can *addr, int len)
 	if (!addr->can_ifindex)
 		return -ENODEV;
 	if (pgn_is_valid(addr->can_addr.j1939.pgn) &&
-	    !pgn_is_clean_pdu(addr->can_addr.j1939.pgn))
+	    !j1939_pgn_is_clean_pdu(addr->can_addr.j1939.pgn))
 		return -EINVAL;
 
 	return 0;
@@ -652,7 +652,7 @@ static int j1939_sk_sendmsg(struct socket *sock, struct msghdr *msg, size_t size
 		if (addr->can_family != AF_CAN)
 			return -EINVAL;
 		if (pgn_is_valid(addr->can_addr.j1939.pgn) &&
-		    !pgn_is_clean_pdu(addr->can_addr.j1939.pgn))
+		    !j1939_pgn_is_clean_pdu(addr->can_addr.j1939.pgn))
 			return -EINVAL;
 		/* TODO: always check if ifindex is correct? */
 		if (addr->can_ifindex && ifindex != addr->can_ifindex)

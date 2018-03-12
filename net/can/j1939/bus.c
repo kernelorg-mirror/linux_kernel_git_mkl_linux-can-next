@@ -87,8 +87,9 @@ static void j1939_ecu_get(struct j1939_ecu *ecu)
 	kref_get(&ecu->kref);
 }
 
-struct j1939_ecu *j1939_ecu_get_register_locked(struct j1939_priv *priv, name_t name,
-					  bool create_if_necessary)
+struct j1939_ecu *j1939_ecu_get_register_locked(struct j1939_priv *priv,
+						name_t name,
+						bool create_if_necessary)
 {
 	struct j1939_ecu *ecu;
 
@@ -240,7 +241,7 @@ int j1939_local_get(struct j1939_priv *priv, name_t name, u8 sa)
 		/* ecu's sa is active already */
 		priv->ents[ecu->sa].nusers++;
 
-done:
+ done:
 	write_unlock_bh(&priv->lock);
 
 	return err;
@@ -269,6 +270,6 @@ void j1939_local_put(struct j1939_priv *priv, name_t name, u8 sa)
 		priv->ents[ecu->sa].nusers--;
 	j1939_ecu_put(ecu);
 
-done:
+ done:
 	write_unlock_bh(&priv->lock);
 }

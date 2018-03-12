@@ -152,7 +152,7 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 	if (IS_ERR(ecu))
 		goto done;
 
-	if (skcb->addr.sa >= J1939_IDLE_ADDR) {
+	if (skcb->addr.sa == J1939_IDLE_ADDR) {
 		j1939_ecu_unregister_locked(ecu);
 		goto done;
 	}

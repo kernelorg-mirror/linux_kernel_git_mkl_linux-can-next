@@ -47,11 +47,11 @@
 #define J1939_MAX_TP_PACKET_SIZE (7 * 0xff)
 #define J1939_MAX_ETP_PACKET_SIZE (7 * 0x00ffffff)
 
-static unsigned int block = 255;
-static unsigned int max_packet_size = J1939_MAX_ETP_PACKET_SIZE;
-static unsigned int retry_ms = 20;
-static unsigned int packet_delay;
-static unsigned int padding = 1;
+static unsigned int j1939_tp_block = 255;
+static unsigned int j1939_tp_max_packet_size = J1939_MAX_ETP_PACKET_SIZE;
+static unsigned int j1939_tp_retry_ms = 20;
+static unsigned int j1939_tp_packet_delay;
+static unsigned int j1939_tp_padding = 1;
 
 struct j1939_session {
 	struct list_head list;
@@ -381,7 +381,7 @@ static int j1939_tp_tx_dat(struct sk_buff *related, bool extd,
 
 	skdat = skb_put(skb, len);
 	memcpy(skdat, dat, len);
-	if (padding && len < 8)
+	if (j1939_tp_padding && len < 8)
 		memset(skb_put(skb, 8 - len), 0xff, 8 - len);
 
 	return j1939_send(dev_net(skb->dev), skb);
@@ -448,7 +448,7 @@ static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 	j1939_session_get(session);
 	ret = j1939_tp_txnext(net, session);
 	if (ret < 0)
-		j1939_tp_schedule_txtimer(session, retry_ms ?: 20);
+		j1939_tp_schedule_txtimer(session, j1939_tp_retry_ms ?: 20);
 	j1939_session_put(net, session);
 
 	return HRTIMER_NORESTART;
@@ -724,7 +724,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 			len = j1939_etp_ctl_to_size(dat);
 			if (len > J1939_MAX_ETP_PACKET_SIZE)
 				abort = J1939_ABORT_FAULT;
-			else if (max_packet_size && (len > max_packet_size))
+			else if (j1939_tp_max_packet_size && (len > j1939_tp_max_packet_size))
 				abort = J1939_ABORT_RESOURCE;
 			else if (len <= J1939_MAX_TP_PACKET_SIZE)
 				abort = J1939_ABORT_FAULT;
@@ -732,7 +732,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 			len = j1939_tp_ctl_to_size(dat);
 			if (len > J1939_MAX_TP_PACKET_SIZE)
 				abort = J1939_ABORT_FAULT;
-			else if (max_packet_size && (len > max_packet_size))
+			else if (j1939_tp_max_packet_size && (len > j1939_tp_max_packet_size))
 				abort = J1939_ABORT_RESOURCE;
 		}
 		if (abort) {
@@ -949,7 +949,7 @@ static int j1939_tp_txnext(struct net *net, struct j1939_session *session)
  tx_cts:
 		ret = 0;
 		len = session->pkt.total - session->pkt.done;
-		len = min(max(len, session->pkt.block), block ?: 255);
+		len = min(max(len, session->pkt.block), j1939_tp_block ?: 255);
 
 		if (session->extd) {
 			pkt = session->pkt.done + 1;
@@ -1050,7 +1050,7 @@ static int j1939_tp_txnext(struct net *net, struct j1939_session *session)
 			++pkt_done;
 			++session->pkt.tx;
 			pdelay = j1939_cb_is_broadcast(session->cb) ? 50 :
-				packet_delay;
+				j1939_tp_packet_delay;
 			if (session->pkt.tx < session->pkt.total && pdelay) {
 				j1939_tp_schedule_txtimer(session, pdelay);
 				break;
@@ -1112,7 +1112,7 @@ int j1939_send_transport(struct net *net, struct j1939_priv *priv, struct sk_buf
 		/* avoid conflict */
 		return -EDOM;
 	else if ((skb->len > J1939_MAX_ETP_PACKET_SIZE) ||
-		 (max_packet_size && (skb->len > max_packet_size)))
+		 (j1939_tp_max_packet_size && (skb->len > j1939_tp_max_packet_size)))
 		return -EMSGSIZE;
 
 	if (skb->len > J1939_MAX_TP_PACKET_SIZE) {
@@ -1143,7 +1143,7 @@ int j1939_send_transport(struct net *net, struct j1939_priv *priv, struct sk_buf
 	session->transmission = true;
 	session->pkt.total = (skb->len + 6) / 7;
 	session->pkt.block = session->extd ? 255 :
-		min(block ?: 255, session->pkt.total);
+		min(j1939_tp_block ?: 255, session->pkt.total);
 	if (j1939_cb_is_broadcast(session->cb))
 		/* set the end-packet for broadcast */
 		session->pkt.last = session->pkt.total;

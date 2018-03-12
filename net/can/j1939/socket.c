@@ -71,9 +71,9 @@ static inline priority_t j1939_prio(int sk_priority)
 		return 7 - sk_priority;
 }
 
-static inline int j1939_to_sk_priority(priority_t j1939_prio)
+static inline int j1939_to_sk_priority(priority_t prio)
 {
-	return 7 - j1939_prio;
+	return 7 - prio;
 }
 
 /* function to see if pgn is to be evaluated */

@@ -90,8 +90,8 @@ struct j1939_session {
 /* forward declarations */
 static struct j1939_session *j1939_session_new(struct sk_buff *skb);
 static struct j1939_session *j1939_session_fresh_new(int size,
-					       struct sk_buff *rel_skb,
-					       pgn_t pgn);
+						     struct sk_buff *rel_skb,
+						     pgn_t pgn);
 static int j1939_tp_txnext(struct net *net, struct j1939_session *session);
 static inline void j1939_tp_schedule_txtimer(struct j1939_session *session, int msec);
 
@@ -259,7 +259,7 @@ static inline unsigned int j1939_etp_ctl_to_size(const u8 *dat)
  * with reverse == true
  */
 static bool j1939_tp_match(struct j1939_session *session, struct sk_buff *skb,
-			  bool reverse)
+			   bool reverse)
 {
 	struct j1939_sk_buff_cb *cb = j1939_get_cb(skb);
 
@@ -299,7 +299,7 @@ static bool j1939_tp_match(struct j1939_session *session, struct sk_buff *skb,
 }
 
 static struct j1939_session *j1939_tp_find_locked(struct net *net, struct list_head *root,
-				     struct sk_buff *skb, bool reverse)
+						  struct sk_buff *skb, bool reverse)
 {
 	struct j1939_session *session;
 
@@ -316,7 +316,7 @@ static struct j1939_session *j1939_tp_find_locked(struct net *net, struct list_h
 }
 
 static struct j1939_session *j1939_tp_find(struct net *net, struct list_head *root,
-				    struct sk_buff *skb, bool reverse)
+					   struct sk_buff *skb, bool reverse)
 {
 	struct j1939_session *session;
 
@@ -335,7 +335,7 @@ static void j1939_skbcb_swap(struct j1939_sk_buff_cb *cb)
 }
 
 static struct sk_buff *j1939_tp_tx_dat_prep(struct sk_buff *related,
-					   bool extd, bool ctl, bool swap_src_dst)
+					    bool extd, bool ctl, bool swap_src_dst)
 {
 	struct sk_buff *skb;
 	struct j1939_sk_buff_cb *skb_cb;
@@ -370,7 +370,7 @@ static struct sk_buff *j1939_tp_tx_dat_prep(struct sk_buff *related,
 
 /* TP transmit packet functions */
 static int j1939_tp_tx_dat(struct sk_buff *related, bool extd,
-			  const u8 *dat, int len)
+			   const u8 *dat, int len)
 {
 	struct sk_buff *skb;
 	u8 *skdat;
@@ -388,7 +388,7 @@ static int j1939_tp_tx_dat(struct sk_buff *related, bool extd,
 }
 
 static int j1939_xtp_do_tx_ctl(struct sk_buff *related, bool extd,
-			      bool swap_src_dst, pgn_t pgn, const u8 *dat)
+			       bool swap_src_dst, pgn_t pgn, const u8 *dat)
 {
 	struct sk_buff *skb;
 	u8 *skdat;
@@ -410,14 +410,14 @@ static int j1939_xtp_do_tx_ctl(struct sk_buff *related, bool extd,
 }
 
 static inline int j1939_tp_tx_ctl(struct j1939_session *session,
-				 bool swap_src_dst, const u8 *dat)
+				  bool swap_src_dst, const u8 *dat)
 {
 	return j1939_xtp_do_tx_ctl(session->skb, session->extd, swap_src_dst,
-				  session->cb->addr.pgn, dat);
+				   session->cb->addr.pgn, dat);
 }
 
 static int j1939_xtp_tx_abort(struct sk_buff *related, bool extd,
-			     bool swap_src_dst, int err, pgn_t pgn)
+			      bool swap_src_dst, int err, pgn_t pgn)
 {
 	u8 dat[5];
 
@@ -500,8 +500,8 @@ static void j1939_session_cancel(struct net *net, struct j1939_session *session,
 		if (!j1939_cb_is_broadcast(session->cb)) {
 			/* do not send aborts on incoming broadcasts */
 			j1939_xtp_tx_abort(session->skb, session->extd,
-					  !(session->cb->src_flags & J1939_ECU_LOCAL),
-					  err, session->cb->addr.pgn);
+					   !(session->cb->src_flags & J1939_ECU_LOCAL),
+					   err, session->cb->addr.pgn);
 		}
 	}
 	j1939_session_drop(net, session);
@@ -510,7 +510,7 @@ static void j1939_session_cancel(struct net *net, struct j1939_session *session,
 static enum hrtimer_restart j1939_tp_rxtimer(struct hrtimer *hrtimer)
 {
 	struct j1939_session *session = container_of(hrtimer, struct j1939_session,
-					       rxtimer);
+						     rxtimer);
 	struct net *net = dev_net(session->skb->dev);
 
 	j1939_session_get(session);
@@ -742,7 +742,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 		session = j1939_session_fresh_new(len, skb, pgn);
 		if (!session) {
 			j1939_xtp_tx_abort(skb, extd, 1, J1939_ABORT_RESOURCE,
-					  pgn);
+					   pgn);
 			return;
 		}
 		session->extd = extd;
@@ -1043,7 +1043,7 @@ static int j1939_tp_txnext(struct net *net, struct j1939_session *session)
 				len = 7;
 			memcpy(&dat[1], &tpdat[offset], len);
 			ret = j1939_tp_tx_dat(session->skb, session->extd,
-					     dat, len + 1);
+					      dat, len + 1);
 			if (ret < 0)
 				break;
 			session->last_txcmd = 0xff;
@@ -1088,7 +1088,7 @@ static int j1939_session_insert(struct net *net, struct j1939_session *session)
 
 	j1939_sessionlist_lock(net);
 	pending = j1939_tp_find_locked(net, j1939_sessionq(net, session->extd),
-				session->skb, false);
+				       session->skb, false);
 	if (pending)
 		/* revert the effect of find() */
 		j1939_session_put(net, pending);
@@ -1244,8 +1244,8 @@ int j1939_recv_transport(struct net *net, struct sk_buff *skb)
 }
 
 static struct j1939_session *j1939_session_fresh_new(int size,
-					       struct sk_buff *rel_skb,
-					       pgn_t pgn)
+						     struct sk_buff *rel_skb,
+						     pgn_t pgn)
 {
 	struct sk_buff *skb;
 	struct j1939_sk_buff_cb *cb;

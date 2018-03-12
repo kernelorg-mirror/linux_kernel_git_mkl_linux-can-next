@@ -148,7 +148,7 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 	write_lock_bh(&priv->lock);
 
 	ecu = j1939_ecu_get_register_locked(priv, name,
-				      j1939_address_is_unicast(skcb->addr.sa));
+					    j1939_address_is_unicast(skcb->addr.sa));
 	if (IS_ERR(ecu))
 		goto done;
 

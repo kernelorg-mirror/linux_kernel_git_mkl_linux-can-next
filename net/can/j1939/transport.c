@@ -96,7 +96,7 @@ static int j1939_tp_txnext(struct net *net, struct session *session);
 static inline void j1939_tp_schedule_txtimer(struct session *session, int msec);
 
 /* helpers */
-static inline void fix_cb(struct j1939_sk_buff_cb *cb)
+static inline void j1939_fix_cb(struct j1939_sk_buff_cb *cb)
 {
 	cb->msg_flags &= ~MSG_SYN;
 }
@@ -356,7 +356,7 @@ static struct sk_buff *j1939_tp_tx_dat_prep(struct sk_buff *related,
 
 	memcpy(skb->cb, related->cb, sizeof(skb->cb));
 	skb_cb = j1939_get_cb(skb);
-	fix_cb(skb_cb);
+	j1939_fix_cb(skb_cb);
 	if (swap_src_dst)
 		j1939_skbcb_swap(skb_cb);
 
@@ -1261,7 +1261,7 @@ static struct session *j1939_session_fresh_new(int size,
 
 	cb = j1939_get_cb(skb);
 	memcpy(cb, rel_skb->cb, sizeof(*cb));
-	fix_cb(cb);
+	j1939_fix_cb(cb);
 	cb->addr.pgn = pgn;
 
 	session = j1939_session_new(skb);

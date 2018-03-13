@@ -94,10 +94,8 @@ struct j1939_ecu *j1939_ecu_register_locked(struct j1939_priv *priv,
 
 	lockdep_assert_held(&priv->lock);
 
-	/* alloc */
 	ecu = kzalloc(sizeof(*ecu), gfp_any());
 	if (!ecu)
-		/* should we look for an existing ecu */
 		return ERR_PTR(-ENOMEM);
 	kref_init(&ecu->kref);
 	ecu->sa = J1939_IDLE_ADDR;
@@ -107,13 +105,10 @@ struct j1939_ecu *j1939_ecu_register_locked(struct j1939_priv *priv,
 	ecu->ac_timer.function = j1939_ecu_timer_handler;
 	INIT_LIST_HEAD(&ecu->list);
 
-	/* first add to internal list */
-	/* a ref to priv is held */
 	ecu->priv = priv;
 	list_add_tail(&ecu->list, &priv->ecus);
 
 	ecu_dbg(ecu, "register\n");
-	/* do not put_j1939_priv, a new ECU keeps a refcnt open */
 	return ecu;
 }
 

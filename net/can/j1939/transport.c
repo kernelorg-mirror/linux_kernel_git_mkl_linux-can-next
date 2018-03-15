@@ -1300,22 +1300,22 @@ static struct j1939_session *j1939_session_new(struct sk_buff *skb)
 	return session;
 }
 
-int j1939_tp_rmdev_notifier(struct net_device *netdev)
+int j1939_tp_rmdev_notifier(struct net_device *ndev)
 {
-	struct net *net = dev_net(netdev);
+	struct net *net = dev_net(ndev);
 	struct j1939_session *session, *saved;
 
 	j1939_sessionlist_lock(net);
 	list_for_each_entry_safe(session, saved,
 				 &net->can_j1939.tp_sessionq, list) {
-		if (session->skb_iif != netdev->ifindex)
+		if (session->skb_iif != ndev->ifindex)
 			continue;
 		list_del_init(&session->list);
 		j1939_session_put(net, session);
 	}
 	list_for_each_entry_safe(session, saved,
 				 &net->can_j1939.tp_extsessionq, list) {
-		if (session->skb_iif != netdev->ifindex)
+		if (session->skb_iif != ndev->ifindex)
 			continue;
 		list_del_init(&session->list);
 		j1939_session_put(net, session);

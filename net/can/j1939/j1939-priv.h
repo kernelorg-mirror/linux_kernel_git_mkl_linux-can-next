@@ -61,7 +61,7 @@ struct j1939_priv {
 	/* segments need a lock to protect the above list */
 	rwlock_t lock;
 
-	struct net_device *netdev;
+	struct net_device *ndev;
 
 	/* list of 256 ecu ptrs, that cache the claimed addresses.
 	 * also protected by the above lock
@@ -165,15 +165,15 @@ struct j1939_ecu *j1939_ecu_get_register_locked(struct j1939_priv *priv,
 /* unregister must be called with lock held */
 void j1939_ecu_unregister_locked(struct j1939_ecu *ecu);
 
-int j1939_netdev_start(struct net *net, struct net_device *netdev);
-void j1939_netdev_stop(struct net_device *netdev);
+int j1939_netdev_start(struct net *net, struct net_device *ndev);
+void j1939_netdev_stop(struct net_device *ndev);
 
-struct j1939_priv *j1939_priv_get(struct net_device *dev);
+struct j1939_priv *j1939_priv_get(struct net_device *ndev);
 void j1939_priv_put(struct j1939_priv *priv);
 
 /* notify/alert all j1939 sockets bound to ifindex */
-void j1939_sk_netdev_event(struct net_device *netdev, int error_code);
-int j1939_tp_rmdev_notifier(struct net_device *netdev);
+void j1939_sk_netdev_event(struct net_device *ndev, int error_code);
+int j1939_tp_rmdev_notifier(struct net_device *ndev);
 
 /* decrement pending skb for a j1939 socket */
 void j1939_sock_pending_del(struct sock *sk);

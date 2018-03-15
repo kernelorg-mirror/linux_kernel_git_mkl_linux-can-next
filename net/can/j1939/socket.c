@@ -254,7 +254,7 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 	struct j1939_sock *jsk = j1939_sk(sock->sk);
 	struct sock *sk = sock->sk;
 	struct net *net = sock_net(sk);
-	struct net_device *netdev;
+	struct net_device *ndev;
 	struct j1939_priv *priv;
 	int ret = 0;
 
@@ -264,8 +264,8 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 
 	lock_sock(sock->sk);
 
-	netdev = dev_get_by_index(net, addr->can_ifindex);
-	if (!netdev) {
+	ndev = dev_get_by_index(net, addr->can_ifindex);
+	if (!ndev) {
 		ret = -ENODEV;
 		goto out_release_sock;
 	}
@@ -281,20 +281,20 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 		}
 
 		/* drop old references */
-		priv = j1939_priv_get(netdev);
+		priv = j1939_priv_get(ndev);
 		j1939_local_put(priv, jsk->addr.src_name, jsk->addr.sa);
 	} else {
-		if (netdev->type != ARPHRD_CAN) {
+		if (ndev->type != ARPHRD_CAN) {
 			ret = -ENODEV;
 			goto out_dev_put;
 		}
 
-		ret = j1939_netdev_start(net, netdev);
+		ret = j1939_netdev_start(net, ndev);
 		if (ret < 0)
 			goto out_dev_put;
 
 		jsk->sk.sk_bound_dev_if = addr->can_ifindex;
-		priv = j1939_priv_get(netdev);
+		priv = j1939_priv_get(ndev);
 	}
 
 	/* set default transmit pgn */
@@ -307,7 +307,7 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 	ret = j1939_local_get(priv, jsk->addr.src_name, jsk->addr.sa);
 	j1939_priv_put(priv);
 	if (ret) {
-		j1939_netdev_stop(netdev);
+		j1939_netdev_stop(ndev);
 		goto out_dev_put;
 	}
 
@@ -320,7 +320,7 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 	}
 
  out_dev_put:	/* fallthrough */
-	dev_put(netdev);
+	dev_put(ndev);
  out_release_sock:
 	release_sock(sock->sk);
 
@@ -416,21 +416,21 @@ static int j1939_sk_release(struct socket *sock)
 	lock_sock(sk);
 
 	if (jsk->state & J1939_SOCK_BOUND) {
-		struct net_device *netdev;
+		struct net_device *ndev;
 
 		spin_lock_bh(&j1939_socks_lock);
 		list_del_init(&jsk->list);
 		spin_unlock_bh(&j1939_socks_lock);
 
-		netdev = dev_get_by_index(sock_net(sk),
+		ndev = dev_get_by_index(sock_net(sk),
 					  jsk->sk.sk_bound_dev_if);
-		if (netdev) {
-			priv = j1939_priv_get(netdev);
+		if (ndev) {
+			priv = j1939_priv_get(ndev);
 			j1939_local_put(priv, jsk->addr.src_name, jsk->addr.sa);
 			j1939_priv_put(priv);
 
-			j1939_netdev_stop(netdev);
-			dev_put(netdev);
+			j1939_netdev_stop(ndev);
+			dev_put(ndev);
 		}
 	}
 
@@ -631,7 +631,7 @@ static int j1939_sk_sendmsg(struct socket *sock, struct msghdr *msg, size_t size
 	struct sockaddr_can *addr = msg->msg_name;
 	struct j1939_sk_buff_cb *skcb;
 	struct sk_buff *skb;
-	struct net_device *dev;
+	struct net_device *ndev;
 	int ifindex;
 	int ret;
 
@@ -659,8 +659,8 @@ static int j1939_sk_sendmsg(struct socket *sock, struct msghdr *msg, size_t size
 			return -EBADFD;
 	}
 
-	dev = dev_get_by_index(sock_net(sk), ifindex);
-	if (!dev)
+	ndev = dev_get_by_index(sock_net(sk), ifindex);
+	if (!ndev)
 		return -ENXIO;
 
 	skb = sock_alloc_send_skb(sk,
@@ -673,7 +673,7 @@ static int j1939_sk_sendmsg(struct socket *sock, struct msghdr *msg, size_t size
 		goto put_dev;
 
 	can_skb_reserve(skb);
-	can_skb_prv(skb)->ifindex = dev->ifindex;
+	can_skb_prv(skb)->ifindex = ndev->ifindex;
 	skb_reserve(skb, offsetof(struct can_frame, data));
 
 	ret = memcpy_from_msg(skb_put(skb, size), msg, size);
@@ -681,7 +681,7 @@ static int j1939_sk_sendmsg(struct socket *sock, struct msghdr *msg, size_t size
 		goto free_skb;
 	sock_tx_timestamp(sk, skb->sk->sk_tsflags, &skb_shinfo(skb)->tx_flags);
 
-	skb->dev = dev;
+	skb->dev = ndev;
 
 	skcb = j1939_get_cb(skb);
 	memset(skcb, 0, sizeof(*skcb));
@@ -720,27 +720,27 @@ static int j1939_sk_sendmsg(struct socket *sock, struct msghdr *msg, size_t size
 		j1939_sock_pending_add(&jsk->sk);
 	}
 
-	ret = j1939_send(dev_net(dev), skb);
+	ret = j1939_send(dev_net(ndev), skb);
 	if (ret < 0)
 		j1939_sock_pending_del(&jsk->sk);
 
-	dev_put(dev);
+	dev_put(ndev);
 	return (ret < 0) ? ret : size;
 
  free_skb:
 	kfree_skb(skb);
  put_dev:
-	dev_put(dev);
+	dev_put(ndev);
 	return ret;
 }
 
-void j1939_sk_netdev_event(struct net_device *netdev, int error_code)
+void j1939_sk_netdev_event(struct net_device *ndev, int error_code)
 {
 	struct j1939_sock *jsk;
 
 	spin_lock_bh(&j1939_socks_lock);
 	list_for_each_entry(jsk, &j1939_socks, list) {
-		if (jsk->sk.sk_bound_dev_if != netdev->ifindex)
+		if (jsk->sk.sk_bound_dev_if != ndev->ifindex)
 			continue;
 
 		jsk->sk.sk_err = error_code;
@@ -750,11 +750,11 @@ void j1939_sk_netdev_event(struct net_device *netdev, int error_code)
 		if (error_code == ENODEV) {
 			struct j1939_priv *priv;
 
-			priv = j1939_priv_get(netdev);
+			priv = j1939_priv_get(ndev);
 			j1939_local_put(priv, jsk->addr.src_name, jsk->addr.sa);
 			j1939_priv_put(priv);
 
-			j1939_netdev_stop(netdev);
+			j1939_netdev_stop(ndev);
 		}
 		/* do not remove filters here */
 	}

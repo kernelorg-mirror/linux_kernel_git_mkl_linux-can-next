@@ -24,7 +24,7 @@
 #define ecu_dbg(_ecu, fmt, ...) \
 { \
 	struct j1939_ecu *ecu = _ecu; \
-	pr_debug("j1939-%i,%016llx,%02x: " fmt, ecu->priv->netdev->ifindex, \
+	pr_debug("j1939-%i,%016llx,%02x: " fmt, ecu->priv->ndev->ifindex, \
 		 ecu->name, ecu->sa, ##__VA_ARGS__); \
 }
 

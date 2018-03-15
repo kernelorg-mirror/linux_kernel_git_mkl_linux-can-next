@@ -213,7 +213,7 @@ int j1939_netdev_start(struct net *net, struct net_device *netdev)
 }
 
 /* get pointer to priv without increasing ref counter */
-static inline struct j1939_priv *__j1939_priv_get(struct net_device *dev)
+static inline struct j1939_priv *j1939_ndev_to_priv(struct net_device *dev)
 {
 	struct can_ml_priv *can_ml_priv = dev->ml_priv;
 
@@ -225,7 +225,7 @@ void j1939_netdev_stop(struct net_device *netdev)
 	struct j1939_priv *priv;
 
 	spin_lock(&j1939_netdev_lock);
-	priv = __j1939_priv_get(netdev);
+	priv = j1939_ndev_to_priv(netdev);
 	j1939_priv_put(priv);
 	spin_unlock(&j1939_netdev_lock);
 }
@@ -237,7 +237,7 @@ struct j1939_priv *j1939_priv_get(struct net_device *dev)
 	if (dev->type != ARPHRD_CAN)
 		return NULL;
 
-	priv = __j1939_priv_get(dev);
+	priv = j1939_ndev_to_priv(dev);
 	if (priv)
 		kref_get(&priv->kref);
 

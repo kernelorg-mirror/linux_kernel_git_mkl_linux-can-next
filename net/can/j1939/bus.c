@@ -157,20 +157,18 @@ struct j1939_ecu *j1939_ecu_get_by_addr(struct j1939_priv *priv, u8 sa)
 }
 
 /* get pointer to ecu without increasing ref counter */
-static struct j1939_ecu *__j1939_ecu_get_by_name(struct j1939_priv *priv, name_t name)
+static struct j1939_ecu *j1939_ecu_find_by_name_locked(struct j1939_priv *priv, name_t name)
 {
-	struct j1939_ecu *ecu = NULL;
+	struct j1939_ecu *ecu;
 
-	read_lock_bh(&priv->lock);
+	lockdep_assert_held(&priv->lock);
+
 	list_for_each_entry(ecu, &priv->ecus, list) {
 		if (ecu->name == name)
-			goto found_on_intf;
+			return ecu;
 	}
 
- found_on_intf:
-	read_unlock_bh(&priv->lock);
-
-	return ecu;
+	return NULL;
 }
 
 struct j1939_ecu *j1939_ecu_get_by_name(struct j1939_priv *priv, name_t name)
@@ -180,9 +178,11 @@ struct j1939_ecu *j1939_ecu_get_by_name(struct j1939_priv *priv, name_t name)
 	if (!name)
 		return NULL;
 
-	ecu = __j1939_ecu_get_by_name(priv, name);
+	read_lock_bh(&priv->lock);
+	ecu = j1939_ecu_find_by_name_locked(priv, name);
 	if (ecu)
 		j1939_ecu_get(ecu);
+	read_unlock_bh(&priv->lock);
 
 	return ecu;
 }
@@ -259,7 +259,7 @@ void j1939_local_put(struct j1939_priv *priv, name_t name, u8 sa)
 	if (!name)
 		goto done;
 
-	ecu = __j1939_ecu_get_by_name(priv, name);
+	ecu = j1939_ecu_find_by_name_locked(priv, name);
 	if (WARN_ON_ONCE(!ecu))
 		goto done;
 

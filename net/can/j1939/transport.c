@@ -756,7 +756,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 					 __func__, session->pkt.total,
 					 dat[3]);
 			session->pkt.total = dat[3];
-			session->pkt.block = dat[4];
+			session->pkt.block = min(dat[3], dat[4]);
 		}
 		session->pkt.done = 0;
 		session->pkt.tx = 0;

@@ -158,14 +158,14 @@ static void j1939_session_put(struct net *net, struct j1939_session *session)
 		return;
 
 
-	if (in_interrupt()) {
+	if (in_softirq()) {
 		hrtimer_try_to_cancel(&session->rxtimer);
 		hrtimer_try_to_cancel(&session->txtimer);
 		spin_lock_bh(&net->can_j1939.tp_dellock);
 		list_add_tail(&session->list, &net->can_j1939.tp_delsessionq);
 		spin_unlock_bh(&net->can_j1939.tp_dellock);
 		schedule_work(&net->can_j1939.tp_delwork);
-	} else {
+	} else if (WARN_ON_ONCE(!in_task())) {
 		hrtimer_cancel(&session->rxtimer);
 		hrtimer_cancel(&session->txtimer);
 		/* destroy session right here */

@@ -37,7 +37,7 @@ static inline name_t j1939_candata_to_name(const struct sk_buff *skb)
 
 static inline bool j1939_ac_msg_is_request(struct sk_buff *skb)
 {
-	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
+	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
 	int req_pgn;
 
 	if (skb->len < 3 || skcb->addr.pgn != J1939_PGN_REQUEST)
@@ -50,7 +50,7 @@ static inline bool j1939_ac_msg_is_request(struct sk_buff *skb)
 
 static int j1939_ac_verify_outgoing(struct sk_buff *skb)
 {
-	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
+	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
 
 	if (skb->len != 8) {
 		pr_notice("tx address claim with dlc %i\n", skb->len);
@@ -77,7 +77,7 @@ static int j1939_ac_verify_outgoing(struct sk_buff *skb)
 
 int j1939_ac_fixup(struct j1939_priv *priv, struct sk_buff *skb)
 {
-	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
+	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
 	int ret;
 	u8 sa;
 
@@ -124,7 +124,7 @@ int j1939_ac_fixup(struct j1939_priv *priv, struct sk_buff *skb)
 
 static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 {
-	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
+	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
 	struct j1939_ecu *ecu, *prev;
 	name_t name;
 
@@ -184,7 +184,7 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 
 void j1939_ac_recv(struct j1939_priv *priv, struct sk_buff *skb)
 {
-	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
+	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
 	struct j1939_ecu *ecu;
 
 	/* network mgmt */

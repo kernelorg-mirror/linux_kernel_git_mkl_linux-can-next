@@ -67,7 +67,7 @@ static void j1939_can_recv(struct sk_buff *iskb, void *data)
 	skb_trim(skb, min_t(uint8_t, cf->can_dlc, 8));
 
 	/* set addr */
-	skcb = j1939_get_cb(skb);
+	skcb = j1939_skb_to_cb(skb);
 	memset(skcb, 0, sizeof(*skcb));
 
 	/* save incoming socket, without assigning the skb to it */
@@ -263,7 +263,7 @@ int j1939_send(struct net *net, struct sk_buff *skb)
 {
 	int ret, dlc;
 	canid_t canid;
-	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
+	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
 	struct j1939_priv *priv;
 	struct can_frame *cf;
 

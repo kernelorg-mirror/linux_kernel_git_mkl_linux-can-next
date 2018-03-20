@@ -141,7 +141,7 @@ struct j1939_sk_buff_cb {
 	struct sock *insock;
 };
 
-static inline struct j1939_sk_buff_cb *j1939_get_cb(struct sk_buff *skb)
+static inline struct j1939_sk_buff_cb *j1939_skb_to_cb(struct sk_buff *skb)
 {
 	BUILD_BUG_ON(sizeof(struct j1939_sk_buff_cb) > sizeof(skb->cb));
 

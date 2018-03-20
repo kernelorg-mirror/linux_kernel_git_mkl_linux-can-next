@@ -153,7 +153,7 @@ static inline bool j1939_packet_match(const struct j1939_sk_buff_cb *skcb,
 static void j1939_sk_recv_skb(struct sk_buff *oskb, struct j1939_sock *jsk)
 {
 	struct sk_buff *skb;
-	struct j1939_sk_buff_cb *skcb = j1939_get_cb(oskb);
+	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(oskb);
 
 	if (!(jsk->state & (J1939_SOCK_BOUND | J1939_SOCK_CONNECTED)))
 		return;
@@ -193,7 +193,7 @@ static void j1939_sk_recv_skb(struct sk_buff *oskb, struct j1939_sock *jsk)
 		pr_warn("skb clone failed\n");
 		return;
 	}
-	skcb = j1939_get_cb(skb);
+	skcb = j1939_skb_to_cb(skb);
 	skcb->msg_flags &= ~(MSG_DONTROUTE | MSG_CONFIRM);
 	if (skcb->insock)
 		skcb->msg_flags |= MSG_DONTROUTE;
@@ -593,7 +593,7 @@ static int j1939_sk_recvmsg(struct socket *sock, struct msghdr *msg,
 		return ret;
 	}
 
-	skcb = j1939_get_cb(skb);
+	skcb = j1939_skb_to_cb(skb);
 	if (j1939_address_is_valid(skcb->addr.da))
 		put_cmsg(msg, SOL_CAN_J1939, SCM_J1939_DEST_ADDR,
 			 sizeof(skcb->addr.da), &skcb->addr.da);
@@ -683,7 +683,7 @@ static int j1939_sk_sendmsg(struct socket *sock, struct msghdr *msg, size_t size
 
 	skb->dev = ndev;
 
-	skcb = j1939_get_cb(skb);
+	skcb = j1939_skb_to_cb(skb);
 	memset(skcb, 0, sizeof(*skcb));
 	skcb->addr = jsk->addr;
 	skcb->priority = j1939_prio(sk->sk_priority);

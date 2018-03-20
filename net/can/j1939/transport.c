@@ -109,11 +109,10 @@ static inline struct list_head *j1939_sessionq(struct net *net, bool extd)
 
 static inline void j1939_session_destroy(struct j1939_session *session)
 {
-	kfree_skb(session->skb);
-
 	hrtimer_cancel(&session->rxtimer);
 	hrtimer_cancel(&session->txtimer);
 
+	kfree_skb(session->skb);
 	kfree(session);
 }
 

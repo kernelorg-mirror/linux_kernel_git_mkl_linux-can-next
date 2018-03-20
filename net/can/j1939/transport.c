@@ -151,7 +151,7 @@ static inline void j1939_session_get(struct j1939_session *session)
 	atomic_inc(&session->refs);
 }
 
-static void j1939_session_put(struct net *net, struct j1939_session *session)
+static void j1939_session_put(struct j1939_session *session)
 {
 	if (atomic_add_return(-1, &session->refs) >= 0)
 		/* not the last one */
@@ -159,6 +159,8 @@ static void j1939_session_put(struct net *net, struct j1939_session *session)
 
 
 	if (in_softirq()) {
+		struct net *net = dev_net(session->skb->dev);
+
 		hrtimer_try_to_cancel(&session->rxtimer);
 		hrtimer_try_to_cancel(&session->txtimer);
 		spin_lock_bh(&net->can_j1939.tp_dellock);
@@ -183,7 +185,7 @@ static inline void j1939_session_lock(struct j1939_session *session)
 static inline void j1939_session_unlock(struct net *net, struct j1939_session *session)
 {
 	spin_unlock_bh(&session->lock);
-	j1939_session_put(net, session);
+	j1939_session_put(session);
 }
 
 static inline void j1939_sessionlist_lock(struct net *net)
@@ -311,7 +313,7 @@ static struct j1939_session *j1939_session_get_by_skb_locked(struct net *net, st
 		j1939_session_get(session);
 		if (j1939_tp_match(session, skb, reverse))
 			return session;
-		j1939_session_put(net, session);
+		j1939_session_put(session);
 	}
 
 	return NULL;
@@ -451,7 +453,7 @@ static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 	ret = j1939_tp_txnext(net, session);
 	if (ret < 0)
 		j1939_tp_schedule_txtimer(session, j1939_tp_retry_ms ?: 20);
-	j1939_session_put(net, session);
+	j1939_session_put(session);
 
 	return HRTIMER_NORESTART;
 }
@@ -486,7 +488,7 @@ static inline void j1939_session_drop(struct net *net, struct j1939_session *ses
 			j1939_sock_pending_del(session->skb->sk);
 		wake_up_all(&net->can_j1939.tp_wait);
 	}
-	j1939_session_put(net, session);
+	j1939_session_put(session);
 }
 
 static inline void j1939_session_completed(struct net *net, struct j1939_session *session)
@@ -518,7 +520,7 @@ static enum hrtimer_restart j1939_tp_rxtimer(struct hrtimer *hrtimer)
 	j1939_session_get(session);
 	pr_alert("%s: timeout on %i\n", __func__, session->skb_iif);
 	j1939_session_cancel(net, session, J1939_ABORT_TIMEOUT);
-	j1939_session_put(net, session);
+	j1939_session_put(session);
 
 	return HRTIMER_NORESTART;
 }
@@ -534,13 +536,13 @@ static void _j1939_xtp_rx_bad_message(struct net *net, struct sk_buff *skb, bool
 	if (session /*&& (session->skcb->addr.pgn == pgn)*/) {
 		/* do not allow TP control messages on 2 pgn's */
 		j1939_session_cancel(net, session, J1939_ABORT_FAULT);
-		j1939_session_put(net, session); /* ~j1939_tp_find */
+		j1939_session_put(session);
 		return;
 	}
 	j1939_xtp_tx_abort(skb, extd, 0, J1939_ABORT_FAULT, pgn);
 	if (!session)
 		return;
-	j1939_session_put(net, session); /* ~j1939_tp_find */
+	j1939_session_put(session);
 }
 
 /* abort packets may come in 2 directions */
@@ -573,7 +575,7 @@ static void _j1939_xtp_rx_abort(struct net *net, struct sk_buff *skb, bool extd,
 	/* TODO: maybe cancel current connection
 	 * as another pgn was communicated
 	 */
-	j1939_session_put(net, session); /* ~j1939_tp_find */
+	j1939_session_put(session);
 }
 
 /* abort packets may come in 2 directions */
@@ -608,7 +610,7 @@ static void j1939_xtp_rx_eof(struct net *net, struct sk_buff *skb, bool extd)
 		/* transmitted without problems */
 		j1939_session_completed(net, session);
 	}
-	j1939_session_put(net, session); /* ~j1939_tp_find */
+	j1939_session_put(session);
 }
 
 static void j1939_xtp_rx_cts(struct net *net, struct sk_buff *skb, bool extd)
@@ -630,7 +632,7 @@ static void j1939_xtp_rx_cts(struct net *net, struct sk_buff *skb, bool extd)
 		/* what to do? */
 		j1939_xtp_tx_abort(skb, extd, 1, J1939_ABORT_BUSY, pgn);
 		j1939_session_cancel(net, session, J1939_ABORT_BUSY);
-		j1939_session_put(net, session); /* ~j1939_tp_find */
+		j1939_session_put(session);
 		return;
 	}
 
@@ -663,12 +665,12 @@ static void j1939_xtp_rx_cts(struct net *net, struct sk_buff *skb, bool extd)
 		/* CTS(0) */
 		j1939_tp_set_rxtimeout(session, 550);
 	}
-	j1939_session_put(net, session); /* ~j1939_tp_find */
+	j1939_session_put(session);
 	return;
  bad_fmt:
 	j1939_session_unlock(net, session);
 	j1939_session_cancel(net, session, J1939_ABORT_FAULT);
-	j1939_session_put(net, session); /* ~j1939_tp_find */
+	j1939_session_put(session);
 }
 
 static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
@@ -697,7 +699,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 		j1939_session_cancel(net, session, J1939_ABORT_BUSY);
 		if (pgn != session->skcb->addr.pgn && dat[0] != J1939_TP_CMD_BAM)
 			j1939_xtp_tx_abort(skb, extd, 1, J1939_ABORT_BUSY, pgn);
-		j1939_session_put(net, session); /* ~j1939_tp_find */
+		j1939_session_put(session);
 		return;
 	} else if (!session && j1939_tp_im_transmitter(skb)) {
 		pr_alert("%s: I should tx (%i %02x %02x)\n", __func__,
@@ -709,7 +711,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 		pr_alert("%s: connection exists (%i %02x %02x)\n", __func__,
 			 skb->skb_iif, skcb->addr.sa, skcb->addr.da);
 		j1939_session_cancel(net, session, J1939_ABORT_BUSY);
-		j1939_session_put(net, session); /* ~j1939_tp_find */
+		j1939_session_put(session);
 		return;
 	}
 	if (session) {
@@ -781,7 +783,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 	 * between spin_unlock & next statement
 	 * so, only release here, at the end
 	 */
-	j1939_session_put(net, session); /* ~j1939_tp_find */
+	j1939_session_put(session);
 }
 
 static void j1939_xtp_rx_dpo(struct net *net, struct sk_buff *skb, bool extd)
@@ -801,7 +803,7 @@ static void j1939_xtp_rx_dpo(struct net *net, struct sk_buff *skb, bool extd)
 		pr_info("%s: different pgn\n", __func__);
 		j1939_xtp_tx_abort(skb, 1, 1, J1939_ABORT_BUSY, pgn);
 		j1939_session_cancel(net, session, J1939_ABORT_BUSY);
-		j1939_session_put(net, session); /* ~j1939_tp_find */
+		j1939_session_put(session);
 		return;
 	}
 
@@ -809,7 +811,7 @@ static void j1939_xtp_rx_dpo(struct net *net, struct sk_buff *skb, bool extd)
 	session->pkt.dpo = j1939_etp_ctl_to_packet(skb->data);
 	session->last_cmd = dat[0];
 	j1939_tp_set_rxtimeout(session, 750);
-	j1939_session_put(net, session); /* ~j1939_tp_find */
+	j1939_session_put(session);
 }
 
 static void j1939_xtp_rx_dat(struct net *net, struct sk_buff *skb, bool extd)
@@ -889,7 +891,7 @@ static void j1939_xtp_rx_dat(struct net *net, struct sk_buff *skb, bool extd)
 		j1939_tp_set_rxtimeout(session, 250);
 	}
 	session->last_cmd = 0xff;
-	j1939_session_put(net, session); /* ~j1939_tp_find */
+	j1939_session_put(session);
 	return;
 
  strange_packet:
@@ -897,7 +899,7 @@ static void j1939_xtp_rx_dat(struct net *net, struct sk_buff *skb, bool extd)
 	j1939_session_unlock(net, session);
  strange_packet_unlocked:
 	j1939_session_cancel(net, session, J1939_ABORT_FAULT);
-	j1939_session_put(net, session); /* ~j1939_tp_find */
+	j1939_session_put(session);
 }
 
 /* transmit function */
@@ -1064,10 +1066,10 @@ static int j1939_tp_txnext(struct net *net, struct j1939_session *session)
 			goto failed;
 		break;
 	}
-	j1939_session_put(net, session);
+	j1939_session_put(session);
 	return 0;
  failed:
-	j1939_session_put(net, session);
+	j1939_session_put(session);
 	return ret;
 }
 
@@ -1079,7 +1081,7 @@ static inline int j1939_tp_tx_initial(struct net *net, struct j1939_session *ses
 	ret = j1939_tp_txnext(net, session);
 	/* set nonblocking for further packets */
 	session->skcb->msg_flags |= MSG_DONTWAIT;
-	j1939_session_put(net, session);
+	j1939_session_put(session);
 	return ret;
 }
 
@@ -1093,7 +1095,7 @@ static int j1939_session_insert(struct net *net, struct j1939_session *session)
 				       session->skb, false);
 	if (pending)
 		/* revert the effect of find() */
-		j1939_session_put(net, pending);
+		j1939_session_put(pending);
 	else
 		list_add_tail(&session->list, j1939_sessionq(net, session->extd));
 	j1939_sessionlist_unlock(net);
@@ -1313,14 +1315,14 @@ int j1939_tp_rmdev_notifier(struct net_device *ndev)
 		if (session->skb_iif != ndev->ifindex)
 			continue;
 		list_del_init(&session->list);
-		j1939_session_put(net, session);
+		j1939_session_put(session);
 	}
 	list_for_each_entry_safe(session, saved,
 				 &net->can_j1939.tp_extsessionq, list) {
 		if (session->skb_iif != ndev->ifindex)
 			continue;
 		list_del_init(&session->list);
-		j1939_session_put(net, session);
+		j1939_session_put(session);
 	}
 	j1939_sessionlist_unlock(net);
 	return NOTIFY_DONE;
@@ -1348,12 +1350,12 @@ static void __net_exit j1939_tp_pernet_exit(struct net *net)
 	list_for_each_entry_safe(session, saved,
 				 &net->can_j1939.tp_extsessionq, list) {
 		list_del_init(&session->list);
-		j1939_session_put(net, session);
+		j1939_session_put(session);
 	}
 	list_for_each_entry_safe(session, saved,
 				 &net->can_j1939.tp_sessionq, list) {
 		list_del_init(&session->list);
-		j1939_session_put(net, session);
+		j1939_session_put(session);
 	}
 	j1939_sessionlist_unlock(net);
 }

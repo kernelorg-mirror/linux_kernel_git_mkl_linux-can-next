@@ -168,9 +168,6 @@ static void j1939_session_put(struct j1939_session *session)
 		spin_unlock_bh(&net->can_j1939.tp_dellock);
 		schedule_work(&net->can_j1939.tp_delwork);
 	} else if (WARN_ON_ONCE(!in_task())) {
-		hrtimer_cancel(&session->rxtimer);
-		hrtimer_cancel(&session->txtimer);
-		/* destroy session right here */
 		j1939_session_destroy(session);
 	}
 }

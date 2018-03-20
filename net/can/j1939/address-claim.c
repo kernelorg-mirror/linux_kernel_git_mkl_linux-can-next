@@ -30,7 +30,7 @@
 
 #include "j1939-priv.h"
 
-static inline name_t j1939_candata_to_name(const struct sk_buff *skb)
+static inline name_t j1939_skb_to_name(const struct sk_buff *skb)
 {
 	return le64_to_cpup((__le64 *)skb->data);
 }
@@ -57,7 +57,7 @@ static int j1939_ac_verify_outgoing(struct sk_buff *skb)
 		return -EPROTO;
 	}
 
-	if (skcb->addr.src_name != j1939_candata_to_name(skb)) {
+	if (skcb->addr.src_name != j1939_skb_to_name(skb)) {
 		pr_notice("tx address claim with different name\n");
 		return -EPROTO;
 	}
@@ -133,7 +133,7 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 		return;
 	}
 
-	name = j1939_candata_to_name(skb);
+	name = j1939_skb_to_name(skb);
 	skcb->addr.src_name = name;
 	if (!name) {
 		pr_notice("rx address claim without name\n");

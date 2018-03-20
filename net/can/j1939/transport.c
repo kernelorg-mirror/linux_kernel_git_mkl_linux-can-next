@@ -58,7 +58,7 @@ static unsigned int j1939_tp_padding = 1;
 
 struct j1939_session {
 	struct list_head list;
-	atomic_t refs;
+	struct kref kref;
 	spinlock_t lock;
 
 	/* ifindex, src, dst, pgn define the session block
@@ -172,15 +172,12 @@ static void j1939_tp_del_work(struct work_struct *work)
 /* reference counter */
 static inline void j1939_session_get(struct j1939_session *session)
 {
-	atomic_inc(&session->refs);
+	kref_get(&session->kref);
 }
 
-static void j1939_session_put(struct j1939_session *session)
+static void __j1939_session_put(struct kref *kref)
 {
-	if (atomic_add_return(-1, &session->refs) >= 0)
-		/* not the last one */
-		return;
-
+	struct j1939_session *session = container_of(kref, struct j1939_session, kref);
 
 	if (in_softirq()) {
 		struct net *net = dev_net(session->skb->dev);
@@ -194,6 +191,11 @@ static void j1939_session_put(struct j1939_session *session)
 	} else if (WARN_ON_ONCE(!in_task())) {
 		j1939_session_destroy(session);
 	}
+}
+
+static void j1939_session_put(struct j1939_session *session)
+{
+	kref_put(&session->kref, __j1939_session_put);
 }
 
 /* transport status locking */
@@ -1308,6 +1310,7 @@ static struct j1939_session *j1939_session_new(struct sk_buff *skb)
 		return NULL;
 	INIT_LIST_HEAD(&session->list);
 	spin_lock_init(&session->lock);
+	kref_init(&session->kref);
 	session->skb = skb;
 
 	session->skcb = j1939_skb_to_cb(session->skb);

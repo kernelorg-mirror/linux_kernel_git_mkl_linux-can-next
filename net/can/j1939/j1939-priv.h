@@ -106,7 +106,7 @@ static inline bool j1939_pgn_is_pdu1(pgn_t pgn)
 void j1939_ecu_remove_sa_locked(struct j1939_ecu *ecu);
 void j1939_ecu_remove_sa(struct j1939_ecu *ecu);
 
-u8 j1939_name_to_sa(struct j1939_priv *priv, name_t name);
+u8 j1939_name_to_addr(struct j1939_priv *priv, name_t name);
 struct j1939_ecu *j1939_ecu_get_by_addr(struct j1939_priv *priv, u8 sa);
 struct j1939_ecu *j1939_ecu_get_by_name(struct j1939_priv *priv, name_t name);
 

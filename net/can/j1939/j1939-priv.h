@@ -65,7 +65,6 @@ struct j1939_priv {
 
 	/* list of 256 ecu ptrs, that cache the claimed addresses.
 	 * also protected by the above lock
-	 * don't use directly, use j1939_ecu_set_address() instead
 	 */
 	struct j1939_addr_ent {
 		struct j1939_ecu *ecu;

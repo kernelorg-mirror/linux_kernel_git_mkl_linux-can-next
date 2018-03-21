@@ -203,7 +203,7 @@ static void j1939_sk_recv_skb(struct j1939_sock *jsk, struct sk_buff *oskb)
 		kfree_skb(skb);
 }
 
-void j1939_recv(struct sk_buff *skb)
+void j1939_sk_recv(struct sk_buff *skb)
 {
 	struct j1939_sock *jsk;
 

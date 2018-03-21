@@ -101,7 +101,7 @@ static void j1939_can_recv(struct sk_buff *iskb, void *data)
 	if (j1939_tp_recv(net, skb))
 		/* this means the transport layer processed the message */
 		goto done;
-	j1939_recv(skb);
+	j1939_sk_recv(skb);
  done:
 	kfree_skb(skb);
 }

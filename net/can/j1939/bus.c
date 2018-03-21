@@ -62,6 +62,9 @@ static enum hrtimer_restart j1939_ecu_timer_handler(struct hrtimer *hrtimer)
 	 * the timer?
 	 */
 	if (j1939_address_is_unicast(ecu->sa)) {
+		/* TODO: put this into a seperate function.
+		 * Inverse to: j1939_ecu_remove_sa_locked()
+		 */
 		priv->ents[ecu->sa].ecu = ecu;
 		priv->ents[ecu->sa].nusers += ecu->nusers;
 	}

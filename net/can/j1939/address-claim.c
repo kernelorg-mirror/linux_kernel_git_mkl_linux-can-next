@@ -193,15 +193,15 @@ void j1939_ac_recv(struct j1939_priv *priv, struct sk_buff *skb)
 	if (skcb->addr.pgn == J1939_PGN_ADDRESS_CLAIMED) {
 		j1939_ac_process(priv, skb);
 	} else if (j1939_address_is_unicast(skcb->addr.sa)) {
+		/* assign source name */
 		ecu = j1939_ecu_get_by_addr(priv, skcb->addr.sa);
 		if (ecu) {
-			/* source administration */
 			skcb->addr.src_name = ecu->name;
 			j1939_ecu_put(ecu);
 		}
 	}
 
-	/* assign destination stuff */
+	/* assign destination name */
 	ecu = j1939_ecu_get_by_addr(priv, skcb->addr.da);
 	if (ecu) {
 		skcb->addr.dst_name = ecu->name;

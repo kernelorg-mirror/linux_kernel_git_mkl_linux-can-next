@@ -190,12 +190,11 @@ struct j1939_ecu *j1939_ecu_get_by_name(struct j1939_priv *priv, name_t name)
 u8 j1939_name_to_sa(struct j1939_priv *priv, name_t name)
 {
 	struct j1939_ecu *ecu;
-	int sa;
+	int sa = J1939_IDLE_ADDR;
 
 	if (!name)
 		return J1939_NO_ADDR;
 
-	sa = J1939_IDLE_ADDR;
 	read_lock_bh(&priv->lock);
 	list_for_each_entry(ecu, &priv->ecus, list) {
 		if (ecu->name == name) {

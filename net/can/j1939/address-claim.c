@@ -79,7 +79,7 @@ int j1939_ac_fixup(struct j1939_priv *priv, struct sk_buff *skb)
 {
 	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
 	int ret;
-	u8 sa;
+	u8 addr;
 
 	/* network mgmt: address claiming msgs */
 	if (skcb->addr.pgn == J1939_PGN_ADDRESS_CLAIMED) {
@@ -99,25 +99,25 @@ int j1939_ac_fixup(struct j1939_priv *priv, struct sk_buff *skb)
 		j1939_ecu_put(ecu);
 	} else if (skcb->addr.src_name) {
 		/* assign source address */
-		sa = j1939_name_to_addr(priv, skcb->addr.src_name);
-		if (!j1939_address_is_unicast(sa) &&
+		addr = j1939_name_to_addr(priv, skcb->addr.src_name);
+		if (!j1939_address_is_unicast(addr) &&
 		    !j1939_ac_msg_is_request(skb)) {
 			pr_notice("tx drop: invalid sa for name 0x%016llx\n",
 				  skcb->addr.src_name);
 			return -EADDRNOTAVAIL;
 		}
-		skcb->addr.sa = sa;
+		skcb->addr.sa = addr;
 	}
 
 	/* assign destination address */
 	if (skcb->addr.dst_name) {
-		sa = j1939_name_to_addr(priv, skcb->addr.dst_name);
-		if (!j1939_address_is_unicast(sa)) {
+		addr = j1939_name_to_addr(priv, skcb->addr.dst_name);
+		if (!j1939_address_is_unicast(addr)) {
 			pr_notice("tx drop: invalid da for name 0x%016llx\n",
 				  skcb->addr.dst_name);
 			return -EADDRNOTAVAIL;
 		}
-		skcb->addr.da = sa;
+		skcb->addr.da = addr;
 	}
 	return 0;
 }

@@ -322,7 +322,6 @@ int j1939_send(struct net *net, struct sk_buff *skb)
 	consume_skb(skb);
 	return ret;
 }
-EXPORT_SYMBOL_GPL(j1939_send);
 
 static int j1939_netdev_notify(struct notifier_block *nb,
 			       unsigned long msg, void *data)

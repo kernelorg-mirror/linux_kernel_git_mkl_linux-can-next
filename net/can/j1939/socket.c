@@ -214,7 +214,6 @@ void j1939_recv(struct sk_buff *skb)
 	}
 	spin_unlock_bh(&j1939_socks_lock);
 }
-EXPORT_SYMBOL_GPL(j1939_recv);
 
 static int j1939_sk_init(struct sock *sk)
 {

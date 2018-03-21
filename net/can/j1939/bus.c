@@ -183,14 +183,11 @@ u8 j1939_name_to_sa(struct j1939_priv *priv, name_t name)
 		return J1939_NO_ADDR;
 
 	read_lock_bh(&priv->lock);
-	list_for_each_entry(ecu, &priv->ecus, list) {
-		if (ecu->name == name) {
-			if (priv->ents[ecu->sa].ecu == ecu)
-				/* ecu's SA is registered */
-				sa = ecu->sa;
-			break;
-		}
-	}
+	ecu = j1939_ecu_find_by_name_locked(priv, name);
+	if (priv->ents[ecu->sa].ecu == ecu)
+		/* ecu's SA is registered */
+		sa = ecu->sa;
+
 	read_unlock_bh(&priv->lock);
 
 	return sa;

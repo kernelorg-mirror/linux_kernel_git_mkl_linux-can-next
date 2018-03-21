@@ -149,7 +149,7 @@ static inline bool j1939_packet_match(const struct j1939_sk_buff_cb *skcb,
 	return false;
 }
 
-static void j1939_sk_recv_skb(struct j1939_sock *jsk, struct sk_buff *oskb)
+static void j1939_sk_recv_one(struct j1939_sock *jsk, struct sk_buff *oskb)
 {
 	struct sk_buff *skb;
 	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(oskb);
@@ -209,7 +209,7 @@ void j1939_sk_recv(struct sk_buff *skb)
 
 	spin_lock_bh(&j1939_socks_lock);
 	list_for_each_entry(jsk, &j1939_socks, list) {
-		j1939_sk_recv_skb(jsk, skb);
+		j1939_sk_recv_one(jsk, skb);
 	}
 	spin_unlock_bh(&j1939_socks_lock);
 }

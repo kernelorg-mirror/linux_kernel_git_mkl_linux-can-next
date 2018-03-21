@@ -86,6 +86,11 @@ static inline bool j1939_address_is_unicast(u8 sa)
 	return sa <= J1939_MAX_UNICAST_ADDR;
 }
 
+static inline bool j1939_address_is_idle(u8 sa)
+{
+	return sa == J1939_IDLE_ADDR;
+}
+
 static inline bool j1939_address_is_valid(u8 sa)
 {
 	return sa != J1939_NO_ADDR;

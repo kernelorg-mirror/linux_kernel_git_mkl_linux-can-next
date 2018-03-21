@@ -98,7 +98,7 @@ static void j1939_can_recv(struct sk_buff *iskb, void *data)
 	/* deliver into the j1939 stack ... */
 	j1939_ac_recv(priv, skb);
 
-	if (j1939_recv_transport(net, skb))
+	if (j1939_tp_recv(net, skb))
 		/* this means the transport layer processed the message */
 		goto done;
 	j1939_recv(skb);
@@ -275,7 +275,7 @@ int j1939_send(struct net *net, struct sk_buff *skb)
 
 	if (skb->len > 8) {
 		/* re-route via transport protocol */
-		ret = j1939_send_transport(net, priv, skb);
+		ret = j1939_tp_send(net, priv, skb);
 		j1939_priv_put(priv);
 		return ret;
 	}

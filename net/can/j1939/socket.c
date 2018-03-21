@@ -149,7 +149,6 @@ static inline bool j1939_packet_match(const struct j1939_sk_buff_cb *skcb,
 	return false;
 }
 
-/* callback per socket, called from j1939_recv */
 static void j1939_sk_recv_skb(struct sk_buff *oskb, struct j1939_sock *jsk)
 {
 	struct sk_buff *skb;

@@ -28,6 +28,13 @@
 		 ecu->name, ecu->sa, ##__VA_ARGS__); \
 }
 
+static bool j1939_ecu_is_registred(struct j1939_ecu *ecu)
+{
+	struct j1939_priv *priv = ecu->priv;
+
+	return priv && priv->ents[ecu->sa].ecu == ecu;
+}
+
 /* ECU device interface */
 void j1939_ecu_remove_sa_locked(struct j1939_ecu *ecu)
 {
@@ -35,7 +42,7 @@ void j1939_ecu_remove_sa_locked(struct j1939_ecu *ecu)
 
 	if (!j1939_address_is_unicast(ecu->sa))
 		return;
-	if (ecu->priv && ecu->priv->ents[ecu->sa].ecu == ecu) {
+	if (j1939_ecu_is_registred(ecu)) {
 		ecu->priv->ents[ecu->sa].ecu = NULL;
 		ecu->priv->ents[ecu->sa].nusers -= ecu->nusers;
 	}
@@ -184,7 +191,7 @@ u8 j1939_name_to_sa(struct j1939_priv *priv, name_t name)
 
 	read_lock_bh(&priv->lock);
 	ecu = j1939_ecu_find_by_name_locked(priv, name);
-	if (priv->ents[ecu->sa].ecu == ecu)
+	if (j1939_ecu_is_registred(ecu))
 		/* ecu's SA is registered */
 		sa = ecu->sa;
 
@@ -222,7 +229,7 @@ int j1939_local_ecu_get(struct j1939_priv *priv, name_t name, u8 sa)
 	j1939_ecu_get(ecu);
 	ecu->nusers++;
 	/* TODO: do we care if ecu->sa != sa? */
-	if (priv->ents[ecu->sa].ecu == ecu)
+	if (j1939_ecu_is_registred(ecu))
 		/* ecu's sa is active already */
 		priv->ents[ecu->sa].nusers++;
 
@@ -250,7 +257,7 @@ void j1939_local_ecu_put(struct j1939_priv *priv, name_t name, u8 sa)
 
 	ecu->nusers--;
 	/* TODO: do we care if ecu->sa != sa? */
-	if (priv->ents[ecu->sa].ecu == ecu)
+	if (j1939_ecu_is_registred(ecu))
 		/* ecu's sa is active already */
 		priv->ents[ecu->sa].nusers--;
 	j1939_ecu_put(ecu);

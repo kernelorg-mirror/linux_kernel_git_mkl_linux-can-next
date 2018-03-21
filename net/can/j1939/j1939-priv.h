@@ -78,8 +78,8 @@ struct j1939_priv {
 void j1939_ecu_put(struct j1939_ecu *ecu);
 
 /* keep the cache of what is local */
-int j1939_local_get(struct j1939_priv *priv, name_t name, u8 sa);
-void j1939_local_put(struct j1939_priv *priv, name_t name, u8 sa);
+int j1939_local_ecu_get(struct j1939_priv *priv, name_t name, u8 sa);
+void j1939_local_ecu_put(struct j1939_priv *priv, name_t name, u8 sa);
 
 static inline bool j1939_address_is_unicast(u8 sa)
 {

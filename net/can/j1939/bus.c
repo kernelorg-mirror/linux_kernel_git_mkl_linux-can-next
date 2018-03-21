@@ -202,7 +202,7 @@ u8 j1939_name_to_sa(struct j1939_priv *priv, name_t name)
  * so locking is straigforward
  */
 
-int j1939_local_get(struct j1939_priv *priv, name_t name, u8 sa)
+int j1939_local_ecu_get(struct j1939_priv *priv, name_t name, u8 sa)
 {
 	struct j1939_ecu *ecu;
 	int err = 0;
@@ -235,7 +235,7 @@ int j1939_local_get(struct j1939_priv *priv, name_t name, u8 sa)
 	return err;
 }
 
-void j1939_local_put(struct j1939_priv *priv, name_t name, u8 sa)
+void j1939_local_ecu_put(struct j1939_priv *priv, name_t name, u8 sa)
 {
 	struct j1939_ecu *ecu;
 

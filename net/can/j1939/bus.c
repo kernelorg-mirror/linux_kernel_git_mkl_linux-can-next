@@ -36,6 +36,18 @@ static bool j1939_ecu_is_registred(struct j1939_ecu *ecu)
 }
 
 /* ECU device interface */
+/* map ECU to a bus address space */
+static void j1939_ecu_map_locked(struct j1939_ecu *ecu)
+{
+	lockdep_assert_held(&ecu->priv->lock);
+
+	if (!j1939_address_is_unicast(ecu->addr))
+		return;
+
+	ecu->priv->ents[ecu->addr].ecu = ecu;
+	ecu->priv->ents[ecu->addr].nusers += ecu->nusers;
+}
+
 void j1939_ecu_remove_sa_locked(struct j1939_ecu *ecu)
 {
 	lockdep_assert_held(&ecu->priv->lock);
@@ -68,13 +80,7 @@ static enum hrtimer_restart j1939_ecu_timer_handler(struct hrtimer *hrtimer)
 	/* TODO: can we test if ecu->addr is unicast before starting
 	 * the timer?
 	 */
-	if (j1939_address_is_unicast(ecu->addr)) {
-		/* TODO: put this into a seperate function.
-		 * Inverse to: j1939_ecu_remove_sa_locked()
-		 */
-		priv->ents[ecu->addr].ecu = ecu;
-		priv->ents[ecu->addr].nusers += ecu->nusers;
-	}
+	j1939_ecu_map_locked(ecu);
 	write_unlock_bh(&priv->lock);
 
 	return HRTIMER_NORESTART;

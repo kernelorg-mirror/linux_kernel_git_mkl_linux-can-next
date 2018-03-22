@@ -93,7 +93,7 @@ int j1939_ac_fixup(struct j1939_priv *priv, struct sk_buff *skb)
 		if (!ecu)
 			return -ENODEV;
 
-		if (ecu->sa != skcb->addr.sa)
+		if (ecu->addr != skcb->addr.sa)
 			/* hold further traffic for ecu, remove from parent */
 			j1939_ecu_remove_sa(ecu);
 		j1939_ecu_put(ecu);
@@ -160,11 +160,11 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 	}
 
 	/* save new SA */
-	if (skcb->addr.sa != ecu->sa)
+	if (skcb->addr.sa != ecu->addr)
 		j1939_ecu_remove_sa_locked(ecu);
 	/* cancel pending (previous) address claim */
 	hrtimer_cancel(&ecu->ac_timer);
-	ecu->sa = skcb->addr.sa;
+	ecu->addr = skcb->addr.sa;
 
 	prev = priv->ents[skcb->addr.sa].ecu;
 	if (prev && prev != ecu) {

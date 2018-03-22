@@ -34,7 +34,7 @@
 struct j1939_ecu {
 	struct list_head list;
 	name_t name;
-	u8 sa;
+	u8 addr;
 
 	/* indicates that this ecu successfully claimed @sa as its address */
 	struct hrtimer ac_timer;

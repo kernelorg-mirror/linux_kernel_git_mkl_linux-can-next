@@ -25,14 +25,14 @@
 { \
 	struct j1939_ecu *ecu = _ecu; \
 	pr_debug("j1939-%i,%016llx,%02x: " fmt, ecu->priv->ndev->ifindex, \
-		 ecu->name, ecu->sa, ##__VA_ARGS__); \
+		 ecu->name, ecu->addr, ##__VA_ARGS__); \
 }
 
 static bool j1939_ecu_is_registred(struct j1939_ecu *ecu)
 {
 	struct j1939_priv *priv = ecu->priv;
 
-	return priv && priv->ents[ecu->sa].ecu == ecu;
+	return priv && priv->ents[ecu->addr].ecu == ecu;
 }
 
 /* ECU device interface */
@@ -40,17 +40,17 @@ void j1939_ecu_remove_sa_locked(struct j1939_ecu *ecu)
 {
 	lockdep_assert_held(&ecu->priv->lock);
 
-	if (!j1939_address_is_unicast(ecu->sa))
+	if (!j1939_address_is_unicast(ecu->addr))
 		return;
 	if (j1939_ecu_is_registred(ecu)) {
-		ecu->priv->ents[ecu->sa].ecu = NULL;
-		ecu->priv->ents[ecu->sa].nusers -= ecu->nusers;
+		ecu->priv->ents[ecu->addr].ecu = NULL;
+		ecu->priv->ents[ecu->addr].nusers -= ecu->nusers;
 	}
 }
 
 void j1939_ecu_remove_sa(struct j1939_ecu *ecu)
 {
-	if (!j1939_address_is_unicast(ecu->sa))
+	if (!j1939_address_is_unicast(ecu->addr))
 		return;
 
 	write_lock_bh(&ecu->priv->lock);
@@ -65,15 +65,15 @@ static enum hrtimer_restart j1939_ecu_timer_handler(struct hrtimer *hrtimer)
 	struct j1939_priv *priv = ecu->priv;
 
 	write_lock_bh(&priv->lock);
-	/* TODO: can we test if ecu->sa is unicast before starting
+	/* TODO: can we test if ecu->addr is unicast before starting
 	 * the timer?
 	 */
-	if (j1939_address_is_unicast(ecu->sa)) {
+	if (j1939_address_is_unicast(ecu->addr)) {
 		/* TODO: put this into a seperate function.
 		 * Inverse to: j1939_ecu_remove_sa_locked()
 		 */
-		priv->ents[ecu->sa].ecu = ecu;
-		priv->ents[ecu->sa].nusers += ecu->nusers;
+		priv->ents[ecu->addr].ecu = ecu;
+		priv->ents[ecu->addr].nusers += ecu->nusers;
 	}
 	write_unlock_bh(&priv->lock);
 
@@ -108,7 +108,7 @@ struct j1939_ecu *j1939_ecu_register_locked(struct j1939_priv *priv,
 	if (!ecu)
 		return ERR_PTR(-ENOMEM);
 	kref_init(&ecu->kref);
-	ecu->sa = J1939_IDLE_ADDR;
+	ecu->addr = J1939_IDLE_ADDR;
 	ecu->name = name;
 
 	hrtimer_init(&ecu->ac_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL_SOFT);
@@ -193,7 +193,7 @@ u8 j1939_name_to_sa(struct j1939_priv *priv, name_t name)
 	ecu = j1939_ecu_find_by_name_locked(priv, name);
 	if (j1939_ecu_is_registred(ecu))
 		/* ecu's SA is registered */
-		sa = ecu->sa;
+		sa = ecu->addr;
 
 	read_unlock_bh(&priv->lock);
 
@@ -228,10 +228,10 @@ int j1939_local_ecu_get(struct j1939_priv *priv, name_t name, u8 sa)
 
 	j1939_ecu_get(ecu);
 	ecu->nusers++;
-	/* TODO: do we care if ecu->sa != sa? */
+	/* TODO: do we care if ecu->addr != sa? */
 	if (j1939_ecu_is_registred(ecu))
 		/* ecu's sa is active already */
-		priv->ents[ecu->sa].nusers++;
+		priv->ents[ecu->addr].nusers++;
 
  done:
 	write_unlock_bh(&priv->lock);
@@ -256,10 +256,10 @@ void j1939_local_ecu_put(struct j1939_priv *priv, name_t name, u8 sa)
 		goto done;
 
 	ecu->nusers--;
-	/* TODO: do we care if ecu->sa != sa? */
+	/* TODO: do we care if ecu->addr != sa? */
 	if (j1939_ecu_is_registred(ecu))
 		/* ecu's sa is active already */
-		priv->ents[ecu->sa].nusers--;
+		priv->ents[ecu->addr].nusers--;
 	j1939_ecu_put(ecu);
 
  done:

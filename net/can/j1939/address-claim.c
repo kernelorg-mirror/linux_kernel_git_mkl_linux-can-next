@@ -166,7 +166,7 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 	hrtimer_cancel(&ecu->ac_timer);
 	ecu->addr = skcb->addr.sa;
 
-	prev = priv->ents[skcb->addr.sa].ecu;
+	prev = j1939_ecu_find_by_addr_locked(priv, skcb->addr.sa);
 	if (prev && prev != ecu) {
 		if (ecu->name > prev->name) {
 			j1939_ecu_unregister_locked(ecu);

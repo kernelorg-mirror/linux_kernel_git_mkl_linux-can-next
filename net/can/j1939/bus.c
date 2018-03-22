@@ -48,7 +48,8 @@ static void j1939_ecu_map_locked(struct j1939_ecu *ecu)
 	ecu->priv->ents[ecu->addr].nusers += ecu->nusers;
 }
 
-void j1939_ecu_remove_sa_locked(struct j1939_ecu *ecu)
+/* unmap ECU from a bus address space */
+void j1939_ecu_unmap_locked(struct j1939_ecu *ecu)
 {
 	lockdep_assert_held(&ecu->priv->lock);
 
@@ -60,13 +61,13 @@ void j1939_ecu_remove_sa_locked(struct j1939_ecu *ecu)
 	}
 }
 
-void j1939_ecu_remove_sa(struct j1939_ecu *ecu)
+void j1939_ecu_unmap(struct j1939_ecu *ecu)
 {
 	if (!j1939_address_is_unicast(ecu->addr))
 		return;
 
 	write_lock_bh(&ecu->priv->lock);
-	j1939_ecu_remove_sa_locked(ecu);
+	j1939_ecu_unmap_locked(ecu);
 	write_unlock_bh(&ecu->priv->lock);
 }
 
@@ -135,7 +136,7 @@ void j1939_ecu_unregister_locked(struct j1939_ecu *ecu)
 	ecu_dbg(ecu, "unregister\n");
 	hrtimer_cancel(&ecu->ac_timer);
 
-	j1939_ecu_remove_sa_locked(ecu);
+	j1939_ecu_unmap_locked(ecu);
 	list_del_init(&ecu->list);
 	j1939_ecu_put(ecu);
 }

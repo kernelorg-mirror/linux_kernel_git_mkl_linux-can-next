@@ -63,9 +63,6 @@ void j1939_ecu_unmap_locked(struct j1939_ecu *ecu)
 
 void j1939_ecu_unmap(struct j1939_ecu *ecu)
 {
-	if (!j1939_address_is_unicast(ecu->addr))
-		return;
-
 	write_lock_bh(&ecu->priv->lock);
 	j1939_ecu_unmap_locked(ecu);
 	write_unlock_bh(&ecu->priv->lock);

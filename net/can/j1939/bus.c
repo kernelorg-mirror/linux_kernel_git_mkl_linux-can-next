@@ -55,10 +55,12 @@ void j1939_ecu_unmap_locked(struct j1939_ecu *ecu)
 
 	if (!j1939_address_is_unicast(ecu->addr))
 		return;
-	if (j1939_ecu_is_registred(ecu)) {
-		ecu->priv->ents[ecu->addr].ecu = NULL;
-		ecu->priv->ents[ecu->addr].nusers -= ecu->nusers;
-	}
+
+	if (!j1939_ecu_is_registred(ecu))
+		return;
+
+	ecu->priv->ents[ecu->addr].ecu = NULL;
+	ecu->priv->ents[ecu->addr].nusers -= ecu->nusers;
 }
 
 void j1939_ecu_unmap(struct j1939_ecu *ecu)

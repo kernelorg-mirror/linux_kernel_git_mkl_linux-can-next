@@ -160,13 +160,7 @@ int j1939_ac_fixup(struct j1939_priv *priv, struct sk_buff *skb);
 void j1939_ac_recv(struct j1939_priv *priv, struct sk_buff *skb);
 
 /* network management */
-
-/* j1939_ecu_get_register
- * 'create' & 'register' & 'get' new ecu
- * when a matching ecu already exists, then that is returned
- */
-struct j1939_ecu *j1939_ecu_register_locked(struct j1939_priv *priv,
-						name_t name);
+struct j1939_ecu *j1939_ecu_create_locked(struct j1939_priv *priv, name_t name);
 struct j1939_ecu *j1939_ecu_find_by_name_locked(struct j1939_priv *priv,
 						name_t name);
 

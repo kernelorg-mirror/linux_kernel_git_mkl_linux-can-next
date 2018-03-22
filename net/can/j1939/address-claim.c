@@ -149,7 +149,7 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 
 	ecu = j1939_ecu_find_by_name_locked(priv, name);
 	if (!ecu && j1939_address_is_unicast(skcb->addr.sa))
-		ecu = j1939_ecu_register_locked(priv, name);
+		ecu = j1939_ecu_create_locked(priv, name);
 
 	if (IS_ERR_OR_NULL(ecu))
 		goto done;

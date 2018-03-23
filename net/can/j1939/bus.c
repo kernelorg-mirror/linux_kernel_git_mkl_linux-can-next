@@ -94,6 +94,11 @@ void j1939_ecu_unmap(struct j1939_ecu *ecu)
 
 void j1939_ecu_timer_start(struct j1939_ecu *ecu)
 {
+	/* The ECU is held here and released in the
+	 * j1939_ecu_timer_handler() or j1939_ecu_timer_cancel().
+	 */
+	j1939_ecu_get(ecu);
+
 	/* Schedule timer in 250 msec to commit address change. */
 	hrtimer_start(&ecu->ac_timer, ktime_set(0, 250000000),
 		      HRTIMER_MODE_REL_SOFT);
@@ -101,7 +106,8 @@ void j1939_ecu_timer_start(struct j1939_ecu *ecu)
 
 void j1939_ecu_timer_cancel(struct j1939_ecu *ecu)
 {
-	hrtimer_cancel(&ecu->ac_timer);
+	if (hrtimer_cancel(&ecu->ac_timer))
+		j1939_ecu_put(ecu);
 }
 
 static enum hrtimer_restart j1939_ecu_timer_handler(struct hrtimer *hrtimer)
@@ -115,6 +121,11 @@ static enum hrtimer_restart j1939_ecu_timer_handler(struct hrtimer *hrtimer)
 	 * the timer?
 	 */
 	j1939_ecu_map_locked(ecu);
+
+	/* The corresponding j1939_ecu_get() is in
+	 * j1939_ecu_timer_start().
+	 */
+	j1939_ecu_put(ecu);
 	write_unlock_bh(&priv->lock);
 
 	return HRTIMER_NORESTART;

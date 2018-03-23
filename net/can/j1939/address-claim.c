@@ -147,6 +147,21 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 
 	write_lock_bh(&priv->lock);
 
+	/* Few words on the ECU ref counting:
+	 *
+	 * First we get an ECU handle, either with
+	 * j1939_ecu_get_by_name_locked() (increments the ref counter)
+	 * or j1939_ecu_create_locked() (initializes an ECU object
+	 * with a ref counter of 1).
+	 *
+	 * j1939_ecu_unmap_locked() will decrement the ref counter,
+	 * but only if the ECU was mapped before. So "ecu" still
+	 * belongs to us.
+	 *
+	 * j1939_ecu_timer_start() will increment the ref counter
+	 * before it starts the timer, so we can put the ecu when
+	 * leaving this function.
+	 */
 	ecu = j1939_ecu_get_by_name_locked(priv, name);
 	if (!ecu && j1939_address_is_unicast(skcb->addr.sa))
 		ecu = j1939_ecu_create_locked(priv, name);
@@ -158,7 +173,7 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 	j1939_ecu_timer_cancel(ecu);
 
 	if (j1939_address_is_idle(skcb->addr.sa)) {
-		j1939_ecu_unregister_locked(ecu);
+		j1939_ecu_unmap_locked(ecu);
 		goto out_ecu_put;
 	}
 
@@ -172,12 +187,12 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 		j1939_ecu_put(prev);
 	} else if (prev) {
 		if (ecu->name > prev->name) {
-			j1939_ecu_unregister_locked(ecu);
+			j1939_ecu_unmap_locked(ecu);
 			j1939_ecu_put(prev);
 			goto out_ecu_put;
 		} else {
 			/* kick prev */
-			j1939_ecu_unregister_locked(prev);
+			j1939_ecu_unmap_locked(prev);
 			j1939_ecu_put(prev);
 		}
 	}

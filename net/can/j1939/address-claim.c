@@ -154,6 +154,9 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 	if (IS_ERR_OR_NULL(ecu))
 		goto out_unlock_bh;
 
+	/* cancel pending (previous) address claim */
+	hrtimer_cancel(&ecu->ac_timer);
+
 	if (j1939_address_is_idle(skcb->addr.sa)) {
 		j1939_ecu_unregister_locked(ecu);
 		goto out_unlock_bh;
@@ -162,8 +165,6 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 	/* save new addr */
 	if (ecu->addr != skcb->addr.sa)
 		j1939_ecu_unmap_locked(ecu);
-	/* cancel pending (previous) address claim */
-	hrtimer_cancel(&ecu->ac_timer);
 	ecu->addr = skcb->addr.sa;
 
 	prev = j1939_ecu_find_by_addr_locked(priv, skcb->addr.sa);

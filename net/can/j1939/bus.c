@@ -171,17 +171,28 @@ struct j1939_ecu *j1939_ecu_find_by_name_locked(struct j1939_priv *priv, name_t 
 	return NULL;
 }
 
-struct j1939_ecu *j1939_ecu_get_by_name(struct j1939_priv *priv, name_t name)
+struct j1939_ecu *j1939_ecu_get_by_name_locked(struct j1939_priv *priv, name_t name)
 {
 	struct j1939_ecu *ecu;
+
+	lockdep_assert_held(&priv->lock);
 
 	if (!name)
 		return NULL;
 
-	read_lock_bh(&priv->lock);
 	ecu = j1939_ecu_find_by_name_locked(priv, name);
 	if (ecu)
 		j1939_ecu_get(ecu);
+
+	return ecu;
+}
+
+struct j1939_ecu *j1939_ecu_get_by_name(struct j1939_priv *priv, name_t name)
+{
+	struct j1939_ecu *ecu;
+
+	read_lock_bh(&priv->lock);
+	ecu = j1939_ecu_get_by_name_locked(priv, name);
 	read_unlock_bh(&priv->lock);
 
 	return ecu;

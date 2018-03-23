@@ -184,7 +184,7 @@ struct j1939_ecu *j1939_ecu_get_by_name(struct j1939_priv *priv, name_t name)
 u8 j1939_name_to_sa(struct j1939_priv *priv, name_t name)
 {
 	struct j1939_ecu *ecu;
-	int sa = J1939_IDLE_ADDR;
+	int addr = J1939_IDLE_ADDR;
 
 	if (!name)
 		return J1939_NO_ADDR;
@@ -193,11 +193,11 @@ u8 j1939_name_to_sa(struct j1939_priv *priv, name_t name)
 	ecu = j1939_ecu_find_by_name_locked(priv, name);
 	if (j1939_ecu_is_registred(ecu))
 		/* ecu's SA is registered */
-		sa = ecu->addr;
+		addr = ecu->addr;
 
 	read_unlock_bh(&priv->lock);
 
-	return sa;
+	return addr;
 }
 
 /* TX addr/name accounting

@@ -255,14 +255,13 @@ int j1939_local_ecu_get(struct j1939_priv *priv, name_t name, u8 sa)
 	if (!name)
 		goto done;
 
-	ecu = j1939_ecu_find_by_name_locked(priv, name);
+	ecu = j1939_ecu_get_by_name_locked(priv, name);
 	if (!ecu)
 		ecu = j1939_ecu_create_locked(priv, name);
 	err = PTR_ERR_OR_ZERO(ecu);
 	if (err)
 		goto done;
 
-	j1939_ecu_get(ecu);
 	ecu->nusers++;
 	/* TODO: do we care if ecu->addr != sa? */
 	if (j1939_ecu_is_mapped_locked(ecu))

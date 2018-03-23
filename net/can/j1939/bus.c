@@ -32,6 +32,7 @@ static void __j1939_ecu_release(struct kref *kref)
 {
 	struct j1939_ecu *ecu = container_of(kref, struct j1939_ecu, kref);
 
+	list_del(&ecu->list);
 	kfree(ecu);
 }
 
@@ -139,7 +140,6 @@ void j1939_ecu_unregister_locked(struct j1939_ecu *ecu)
 	hrtimer_cancel(&ecu->ac_timer);
 
 	j1939_ecu_unmap_locked(ecu);
-	list_del_init(&ecu->list);
 	j1939_ecu_put(ecu);
 }
 

@@ -63,6 +63,7 @@ static void j1939_ecu_map_locked(struct j1939_ecu *ecu)
 	if (!j1939_address_is_unicast(ecu->addr))
 		return;
 
+	j1939_ecu_get(ecu);
 	ecu->priv->ents[ecu->addr].ecu = ecu;
 	ecu->priv->ents[ecu->addr].nusers += ecu->nusers;
 }
@@ -80,6 +81,7 @@ void j1939_ecu_unmap_locked(struct j1939_ecu *ecu)
 
 	ecu->priv->ents[ecu->addr].ecu = NULL;
 	ecu->priv->ents[ecu->addr].nusers -= ecu->nusers;
+	j1939_ecu_put(ecu);
 }
 
 void j1939_ecu_unmap(struct j1939_ecu *ecu)

@@ -92,6 +92,18 @@ void j1939_ecu_unmap(struct j1939_ecu *ecu)
 	write_unlock_bh(&ecu->priv->lock);
 }
 
+void j1939_ecu_timer_start(struct j1939_ecu *ecu)
+{
+	/* Schedule timer in 250 msec to commit address change. */
+	hrtimer_start(&ecu->ac_timer, ktime_set(0, 250000000),
+		      HRTIMER_MODE_REL_SOFT);
+}
+
+void j1939_ecu_timer_cancel(struct j1939_ecu *ecu)
+{
+	hrtimer_cancel(&ecu->ac_timer);
+}
+
 static enum hrtimer_restart j1939_ecu_timer_handler(struct hrtimer *hrtimer)
 {
 	struct j1939_ecu *ecu =
@@ -137,7 +149,7 @@ void j1939_ecu_unregister_locked(struct j1939_ecu *ecu)
 	lockdep_assert_held(&ecu->priv->lock);
 
 	ecu_dbg(ecu, "unregister\n");
-	hrtimer_cancel(&ecu->ac_timer);
+	j1939_ecu_timer_cancel(ecu);
 
 	j1939_ecu_unmap_locked(ecu);
 	j1939_ecu_put(ecu);

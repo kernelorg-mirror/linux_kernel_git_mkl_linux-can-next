@@ -165,6 +165,9 @@ struct j1939_ecu *j1939_ecu_create_locked(struct j1939_priv *priv, name_t name);
 struct j1939_ecu *j1939_ecu_find_by_name_locked(struct j1939_priv *priv,
 						name_t name);
 
+void j1939_ecu_timer_start(struct j1939_ecu *ecu);
+void j1939_ecu_timer_cancel(struct j1939_ecu *ecu);
+
 /* unregister must be called with lock held */
 void j1939_ecu_unregister_locked(struct j1939_ecu *ecu);
 

@@ -155,7 +155,7 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 		goto out_unlock_bh;
 
 	/* cancel pending (previous) address claim */
-	hrtimer_cancel(&ecu->ac_timer);
+	j1939_ecu_timer_cancel(ecu);
 
 	if (j1939_address_is_idle(skcb->addr.sa)) {
 		j1939_ecu_unregister_locked(ecu);
@@ -178,9 +178,7 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 		}
 	}
 
-	/* schedule timer in 250 msec to commit address change */
-	hrtimer_start(&ecu->ac_timer, ktime_set(0, 250000000),
-		      HRTIMER_MODE_REL_SOFT);
+	j1939_ecu_timer_start(ecu);
  out_unlock_bh:
 	write_unlock_bh(&priv->lock);
 }

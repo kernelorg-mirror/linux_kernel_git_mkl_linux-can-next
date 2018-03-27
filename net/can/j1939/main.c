@@ -266,10 +266,6 @@ int j1939_send(struct sk_buff *skb)
 	if (unlikely(ret))
 		goto failed;
 	dlc = skb->len;
-	if (dlc > 8) {
-		ret = -EMSGSIZE;
-		goto failed;
-	}
 
 	/* re-claim the CAN_HDR from the SKB */
 	cf = skb_push(skb, J1939_CAN_HDR);

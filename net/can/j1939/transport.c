@@ -1082,8 +1082,9 @@ static int j1939_session_insert(struct net *net, struct j1939_session *session)
 }
 
 /* j1939 main intf */
-int j1939_tp_send(struct net *net, struct j1939_priv *priv, struct sk_buff *skb)
+int j1939_tp_send(struct j1939_priv *priv, struct sk_buff *skb)
 {
+	struct net *net = dev_net(skb->dev);
 	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
 	struct j1939_session *session;
 	int ret;

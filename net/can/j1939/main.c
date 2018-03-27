@@ -265,7 +265,7 @@ int j1939_send(struct net *net, struct sk_buff *skb)
 
 	if (skb->len > 8) {
 		/* re-route via transport protocol */
-		ret = j1939_tp_send(net, priv, skb);
+		ret = j1939_tp_send(priv, skb);
 		j1939_priv_put(priv);
 		return ret;
 	}

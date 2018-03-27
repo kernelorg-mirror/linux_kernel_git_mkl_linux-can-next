@@ -279,12 +279,10 @@ int j1939_send(struct sk_buff *skb)
 
 	canid = CAN_EFF_FLAG |
 		(skcb->priority << 26) |
+		(skcb->addr.pgn << 8) |
 		skcb->addr.sa;
 	if (j1939_pgn_is_pdu1(skcb->addr.pgn))
-		canid |= (skcb->addr.pgn << 8) |
-			(skcb->addr.da << 8);
-	else
-		canid |= skcb->addr.pgn << 8;
+		canid |= skcb->addr.da << 8;
 
 	cf->can_id = canid;
 	cf->can_dlc = dlc;

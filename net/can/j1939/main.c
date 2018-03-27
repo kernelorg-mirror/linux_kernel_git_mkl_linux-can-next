@@ -231,26 +231,12 @@ struct j1939_priv *j1939_priv_get_by_ndev(struct net_device *ndev)
 	return priv;
 }
 
-int j1939_send(struct sk_buff *skb)
+static int j1939_send_one(struct j1939_priv *priv, struct sk_buff *skb)
 {
 	int ret, dlc;
 	canid_t canid;
 	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
-	struct j1939_priv *priv;
 	struct can_frame *cf;
-
-	priv = j1939_priv_get_by_ndev(skb->dev);
-	if (!priv) {
-		ret = -EINVAL;
-		goto failed;
-	}
-
-	if (skb->len > 8) {
-		/* re-route via transport protocol */
-		ret = j1939_tp_send(priv, skb);
-		j1939_priv_put(priv);
-		return ret;
-	}
 
 	/* apply sanity checks */
 	if (j1939_pgn_is_pdu1(skcb->addr.pgn))
@@ -262,7 +248,6 @@ int j1939_send(struct sk_buff *skb)
 		skcb->priority = 6;
 
 	ret = j1939_ac_fixup(priv, skb);
-	j1939_priv_put(priv);
 	if (unlikely(ret))
 		goto failed;
 	dlc = skb->len;
@@ -284,8 +269,29 @@ int j1939_send(struct sk_buff *skb)
 	cf->can_dlc = dlc;
 
 	return can_send(skb, 1);
+
  failed:
 	consume_skb(skb);
+	return ret;
+}
+
+int j1939_send(struct sk_buff *skb)
+{
+	struct j1939_priv *priv;
+	int ret;
+
+	priv = j1939_priv_get_by_ndev(skb->dev);
+	if (!priv)
+		return -EINVAL;
+
+	if (skb->len > 8)
+		/* re-route via transport protocol */
+		ret = j1939_tp_send(priv, skb);
+	else
+		ret = j1939_send_one(priv, skb);
+
+	j1939_priv_put(priv);
+
 	return ret;
 }
 

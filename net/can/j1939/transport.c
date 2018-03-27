@@ -262,8 +262,8 @@ static inline unsigned int j1939_etp_ctl_to_size(const u8 *dat)
  * broadcasts (no dst, no da) would never call this
  * with reverse == true
  */
-static bool j1939_tp_match(struct j1939_session *session, struct sk_buff *skb,
-			   bool reverse)
+static bool j1939_session_match(struct j1939_session *session, struct sk_buff *skb,
+				bool reverse)
 {
 	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
 
@@ -311,7 +311,7 @@ static struct j1939_session *j1939_session_get_by_skb_locked(struct net *net, st
 
 	list_for_each_entry(session, root, list) {
 		j1939_session_get(session);
-		if (j1939_tp_match(session, skb, reverse))
+		if (j1939_session_match(session, skb, reverse))
 			return session;
 		j1939_session_put(session);
 	}

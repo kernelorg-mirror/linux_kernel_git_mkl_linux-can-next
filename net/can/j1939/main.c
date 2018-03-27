@@ -274,7 +274,7 @@ int j1939_send(struct net *net, struct sk_buff *skb)
 	struct j1939_priv *priv;
 	struct can_frame *cf;
 
-	priv = j1939_priv_get_by_index(net, skb->dev->ifindex);
+	priv = j1939_priv_get_by_ndev(skb->dev);
 	if (!priv) {
 		ret = -EINVAL;
 		goto failed;

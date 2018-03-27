@@ -278,8 +278,8 @@ int j1939_send(struct sk_buff *skb)
 	skb_put(skb, J1939_CAN_FTR + (8 - dlc));
 
 	canid = CAN_EFF_FLAG |
-		(skcb->addr.sa) |
-		(skcb->priority << 26);
+		(skcb->priority << 26) |
+		skcb->addr.sa;
 	if (j1939_pgn_is_pdu1(skcb->addr.pgn))
 		canid |= (skcb->addr.pgn << 8) |
 			(skcb->addr.da << 8);

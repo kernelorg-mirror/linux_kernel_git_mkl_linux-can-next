@@ -251,21 +251,6 @@ struct j1939_priv *j1939_priv_get_by_ndev(struct net_device *ndev)
 	return priv;
 }
 
-static struct j1939_priv *j1939_priv_get_by_index(struct net *net, int ifindex)
-{
-	struct j1939_priv *priv;
-	struct net_device *ndev;
-
-	ndev = dev_get_by_index(net, ifindex);
-	if (!ndev)
-		return NULL;
-
-	priv = j1939_priv_get_by_ndev(ndev);
-	dev_put(ndev);
-
-	return priv;
-}
-
 int j1939_send(struct net *net, struct sk_buff *skb)
 {
 	int ret, dlc;

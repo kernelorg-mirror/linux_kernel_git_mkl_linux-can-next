@@ -381,7 +381,7 @@ static int j1939_tp_tx_dat(struct sk_buff *related, bool extd,
 	if (j1939_tp_padding && len < 8)
 		memset(skb_put(skb, 8 - len), 0xff, 8 - len);
 
-	return j1939_send(dev_net(skb->dev), skb);
+	return j1939_send(skb);
 }
 
 static int j1939_xtp_do_tx_ctl(struct sk_buff *related, bool extd,
@@ -403,7 +403,7 @@ static int j1939_xtp_do_tx_ctl(struct sk_buff *related, bool extd,
 	skdat[6] = (pgn >> 8);
 	skdat[7] = (pgn >> 16);
 
-	return j1939_send(dev_net(skb->dev), skb);
+	return j1939_send(skb);
 }
 
 static inline int j1939_tp_tx_ctl(struct j1939_session *session,

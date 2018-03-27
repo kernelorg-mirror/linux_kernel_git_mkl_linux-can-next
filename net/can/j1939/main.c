@@ -249,7 +249,7 @@ struct j1939_priv *j1939_priv_get_by_ndev(struct net_device *ndev)
 	return priv;
 }
 
-int j1939_send(struct net *net, struct sk_buff *skb)
+int j1939_send(struct sk_buff *skb)
 {
 	int ret, dlc;
 	canid_t canid;

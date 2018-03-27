@@ -719,7 +719,7 @@ static int j1939_sk_sendmsg(struct socket *sock, struct msghdr *msg, size_t size
 		j1939_sock_pending_add(&jsk->sk);
 	}
 
-	ret = j1939_send(dev_net(ndev), skb);
+	ret = j1939_send(skb);
 	if (ret < 0)
 		j1939_sock_pending_del(&jsk->sk);
 

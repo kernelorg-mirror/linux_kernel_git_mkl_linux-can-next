@@ -43,8 +43,6 @@ MODULE_ALIAS("can-proto-" __stringify(CAN_J1939));
 static void j1939_can_recv(struct sk_buff *iskb, void *data)
 {
 	struct j1939_priv *priv = data;
-	struct net_device *ndev = priv->ndev;
-	struct net *net = dev_net(ndev);
 	struct sk_buff *skb;
 	struct j1939_sk_buff_cb *skcb;
 	struct can_frame *cf;
@@ -98,7 +96,7 @@ static void j1939_can_recv(struct sk_buff *iskb, void *data)
 	/* deliver into the j1939 stack ... */
 	j1939_ac_recv(priv, skb);
 
-	if (j1939_tp_recv(net, skb))
+	if (j1939_tp_recv(skb))
 		/* this means the transport layer processed the message */
 		goto done;
 	j1939_sk_recv(skb);

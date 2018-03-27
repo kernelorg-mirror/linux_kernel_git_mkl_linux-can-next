@@ -1152,8 +1152,9 @@ int j1939_tp_send(struct net *net, struct j1939_priv *priv, struct sk_buff *skb)
 	return ret;
 }
 
-int j1939_tp_recv(struct net *net, struct sk_buff *skb)
+int j1939_tp_recv(struct sk_buff *skb)
 {
+	struct net *net = dev_net(skb->dev);
 	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
 	const u8 *dat;
 

@@ -152,11 +152,11 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 		ecu = j1939_ecu_create_locked(priv, name);
 
 	if (IS_ERR_OR_NULL(ecu))
-		goto done;
+		goto out_unlock_bh;
 
 	if (j1939_address_is_idle(skcb->addr.sa)) {
 		j1939_ecu_unregister_locked(ecu);
-		goto done;
+		goto out_unlock_bh;
 	}
 
 	/* save new addr */
@@ -170,7 +170,7 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 	if (prev && prev != ecu) {
 		if (ecu->name > prev->name) {
 			j1939_ecu_unregister_locked(ecu);
-			goto done;
+			goto out_unlock_bh;
 		} else {
 			/* kick prev */
 			j1939_ecu_unregister_locked(prev);
@@ -180,7 +180,7 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 	/* schedule timer in 250 msec to commit address change */
 	hrtimer_start(&ecu->ac_timer, ktime_set(0, 250000000),
 		      HRTIMER_MODE_REL_SOFT);
- done:
+ out_unlock_bh:
 	write_unlock_bh(&priv->lock);
 }
 

@@ -201,7 +201,7 @@ struct j1939_ecu *j1939_ecu_get_by_addr(struct j1939_priv *priv, u8 addr)
 }
 
 /* get pointer to ecu without increasing ref counter */
-struct j1939_ecu *j1939_ecu_find_by_name_locked(struct j1939_priv *priv, name_t name)
+static struct j1939_ecu *j1939_ecu_find_by_name_locked(struct j1939_priv *priv, name_t name)
 {
 	struct j1939_ecu *ecu;
 

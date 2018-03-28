@@ -28,9 +28,11 @@
 		 ecu->name, ecu->addr, ##__VA_ARGS__); \
 }
 
-static bool j1939_ecu_is_mapped(struct j1939_ecu *ecu)
+static bool j1939_ecu_is_mapped_locked(struct j1939_ecu *ecu)
 {
 	struct j1939_priv *priv = ecu->priv;
+
+	lockdep_assert_held(&priv->lock);
 
 	return priv->ents[ecu->addr].ecu == ecu;
 }
@@ -56,7 +58,7 @@ void j1939_ecu_unmap_locked(struct j1939_ecu *ecu)
 	if (!j1939_address_is_unicast(ecu->addr))
 		return;
 
-	if (!j1939_ecu_is_mapped(ecu))
+	if (!j1939_ecu_is_mapped_locked(ecu))
 		return;
 
 	ecu->priv->ents[ecu->addr].ecu = NULL;
@@ -208,7 +210,7 @@ u8 j1939_name_to_addr(struct j1939_priv *priv, name_t name)
 
 	read_lock_bh(&priv->lock);
 	ecu = j1939_ecu_find_by_name_locked(priv, name);
-	if (j1939_ecu_is_mapped(ecu))
+	if (j1939_ecu_is_mapped_locked(ecu))
 		/* ecu's SA is registered */
 		addr = ecu->addr;
 
@@ -246,7 +248,7 @@ int j1939_local_ecu_get(struct j1939_priv *priv, name_t name, u8 sa)
 	j1939_ecu_get(ecu);
 	ecu->nusers++;
 	/* TODO: do we care if ecu->addr != sa? */
-	if (j1939_ecu_is_mapped(ecu))
+	if (j1939_ecu_is_mapped_locked(ecu))
 		/* ecu's sa is active already */
 		priv->ents[ecu->addr].nusers++;
 
@@ -274,7 +276,7 @@ void j1939_local_ecu_put(struct j1939_priv *priv, name_t name, u8 sa)
 
 	ecu->nusers--;
 	/* TODO: do we care if ecu->addr != sa? */
-	if (j1939_ecu_is_mapped(ecu))
+	if (j1939_ecu_is_mapped_locked(ecu))
 		/* ecu's sa is active already */
 		priv->ents[ecu->addr].nusers--;
 	j1939_ecu_put(ecu);

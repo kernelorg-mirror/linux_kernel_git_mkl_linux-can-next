@@ -47,8 +47,8 @@ static inline struct j1939_sock *j1939_sk(const struct sock *sk)
 	return container_of(sk, struct j1939_sock, sk);
 }
 
-/* conversion function between (struct sock | struct sk_buff)->sk_priority
- * from linux and j1939 priority field
+/* conversion function between struct sock::sk_priority from linux and
+ * j1939 priority field
  */
 static inline priority_t j1939_prio(int sk_priority)
 {

@@ -159,7 +159,7 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 		goto done;
 	}
 
-	/* save new SA */
+	/* save new addr */
 	if (skcb->addr.sa != ecu->addr)
 		j1939_ecu_unmap_locked(ecu);
 	/* cancel pending (previous) address claim */

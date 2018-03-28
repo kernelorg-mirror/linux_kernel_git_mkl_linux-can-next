@@ -52,12 +52,9 @@ static inline struct j1939_sock *j1939_sk(const struct sock *sk)
  */
 static inline priority_t j1939_prio(u32 sk_priority)
 {
-	if (sk_priority < 0)
-		return 6; /* default */
-	else if (sk_priority > 7)
-		return 0;
-	else
-		return 7 - sk_priority;
+	sk_priority = min(sk_priority, 7U);
+
+	return 7 - sk_priority;
 }
 
 static inline u32 j1939_to_sk_priority(priority_t prio)

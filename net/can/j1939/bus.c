@@ -32,7 +32,7 @@ static bool j1939_ecu_is_mapped(struct j1939_ecu *ecu)
 {
 	struct j1939_priv *priv = ecu->priv;
 
-	return priv && priv->ents[ecu->addr].ecu == ecu;
+	return priv->ents[ecu->addr].ecu == ecu;
 }
 
 /* ECU device interface */

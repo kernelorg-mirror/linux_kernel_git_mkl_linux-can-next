@@ -28,6 +28,23 @@
 		 ecu->name, ecu->addr, ##__VA_ARGS__); \
 }
 
+static void __j1939_ecu_release(struct kref *kref)
+{
+	struct j1939_ecu *ecu = container_of(kref, struct j1939_ecu, kref);
+
+	kfree(ecu);
+}
+
+void j1939_ecu_put(struct j1939_ecu *ecu)
+{
+	kref_put(&ecu->kref, __j1939_ecu_release);
+}
+
+static void j1939_ecu_get(struct j1939_ecu *ecu)
+{
+	kref_get(&ecu->kref);
+}
+
 static bool j1939_ecu_is_mapped_locked(struct j1939_ecu *ecu)
 {
 	struct j1939_priv *priv = ecu->priv;
@@ -86,23 +103,6 @@ static enum hrtimer_restart j1939_ecu_timer_handler(struct hrtimer *hrtimer)
 	write_unlock_bh(&priv->lock);
 
 	return HRTIMER_NORESTART;
-}
-
-static void __j1939_ecu_release(struct kref *kref)
-{
-	struct j1939_ecu *ecu = container_of(kref, struct j1939_ecu, kref);
-
-	kfree(ecu);
-}
-
-void j1939_ecu_put(struct j1939_ecu *ecu)
-{
-	kref_put(&ecu->kref, __j1939_ecu_release);
-}
-
-static void j1939_ecu_get(struct j1939_ecu *ecu)
-{
-	kref_get(&ecu->kref);
 }
 
 struct j1939_ecu *j1939_ecu_create_locked(struct j1939_priv *priv, name_t name)

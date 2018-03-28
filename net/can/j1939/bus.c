@@ -148,17 +148,28 @@ struct j1939_ecu *j1939_ecu_find_by_addr_locked(struct j1939_priv *priv, u8 addr
 	return priv->ents[addr].ecu;
 }
 
-struct j1939_ecu *j1939_ecu_get_by_addr(struct j1939_priv *priv, u8 addr)
+struct j1939_ecu *j1939_ecu_get_by_addr_locked(struct j1939_priv *priv, u8 addr)
 {
 	struct j1939_ecu *ecu;
+
+	lockdep_assert_held(&priv->lock);
 
 	if (!j1939_address_is_unicast(addr))
 		return NULL;
 
-	read_lock_bh(&priv->lock);
 	ecu = j1939_ecu_find_by_addr_locked(priv, addr);
 	if (ecu)
 		j1939_ecu_get(ecu);
+
+	return ecu;
+}
+
+struct j1939_ecu *j1939_ecu_get_by_addr(struct j1939_priv *priv, u8 addr)
+{
+	struct j1939_ecu *ecu;
+
+	read_lock_bh(&priv->lock);
+	ecu = j1939_ecu_get_by_addr_locked(priv, addr);
 	read_unlock_bh(&priv->lock);
 
 	return ecu;

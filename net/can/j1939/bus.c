@@ -140,15 +140,15 @@ void j1939_ecu_unregister_locked(struct j1939_ecu *ecu)
 	j1939_ecu_put(ecu);
 }
 
-struct j1939_ecu *j1939_ecu_get_by_addr(struct j1939_priv *priv, u8 sa)
+struct j1939_ecu *j1939_ecu_get_by_addr(struct j1939_priv *priv, u8 addr)
 {
 	struct j1939_ecu *ecu;
 
-	if (!j1939_address_is_unicast(sa))
+	if (!j1939_address_is_unicast(addr))
 		return NULL;
 
 	read_lock_bh(&priv->lock);
-	ecu = priv->ents[sa].ecu;
+	ecu = priv->ents[addr].ecu;
 	if (ecu)
 		j1939_ecu_get(ecu);
 	read_unlock_bh(&priv->lock);

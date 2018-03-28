@@ -102,7 +102,7 @@ static inline bool j1939_pgn_is_pdu1(pgn_t pgn)
 	return (pgn & 0xff00) < 0xf000;
 }
 
-/* utility to correctly unregister a SA */
+/* utility to correctly unmap an ECU */
 void j1939_ecu_unmap_locked(struct j1939_ecu *ecu);
 void j1939_ecu_unmap(struct j1939_ecu *ecu);
 

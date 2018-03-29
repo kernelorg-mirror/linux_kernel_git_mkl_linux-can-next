@@ -155,17 +155,6 @@ struct j1939_ecu *j1939_ecu_create_locked(struct j1939_priv *priv, name_t name)
 	return ecu;
 }
 
-void j1939_ecu_unregister_locked(struct j1939_ecu *ecu)
-{
-	lockdep_assert_held(&ecu->priv->lock);
-
-	ecu_dbg(ecu, "unregister\n");
-	j1939_ecu_timer_cancel(ecu);
-
-	j1939_ecu_unmap_locked(ecu);
-	j1939_ecu_put(ecu);
-}
-
 struct j1939_ecu *j1939_ecu_find_by_addr_locked(struct j1939_priv *priv, u8 addr)
 {
 	lockdep_assert_held(&priv->lock);

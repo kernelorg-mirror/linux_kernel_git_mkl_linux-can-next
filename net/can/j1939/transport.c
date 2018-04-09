@@ -911,7 +911,6 @@ static int j1939_tp_txnext(struct net *net, struct j1939_session *session)
 	unsigned int pkt, len, pdelay;
 
 	memset(dat, 0xff, sizeof(dat));
-	j1939_session_get(session); /* do not loose it */
 
 	switch (session->last_cmd) {
 	case 0:
@@ -1066,10 +1065,10 @@ static int j1939_tp_txnext(struct net *net, struct j1939_session *session)
 			goto failed;
 		break;
 	}
-	j1939_session_put(session);
+
 	return 0;
+
  failed:
-	j1939_session_put(session);
 	return ret;
 }
 

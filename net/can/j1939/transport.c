@@ -109,6 +109,16 @@ static inline struct list_head *j1939_sessionq(struct net *net, bool extd)
 		return &net->can_j1939.tp_sessionq;
 }
 
+static void j1939_session_list_add(struct j1939_session *session, struct list_head *list)
+{
+	list_add_tail(&session->list, list);
+}
+
+static void j1939_session_list_del(struct j1939_session *session)
+{
+	list_del_init(&session->list);
+}
+
 static void j1939_session_destroy(struct j1939_session *session)
 {
 	hrtimer_cancel(&session->rxtimer);
@@ -140,7 +150,7 @@ static void j1939_tp_del_work(struct work_struct *work)
 		}
 		session = list_first_entry(&ncj->tp_delsessionq,
 					   struct j1939_session, list);
-		list_del_init(&session->list);
+		j1939_session_list_del(session);
 		spin_unlock_bh(&ncj->tp_dellock);
 		j1939_session_destroy(session);
 	} while (1);
@@ -477,7 +487,7 @@ static inline void j1939_tp_set_rxtimeout(struct j1939_session *session, int mse
 static void j1939_session_drop(struct net *net, struct j1939_session *session)
 {
 	j1939_session_list_lock(net);
-	list_del_init(&session->list);
+	j1939_session_list_del(session);
 	j1939_session_list_unlock(net);
 
 	if (session->transmission) {
@@ -765,7 +775,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 		session->pkt.tx = 0;
 		j1939_session_get(session); /* equivalent to j1939_tp_find() */
 		j1939_session_list_lock(net);
-		list_add_tail(&session->list, j1939_sessionq(net, extd));
+		j1939_session_list_add(session, j1939_sessionq(net, extd));
 		j1939_session_list_unlock(net);
 	}
 	session->last_cmd = dat[0];
@@ -1098,7 +1108,7 @@ static int j1939_session_insert(struct net *net, struct j1939_session *session)
 		j1939_session_put(pending);
 		ret = -EAGAIN;
 	} else {
-		list_add_tail(&session->list, j1939_sessionq(net, session->extd));
+		j1939_session_list_add(session, j1939_sessionq(net, session->extd));
 	}
 	j1939_session_list_unlock(net);
 
@@ -1168,7 +1178,7 @@ int j1939_tp_send(struct j1939_priv *priv, struct sk_buff *skb)
 		/* transmission started */
 		return ret;
 	j1939_session_list_lock(net);
-	list_del_init(&session->list);
+	j1939_session_list_del(session);
 	j1939_session_list_unlock(net);
  failed:
 	/* hide the skb from j1939_session_drop, as it would
@@ -1319,14 +1329,14 @@ int j1939_tp_rmdev_notifier(struct net_device *ndev)
 				 &net->can_j1939.tp_sessionq, list) {
 		if (session->ifindex != ndev->ifindex)
 			continue;
-		list_del_init(&session->list);
+		j1939_session_list_del(session);
 		j1939_session_put(session);
 	}
 	list_for_each_entry_safe(session, saved,
 				 &net->can_j1939.tp_extsessionq, list) {
 		if (session->ifindex != ndev->ifindex)
 			continue;
-		list_del_init(&session->list);
+		j1939_session_list_del(session);
 		j1939_session_put(session);
 	}
 	j1939_session_list_unlock(net);
@@ -1354,12 +1364,12 @@ static void __net_exit j1939_tp_pernet_exit(struct net *net)
 	j1939_session_list_lock(net);
 	list_for_each_entry_safe(session, saved,
 				 &net->can_j1939.tp_extsessionq, list) {
-		list_del_init(&session->list);
+		j1939_session_list_del(session);
 		j1939_session_put(session);
 	}
 	list_for_each_entry_safe(session, saved,
 				 &net->can_j1939.tp_sessionq, list) {
-		list_del_init(&session->list);
+		j1939_session_list_del(session);
 		j1939_session_put(session);
 	}
 	j1939_session_list_unlock(net);

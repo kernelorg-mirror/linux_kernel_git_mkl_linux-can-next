@@ -431,12 +431,6 @@ static int j1939_xtp_tx_abort(struct sk_buff *related, bool extd,
 }
 
 /* timer & scheduler functions */
-static inline void j1939_session_schedule_txnow(struct j1939_session *session)
-{
-	hrtimer_start(&session->txtimer, ktime_set(0, 0),
-		      HRTIMER_MODE_REL_SOFT);
-}
-
 static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 {
 	struct j1939_session *session =
@@ -653,7 +647,7 @@ static void j1939_xtp_rx_cts(struct net *net, struct sk_buff *skb, bool extd)
 	if (dat[1]) {
 		j1939_tp_set_rxtimeout(session, 1250);
 		if (j1939_tp_im_transmitter(session->skb))
-			j1939_session_schedule_txnow(session);
+			j1939_tp_schedule_txtimer(session, 0);
 	} else {
 		/* CTS(0) */
 		j1939_tp_set_rxtimeout(session, 550);
@@ -768,7 +762,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 
 	if (j1939_tp_im_receiver(session->skb)) {
 		if (extd || dat[0] != J1939_TP_CMD_BAM)
-			j1939_session_schedule_txnow(session);
+			j1939_tp_schedule_txtimer(session, 0);
 	}
 
 	/* as soon as it's inserted, things can go fast
@@ -880,7 +874,7 @@ static void j1939_xtp_rx_dat(struct net *net, struct sk_buff *skb, bool extd)
 	} else if (do_cts_eof) {
 		j1939_tp_set_rxtimeout(session, 1250);
 		if (j1939_tp_im_receiver(session->skb))
-			j1939_session_schedule_txnow(session);
+			j1939_tp_schedule_txtimer(session, 0);
 	} else {
 		j1939_tp_set_rxtimeout(session, 250);
 	}

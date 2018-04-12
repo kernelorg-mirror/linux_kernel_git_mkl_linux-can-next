@@ -1076,11 +1076,10 @@ static inline int j1939_tp_tx_initial(struct net *net, struct j1939_session *ses
 {
 	int ret;
 
-	j1939_session_get(session);
 	ret = j1939_tp_txnext(net, session);
 	/* set nonblocking for further packets */
 	session->skcb->msg_flags |= MSG_DONTWAIT;
-	j1939_session_put(session);
+
 	return ret;
 }
 

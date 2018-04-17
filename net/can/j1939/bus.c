@@ -31,9 +31,11 @@
 static void __j1939_ecu_release(struct kref *kref)
 {
 	struct j1939_ecu *ecu = container_of(kref, struct j1939_ecu, kref);
+	struct j1939_priv *priv = ecu->priv;
 
 	list_del(&ecu->list);
 	kfree(ecu);
+	j1939_priv_put(priv);
 }
 
 void j1939_ecu_put(struct j1939_ecu *ecu)
@@ -148,6 +150,7 @@ struct j1939_ecu *j1939_ecu_create_locked(struct j1939_priv *priv, name_t name)
 	ecu->ac_timer.function = j1939_ecu_timer_handler;
 	INIT_LIST_HEAD(&ecu->list);
 
+	j1939_priv_get(priv);
 	ecu->priv = priv;
 	list_add_tail(&ecu->list, &priv->ecus);
 

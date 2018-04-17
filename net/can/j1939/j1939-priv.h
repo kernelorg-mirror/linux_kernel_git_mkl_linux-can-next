@@ -169,8 +169,9 @@ void j1939_ecu_timer_cancel(struct j1939_ecu *ecu);
 int j1939_netdev_start(struct net *net, struct net_device *ndev);
 void j1939_netdev_stop(struct net_device *ndev);
 
-struct j1939_priv *j1939_priv_get(struct net_device *ndev);
+struct j1939_priv *j1939_priv_get_by_ndev(struct net_device *ndev);
 void j1939_priv_put(struct j1939_priv *priv);
+void j1939_priv_get(struct j1939_priv *priv);
 
 /* notify/alert all j1939 sockets bound to ifindex */
 void j1939_sk_netdev_event(struct net_device *ndev, int error_code);

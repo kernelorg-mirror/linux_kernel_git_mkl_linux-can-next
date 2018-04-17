@@ -279,7 +279,7 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 		}
 
 		/* drop old references */
-		priv = j1939_priv_get(ndev);
+		priv = j1939_priv_get_by_ndev(ndev);
 		j1939_local_ecu_put(priv, jsk->addr.src_name, jsk->addr.sa);
 	} else {
 		if (ndev->type != ARPHRD_CAN) {
@@ -292,7 +292,7 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 			goto out_dev_put;
 
 		jsk->sk.sk_bound_dev_if = addr->can_ifindex;
-		priv = j1939_priv_get(ndev);
+		priv = j1939_priv_get_by_ndev(ndev);
 	}
 
 	/* set default transmit pgn */
@@ -423,7 +423,7 @@ static int j1939_sk_release(struct socket *sock)
 		ndev = dev_get_by_index(sock_net(sk),
 					  jsk->sk.sk_bound_dev_if);
 		if (ndev) {
-			priv = j1939_priv_get(ndev);
+			priv = j1939_priv_get_by_ndev(ndev);
 			j1939_local_ecu_put(priv, jsk->addr.src_name, jsk->addr.sa);
 			j1939_priv_put(priv);
 
@@ -748,7 +748,7 @@ void j1939_sk_netdev_event(struct net_device *ndev, int error_code)
 		if (error_code == ENODEV) {
 			struct j1939_priv *priv;
 
-			priv = j1939_priv_get(ndev);
+			priv = j1939_priv_get_by_ndev(ndev);
 			j1939_local_ecu_put(priv, jsk->addr.src_name, jsk->addr.sa);
 			j1939_priv_put(priv);
 

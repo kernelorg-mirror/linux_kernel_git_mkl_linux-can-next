@@ -170,13 +170,18 @@ void j1939_priv_put(struct j1939_priv *priv)
 	kref_put(&priv->kref, __j1939_priv_release);
 }
 
+void j1939_priv_get(struct j1939_priv *priv)
+{
+	kref_get(&priv->kref);
+}
+
 int j1939_netdev_start(struct net *net, struct net_device *ndev)
 {
 	struct j1939_priv *priv;
 	int ret;
 
 	spin_lock(&j1939_netdev_lock);
-	priv = j1939_priv_get(ndev);
+	priv = j1939_priv_get_by_ndev(ndev);
 	spin_unlock(&j1939_netdev_lock);
 	if (priv)
 		return 0;
@@ -192,7 +197,7 @@ int j1939_netdev_start(struct net *net, struct net_device *ndev)
 		goto out_dev_put;
 
 	spin_lock(&j1939_netdev_lock);
-	if (j1939_priv_get(ndev)) {
+	if (j1939_priv_get_by_ndev(ndev)) {
 		/* Someone was faster than us, use their priv and roll
 		 * back our's.
 		 */
@@ -232,7 +237,7 @@ void j1939_netdev_stop(struct net_device *ndev)
 	spin_unlock(&j1939_netdev_lock);
 }
 
-struct j1939_priv *j1939_priv_get(struct net_device *ndev)
+struct j1939_priv *j1939_priv_get_by_ndev(struct net_device *ndev)
 {
 	struct j1939_priv *priv;
 
@@ -241,7 +246,7 @@ struct j1939_priv *j1939_priv_get(struct net_device *ndev)
 
 	priv = j1939_ndev_to_priv(ndev);
 	if (priv)
-		kref_get(&priv->kref);
+		j1939_priv_get(priv);
 
 	return priv;
 }
@@ -255,7 +260,7 @@ static struct j1939_priv *j1939_priv_get_by_index(struct net *net, int ifindex)
 	if (!ndev)
 		return NULL;
 
-	priv = j1939_priv_get(ndev);
+	priv = j1939_priv_get_by_ndev(ndev);
 	dev_put(ndev);
 
 	return priv;

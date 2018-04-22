@@ -167,14 +167,18 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 		j1939_ecu_unmap_locked(ecu);
 	ecu->addr = skcb->addr.sa;
 
-	prev = j1939_ecu_find_by_addr_locked(priv, skcb->addr.sa);
-	if (prev && prev != ecu) {
+	prev = j1939_ecu_get_by_addr_locked(priv, skcb->addr.sa);
+	if (prev == ecu) {
+		j1939_ecu_put(prev);
+	} else if (prev) {
 		if (ecu->name > prev->name) {
 			j1939_ecu_unregister_locked(ecu);
+			j1939_ecu_put(prev);
 			goto out_ecu_put;
 		} else {
 			/* kick prev */
 			j1939_ecu_unregister_locked(prev);
+			j1939_ecu_put(prev);
 		}
 	}
 

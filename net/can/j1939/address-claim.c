@@ -147,7 +147,7 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 
 	write_lock_bh(&priv->lock);
 
-	ecu = j1939_ecu_find_by_name_locked(priv, name);
+	ecu = j1939_ecu_get_by_name_locked(priv, name);
 	if (!ecu && j1939_address_is_unicast(skcb->addr.sa))
 		ecu = j1939_ecu_create_locked(priv, name);
 
@@ -159,7 +159,7 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 
 	if (j1939_address_is_idle(skcb->addr.sa)) {
 		j1939_ecu_unregister_locked(ecu);
-		goto out_unlock_bh;
+		goto out_ecu_put;
 	}
 
 	/* save new addr */
@@ -171,7 +171,7 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 	if (prev && prev != ecu) {
 		if (ecu->name > prev->name) {
 			j1939_ecu_unregister_locked(ecu);
-			goto out_unlock_bh;
+			goto out_ecu_put;
 		} else {
 			/* kick prev */
 			j1939_ecu_unregister_locked(prev);
@@ -179,6 +179,8 @@ static void j1939_ac_process(struct j1939_priv *priv, struct sk_buff *skb)
 	}
 
 	j1939_ecu_timer_start(ecu);
+ out_ecu_put:
+	j1939_ecu_put(ecu);
  out_unlock_bh:
 	write_unlock_bh(&priv->lock);
 }

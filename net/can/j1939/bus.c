@@ -100,7 +100,7 @@ void j1939_ecu_timer_start(struct j1939_ecu *ecu)
 	j1939_ecu_get(ecu);
 
 	/* Schedule timer in 250 msec to commit address change. */
-	hrtimer_start(&ecu->ac_timer, ktime_set(0, 250000000),
+	hrtimer_start(&ecu->ac_timer, ms_to_ktime(250),
 		      HRTIMER_MODE_REL_SOFT);
 }
 

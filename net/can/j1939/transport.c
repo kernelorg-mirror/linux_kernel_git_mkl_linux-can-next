@@ -178,14 +178,12 @@ static void j1939_session_put(struct j1939_session *session)
 /* transport status locking */
 static inline void j1939_session_lock(struct j1939_session *session)
 {
-	j1939_session_get(session); /* safety measure */
 	spin_lock_bh(&session->lock);
 }
 
 static inline void j1939_session_unlock(struct net *net, struct j1939_session *session)
 {
 	spin_unlock_bh(&session->lock);
-	j1939_session_put(session);
 }
 
 static inline void j1939_sessionlist_lock(struct net *net)

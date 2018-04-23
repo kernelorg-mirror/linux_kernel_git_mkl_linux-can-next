@@ -449,16 +449,12 @@ static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 
 static inline void j1939_tp_schedule_txtimer(struct j1939_session *session, int msec)
 {
-	hrtimer_start(&session->txtimer,
-		      ktime_set(msec / 1000, (msec % 1000) * 1000000UL),
-		      HRTIMER_MODE_REL_SOFT);
+	hrtimer_start(&session->txtimer, ms_to_ktime(msec), HRTIMER_MODE_REL_SOFT);
 }
 
 static inline void j1939_tp_set_rxtimeout(struct j1939_session *session, int msec)
 {
-	hrtimer_start(&session->rxtimer,
-		      ktime_set(msec / 1000, (msec % 1000) * 1000000UL),
-		      HRTIMER_MODE_REL_SOFT);
+	hrtimer_start(&session->rxtimer, ms_to_ktime(msec), HRTIMER_MODE_REL_SOFT);
 }
 
 /* session completion functions */

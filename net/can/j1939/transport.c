@@ -633,9 +633,7 @@ static void j1939_xtp_rx_cts(struct net *net, struct sk_buff *skb, bool extd)
 
 	j1939_session_lock(session);
 	pkt = extd ? j1939_etp_ctl_to_packet(dat) : dat[2];
-	if (!dat[0]) {
-		hrtimer_cancel(&session->txtimer);
-	} else if (!pkt) {
+	if (!pkt) {
 		goto out_session_unlock;
 	} else if (dat[1] > session->pkt.block /* 0xff for etp */) {
 		goto out_session_unlock;

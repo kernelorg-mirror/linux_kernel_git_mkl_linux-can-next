@@ -550,8 +550,8 @@ static void j1939_xtp_rx_bad_message(struct net *net, struct sk_buff *skb, bool 
 {
 	pr_info("%s, pgn %05x\n", __func__, j1939_xtp_ctl_to_pgn(skb->data));
 
-	_j1939_xtp_rx_bad_message(net, skb, extd, 0);
-	_j1939_xtp_rx_bad_message(net, skb, extd, 1);
+	_j1939_xtp_rx_bad_message(net, skb, extd, false);
+	_j1939_xtp_rx_bad_message(net, skb, extd, true);
 }
 
 static void _j1939_xtp_rx_abort(struct net *net, struct sk_buff *skb, bool extd, bool reverse)
@@ -584,8 +584,8 @@ static inline void j1939_xtp_rx_abort(struct net *net, struct sk_buff *skb, bool
 	pr_info("%s %i, %05x\n", __func__, skb->skb_iif,
 		j1939_xtp_ctl_to_pgn(skb->data));
 
-	_j1939_xtp_rx_abort(net, skb, extd, 0);
-	_j1939_xtp_rx_abort(net, skb, extd, 1);
+	_j1939_xtp_rx_abort(net, skb, extd, false);
+	_j1939_xtp_rx_abort(net, skb, extd, true);
 }
 
 static void j1939_xtp_rx_eof(struct net *net, struct sk_buff *skb, bool extd)

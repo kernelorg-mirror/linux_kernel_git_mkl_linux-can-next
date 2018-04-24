@@ -1134,7 +1134,6 @@ int j1939_tp_send(struct net *net, struct j1939_priv *priv, struct sk_buff *skb)
 	if (!session)
 		return -ENOMEM;
 
-	session->ifindex = can_skb_prv(skb)->ifindex;
 	session->extd = (skb->len > J1939_MAX_TP_PACKET_SIZE) ?
 		J1939_EXTENDED : J1939_REGULAR;
 	session->transmission = true;
@@ -1244,7 +1243,6 @@ static struct j1939_session *j1939_session_fresh_new(int size,
 						     struct sk_buff *rel_skb,
 						     pgn_t pgn)
 {
-	const struct can_skb_priv *rel_skb_prv = can_skb_prv(rel_skb);
 	const struct j1939_sk_buff_cb *rel_skcb = j1939_skb_to_cb(rel_skb);
 	struct sk_buff *skb;
 	struct j1939_sk_buff_cb *skcb;
@@ -1269,7 +1267,6 @@ static struct j1939_session *j1939_session_fresh_new(int size,
 		kfree_skb(skb);
 		return NULL;
 	}
-	session->ifindex = rel_skb_prv->ifindex;
 
 	/* alloc data area */
 	skb_put(skb, size);
@@ -1278,6 +1275,7 @@ static struct j1939_session *j1939_session_fresh_new(int size,
 
 static struct j1939_session *j1939_session_new(struct sk_buff *skb)
 {
+	const struct can_skb_priv *skb_prv = can_skb_prv(skb);
 	struct j1939_session *session;
 
 	session = kzalloc(sizeof(*session), gfp_any());
@@ -1288,6 +1286,8 @@ static struct j1939_session *j1939_session_new(struct sk_buff *skb)
 	session->skb = skb;
 
 	session->skcb = j1939_skb_to_cb(session->skb);
+	session->ifindex = skb_prv->ifindex;
+
 	hrtimer_init(&session->txtimer, CLOCK_MONOTONIC,
 		     HRTIMER_MODE_REL_SOFT);
 	session->txtimer.function = j1939_tp_txtimer;

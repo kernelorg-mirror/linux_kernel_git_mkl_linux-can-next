@@ -631,8 +631,7 @@ static void j1939_xtp_rx_cts(struct net *net, struct sk_buff *skb, bool extd)
 		/* what to do? */
 		j1939_xtp_tx_abort(skb, extd, 1, J1939_ABORT_BUSY, pgn);
 		j1939_session_cancel(net, session, J1939_ABORT_BUSY);
-		j1939_session_put(session);
-		return;
+		goto out_session_put;
 	}
 
 	j1939_session_lock(session);
@@ -670,6 +669,7 @@ static void j1939_xtp_rx_cts(struct net *net, struct sk_buff *skb, bool extd)
  out_session_unlock:
 	j1939_session_unlock(net, session);
 	j1939_session_cancel(net, session, J1939_ABORT_FAULT);
+ out_session_put:
 	j1939_session_put(session);
 }
 

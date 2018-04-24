@@ -699,8 +699,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 		j1939_session_cancel(net, session, J1939_ABORT_BUSY);
 		if (pgn != session->skcb->addr.pgn && dat[0] != J1939_TP_CMD_BAM)
 			j1939_xtp_tx_abort(skb, extd, 1, J1939_ABORT_BUSY, pgn);
-		j1939_session_put(session);
-		return;
+		goto out_session_put;
 	} else if (!session && j1939_tp_im_transmitter(skb)) {
 		pr_alert("%s: I should tx (%i %02x %02x)\n", __func__,
 			 skb->skb_iif, skcb->addr.sa, skcb->addr.da);
@@ -711,8 +710,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 		pr_alert("%s: connection exists (%i %02x %02x)\n", __func__,
 			 skb->skb_iif, skcb->addr.sa, skcb->addr.da);
 		j1939_session_cancel(net, session, J1939_ABORT_BUSY);
-		j1939_session_put(session);
-		return;
+		goto out_session_put;
 	}
 	if (session) {
 		/* make sure 'sa' & 'da' are correct !
@@ -783,6 +781,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 	 * between spin_unlock & next statement
 	 * so, only release here, at the end
 	 */
+ out_session_put:
 	j1939_session_put(session);
 }
 

@@ -534,12 +534,13 @@ static void _j1939_xtp_rx_bad_message(struct net *net, struct sk_buff *skb, bool
 	if (session /*&& (session->skcb->addr.pgn == pgn)*/) {
 		/* do not allow TP control messages on 2 pgn's */
 		j1939_session_cancel(net, session, J1939_ABORT_FAULT);
-		j1939_session_put(session);
-		return;
+		goto out_session_put;
 	}
 	j1939_xtp_tx_abort(skb, extd, 0, J1939_ABORT_FAULT, pgn);
 	if (!session)
 		return;
+
+ out_session_put:
 	j1939_session_put(session);
 }
 

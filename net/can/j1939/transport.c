@@ -26,10 +26,10 @@
 #define J1939_TP_PGN_CTL 0xec00
 #define J1939_TP_PGN_DAT 0xeb00
 
-#define J1939_TP_CMD_BAM 0x20
 #define J1939_TP_CMD_RTS 0x10
 #define J1939_TP_CMD_CTS 0x11
 #define J1939_TP_CMD_EOF 0x13
+#define J1939_TP_CMD_BAM 0x20
 #define J1939_TP_CMD_ABORT 0xff
 
 #define J1939_ETP_CMD_RTS 0x14

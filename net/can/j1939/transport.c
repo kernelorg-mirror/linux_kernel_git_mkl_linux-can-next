@@ -1255,6 +1255,9 @@ static struct j1939_session *j1939_session_fresh_new(int size,
 	if (!skb)
 		return NULL;
 
+	skb->skb_iif = rel_skb->skb_iif;
+	skb->dev = rel_skb->dev;
+
 	skcb = j1939_skb_to_cb(skb);
 	memcpy(skcb, rel_skb->cb, sizeof(*skcb));
 	j1939_fix_cb(skcb);
@@ -1266,8 +1269,6 @@ static struct j1939_session *j1939_session_fresh_new(int size,
 		return NULL;
 	}
 	session->skb_iif = rel_skb->skb_iif;
-	skb->skb_iif = rel_skb->skb_iif;
-	skb->dev = rel_skb->dev;
 
 	/* alloc data area */
 	skb_put(skb, size);

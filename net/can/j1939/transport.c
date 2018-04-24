@@ -639,9 +639,9 @@ static void j1939_xtp_rx_cts(struct net *net, struct sk_buff *skb, bool extd)
 	if (!dat[0]) {
 		hrtimer_cancel(&session->txtimer);
 	} else if (!pkt) {
-		goto bad_fmt;
+		goto out_session_unlock;
 	} else if (dat[1] > session->pkt.block /* 0xff for etp */) {
-		goto bad_fmt;
+		goto out_session_unlock;
 	} else {
 		/* set packet counters only when not CTS(0) */
 		session->pkt.done = pkt - 1;
@@ -665,7 +665,8 @@ static void j1939_xtp_rx_cts(struct net *net, struct sk_buff *skb, bool extd)
 	}
 	j1939_session_put(session);
 	return;
- bad_fmt:
+
+ out_session_unlock:
 	j1939_session_unlock(net, session);
 	j1939_session_cancel(net, session, J1939_ABORT_FAULT);
 	j1939_session_put(session);

@@ -802,14 +802,14 @@ static void j1939_xtp_rx_dpo(struct net *net, struct sk_buff *skb, bool extd)
 		pr_info("%s: different pgn\n", __func__);
 		j1939_xtp_tx_abort(skb, 1, 1, J1939_ABORT_BUSY, pgn);
 		j1939_session_cancel(net, session, J1939_ABORT_BUSY);
-		j1939_session_put(session);
-		return;
+		goto out_session_put;
 	}
 
 	/* transmitted without problems */
 	session->pkt.dpo = j1939_etp_ctl_to_packet(skb->data);
 	session->last_cmd = dat[0];
 	j1939_tp_set_rxtimeout(session, 750);
+ out_session_put:
 	j1939_session_put(session);
 }
 

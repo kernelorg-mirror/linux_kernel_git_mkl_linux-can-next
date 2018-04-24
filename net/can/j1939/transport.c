@@ -1094,7 +1094,6 @@ static int j1939_session_insert(struct net *net, struct j1939_session *session)
 	pending = j1939_session_get_by_skb_locked(net, j1939_sessionq(net, session->extd),
 				       session->skb, false);
 	if (pending)
-		/* revert the effect of find() */
 		j1939_session_put(pending);
 	else
 		list_add_tail(&session->list, j1939_sessionq(net, session->extd));

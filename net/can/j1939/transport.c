@@ -832,7 +832,7 @@ static void j1939_xtp_rx_dat(struct net *net, struct sk_buff *skb, bool extd)
 	dat = skb->data;
 	if (skb->len <= 1)
 		/* makes no sense */
-		goto strange_packet_unlocked;
+		goto out_session_cancel;
 
 	j1939_session_lock(session);
 
@@ -849,7 +849,7 @@ static void j1939_xtp_rx_dat(struct net *net, struct sk_buff *skb, bool extd)
 	default:
 		pr_info("%s: last %02x\n", __func__,
 			session->last_cmd);
-		goto strange_packet;
+		goto out_session_unlock;
 	}
 
 	packet = (dat[0] - 1 + session->pkt.dpo);
@@ -857,7 +857,7 @@ static void j1939_xtp_rx_dat(struct net *net, struct sk_buff *skb, bool extd)
 	if (packet > session->pkt.total ||
 	    (session->pkt.done + 1) > session->pkt.total) {
 		pr_info("%s: should have been completed\n", __func__);
-		goto strange_packet;
+		goto out_session_unlock;
 	}
 	nbytes = session->skb->len - offset;
 	if (nbytes > 7)
@@ -865,7 +865,7 @@ static void j1939_xtp_rx_dat(struct net *net, struct sk_buff *skb, bool extd)
 	if (nbytes <= 0 || (nbytes + 1) > skb->len) {
 		pr_info("%s: nbytes %i, len %i\n", __func__, nbytes,
 			skb->len);
-		goto strange_packet;
+		goto out_session_unlock;
 	}
 	tpdat = session->skb->data;
 	memcpy(&tpdat[offset], &dat[1], nbytes);
@@ -893,10 +893,10 @@ static void j1939_xtp_rx_dat(struct net *net, struct sk_buff *skb, bool extd)
 	j1939_session_put(session);
 	return;
 
- strange_packet:
+ out_session_unlock:
 	/* unlock session (spinlock) before trying to send */
 	j1939_session_unlock(net, session);
- strange_packet_unlocked:
+ out_session_cancel:
 	j1939_session_cancel(net, session, J1939_ABORT_FAULT);
 	j1939_session_put(session);
 }

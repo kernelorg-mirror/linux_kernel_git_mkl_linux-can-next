@@ -152,7 +152,8 @@ static inline bool j1939_packet_match(const struct j1939_sk_buff_cb *skcb,
 static void j1939_sk_recv_one(struct j1939_sock *jsk, struct sk_buff *oskb)
 {
 	struct sk_buff *skb;
-	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(oskb);
+	const struct j1939_sk_buff_cb *oskcb = j1939_skb_to_cb(oskb);
+	struct j1939_sk_buff_cb *skcb;
 
 	if (!(jsk->state & (J1939_SOCK_BOUND | J1939_SOCK_CONNECTED)))
 		return;
@@ -163,16 +164,16 @@ static void j1939_sk_recv_one(struct j1939_sock *jsk, struct sk_buff *oskb)
 	if (!(jsk->state & J1939_SOCK_PROMISC)) {
 		if (jsk->addr.src_name) {
 			/* reject message for other destinations */
-			if (skcb->addr.dst_name &&
-			    skcb->addr.dst_name != jsk->addr.src_name)
+			if (oskcb->addr.dst_name &&
+			    oskcb->addr.dst_name != jsk->addr.src_name)
 				/* the msg is not destined for the name
 				 * that the socket is bound to
 				 */
 				return;
 		} else {
 			/* reject messages for other destination addresses */
-			if (j1939_address_is_unicast(skcb->addr.da) &&
-			    skcb->addr.da != jsk->addr.sa)
+			if (j1939_address_is_unicast(oskcb->addr.da) &&
+			    oskcb->addr.da != jsk->addr.sa)
 				/* the msg is not destined for the name
 				 * that the socket is bound to
 				 */
@@ -180,11 +181,11 @@ static void j1939_sk_recv_one(struct j1939_sock *jsk, struct sk_buff *oskb)
 		}
 	}
 
-	if (skcb->insock == &jsk->sk && !(jsk->state & J1939_SOCK_RECV_OWN))
+	if (oskcb->insock == &jsk->sk && !(jsk->state & J1939_SOCK_RECV_OWN))
 		/* own message */
 		return;
 
-	if (!j1939_packet_match(skcb, jsk->filters, jsk->nfilters))
+	if (!j1939_packet_match(oskcb, jsk->filters, jsk->nfilters))
 		return;
 
 	skb = skb_clone(oskb, GFP_ATOMIC);

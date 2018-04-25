@@ -157,8 +157,7 @@ static void j1939_sk_recv_one(struct j1939_sock *jsk, struct sk_buff *oskb)
 
 	if (!(jsk->state & (J1939_SOCK_BOUND | J1939_SOCK_CONNECTED)))
 		return;
-	if (jsk->sk.sk_bound_dev_if &&
-	    jsk->sk.sk_bound_dev_if != oskb_prv->ifindex)
+	if (jsk->sk.sk_bound_dev_if != oskb_prv->ifindex)
 		/* this socket does not take packets from this iface */
 		return;
 	if (!(jsk->state & J1939_SOCK_PROMISC)) {

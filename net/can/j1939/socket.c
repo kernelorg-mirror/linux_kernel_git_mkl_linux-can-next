@@ -34,12 +34,11 @@ struct j1939_sock {
 	struct sock sk; /* must be first to skip with memset */
 	struct list_head list;
 
-	int state;
-
 #define J1939_SOCK_BOUND BIT(0)
 #define J1939_SOCK_CONNECTED BIT(1)
 #define J1939_SOCK_PROMISC BIT(2)
 #define J1939_SOCK_RECV_OWN BIT(3)
+	int state;
 
 	struct j1939_addr addr;
 	struct j1939_filter *filters;

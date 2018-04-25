@@ -1243,6 +1243,7 @@ static struct j1939_session *j1939_session_fresh_new(int size,
 						     struct sk_buff *rel_skb,
 						     pgn_t pgn)
 {
+	const struct j1939_sk_buff_cb *rel_skcb = j1939_skb_to_cb(rel_skb);
 	struct sk_buff *skb;
 	struct j1939_sk_buff_cb *skcb;
 	struct j1939_session *session;
@@ -1259,7 +1260,7 @@ static struct j1939_session *j1939_session_fresh_new(int size,
 	skb->dev = rel_skb->dev;
 
 	skcb = j1939_skb_to_cb(skb);
-	memcpy(skcb, rel_skb->cb, sizeof(*skcb));
+	memcpy(skcb, rel_skcb, sizeof(*skcb));
 	j1939_fix_cb(skcb);
 	skcb->addr.pgn = pgn;
 

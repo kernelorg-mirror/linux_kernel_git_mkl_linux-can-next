@@ -153,12 +153,13 @@ static void j1939_sk_recv_one(struct j1939_sock *jsk, struct sk_buff *oskb)
 {
 	struct sk_buff *skb;
 	const struct j1939_sk_buff_cb *oskcb = j1939_skb_to_cb(oskb);
+	const struct can_skb_priv *oskb_prv = can_skb_prv(oskb);
 	struct j1939_sk_buff_cb *skcb;
 
 	if (!(jsk->state & (J1939_SOCK_BOUND | J1939_SOCK_CONNECTED)))
 		return;
 	if (jsk->sk.sk_bound_dev_if &&
-	    jsk->sk.sk_bound_dev_if != oskb->skb_iif)
+	    jsk->sk.sk_bound_dev_if != oskb_prv->ifindex)
 		/* this socket does not take packets from this iface */
 		return;
 	if (!(jsk->state & J1939_SOCK_PROMISC)) {

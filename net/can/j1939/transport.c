@@ -260,8 +260,9 @@ static bool j1939_session_match(struct j1939_session *session, struct sk_buff *s
 				bool reverse)
 {
 	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
+	struct can_skb_priv *skb_prv = can_skb_prv(skb);
 
-	if (session->ifindex != skb->skb_iif)
+	if (session->ifindex != skb_prv->ifindex)
 		return false;
 	if (reverse) {
 		if (session->skcb->addr.src_name) {
@@ -576,7 +577,7 @@ static void _j1939_xtp_rx_abort(struct net *net, struct sk_buff *skb, bool extd,
 /* abort packets may come in 2 directions */
 static inline void j1939_xtp_rx_abort(struct net *net, struct sk_buff *skb, bool extd)
 {
-	pr_info("%s %i, %05x\n", __func__, skb->skb_iif,
+	pr_info("%s %i, %05x\n", __func__, can_skb_prv(skb)->ifindex,
 		j1939_xtp_ctl_to_pgn(skb->data));
 
 	_j1939_xtp_rx_abort(net, skb, extd, false);
@@ -682,7 +683,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 
 	if (dat[0] == J1939_TP_CMD_RTS && j1939_cb_is_broadcast(skcb)) {
 		pr_alert("%s: rts without destination (%i %02x)\n", __func__,
-			 skb->skb_iif, skcb->addr.sa);
+			 can_skb_prv(skb)->ifindex, skcb->addr.sa);
 		return;
 	}
 
@@ -698,13 +699,13 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 		goto out_session_put;
 	} else if (!session && j1939_tp_im_transmitter(skb)) {
 		pr_alert("%s: I should tx (%i %02x %02x)\n", __func__,
-			 skb->skb_iif, skcb->addr.sa, skcb->addr.da);
+			 can_skb_prv(skb)->ifindex, skcb->addr.sa, skcb->addr.da);
 		return;
 	}
 	if (session && session->last_cmd != 0) {
 		/* we received a second rts on the same connection */
 		pr_alert("%s: connection exists (%i %02x %02x)\n", __func__,
-			 skb->skb_iif, skcb->addr.sa, skcb->addr.da);
+			 can_skb_prv(skb)->ifindex, skcb->addr.sa, skcb->addr.da);
 		j1939_session_cancel(net, session, J1939_ABORT_BUSY);
 		goto out_session_put;
 	}
@@ -1243,6 +1244,7 @@ static struct j1939_session *j1939_session_fresh_new(int size,
 						     struct sk_buff *rel_skb,
 						     pgn_t pgn)
 {
+	const struct can_skb_priv *rel_skb_prv = can_skb_prv(rel_skb);
 	const struct j1939_sk_buff_cb *rel_skcb = j1939_skb_to_cb(rel_skb);
 	struct sk_buff *skb;
 	struct j1939_sk_buff_cb *skcb;
@@ -1256,9 +1258,7 @@ static struct j1939_session *j1939_session_fresh_new(int size,
 	if (!skb)
 		return NULL;
 
-	skb->skb_iif = rel_skb->skb_iif;
 	skb->dev = rel_skb->dev;
-
 	skcb = j1939_skb_to_cb(skb);
 	memcpy(skcb, rel_skcb, sizeof(*skcb));
 	j1939_fix_cb(skcb);
@@ -1269,7 +1269,7 @@ static struct j1939_session *j1939_session_fresh_new(int size,
 		kfree_skb(skb);
 		return NULL;
 	}
-	session->ifindex = rel_skb->skb_iif;
+	session->ifindex = rel_skb_prv->ifindex;
 
 	/* alloc data area */
 	skb_put(skb, size);

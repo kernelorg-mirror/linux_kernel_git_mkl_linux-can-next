@@ -64,7 +64,7 @@ struct j1939_session {
 	 */
 	struct j1939_sk_buff_cb *skcb;
 	struct sk_buff *skb;
-	int skb_iif;
+	int ifindex;
 
 	/* all tx related stuff (last_txcmd, pkt.tx)
 	 * is protected (modified only) with the txtimer hrtimer
@@ -261,7 +261,7 @@ static bool j1939_session_match(struct j1939_session *session, struct sk_buff *s
 {
 	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
 
-	if (session->skb_iif != skb->skb_iif)
+	if (session->ifindex != skb->skb_iif)
 		return false;
 	if (reverse) {
 		if (session->skcb->addr.src_name) {
@@ -512,7 +512,7 @@ static enum hrtimer_restart j1939_tp_rxtimer(struct hrtimer *hrtimer)
 	struct net *net = dev_net(session->skb->dev);
 
 	j1939_session_get(session);
-	pr_alert("%s: timeout on %i\n", __func__, session->skb_iif);
+	pr_alert("%s: timeout on %i\n", __func__, session->ifindex);
 	j1939_session_cancel(net, session, J1939_ABORT_TIMEOUT);
 	j1939_session_put(session);
 
@@ -1133,7 +1133,7 @@ int j1939_tp_send(struct net *net, struct j1939_priv *priv, struct sk_buff *skb)
 	if (!session)
 		return -ENOMEM;
 
-	session->skb_iif = can_skb_prv(skb)->ifindex;
+	session->ifindex = can_skb_prv(skb)->ifindex;
 	session->extd = (skb->len > J1939_MAX_TP_PACKET_SIZE) ?
 		J1939_EXTENDED : J1939_REGULAR;
 	session->transmission = true;
@@ -1269,7 +1269,7 @@ static struct j1939_session *j1939_session_fresh_new(int size,
 		kfree_skb(skb);
 		return NULL;
 	}
-	session->skb_iif = rel_skb->skb_iif;
+	session->ifindex = rel_skb->skb_iif;
 
 	/* alloc data area */
 	skb_put(skb, size);
@@ -1306,14 +1306,14 @@ int j1939_tp_rmdev_notifier(struct net_device *ndev)
 	j1939_sessionlist_lock(net);
 	list_for_each_entry_safe(session, saved,
 				 &net->can_j1939.tp_sessionq, list) {
-		if (session->skb_iif != ndev->ifindex)
+		if (session->ifindex != ndev->ifindex)
 			continue;
 		list_del_init(&session->list);
 		j1939_session_put(session);
 	}
 	list_for_each_entry_safe(session, saved,
 				 &net->can_j1939.tp_extsessionq, list) {
-		if (session->skb_iif != ndev->ifindex)
+		if (session->ifindex != ndev->ifindex)
 			continue;
 		list_del_init(&session->list);
 		j1939_session_put(session);

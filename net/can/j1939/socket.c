@@ -40,6 +40,7 @@ struct j1939_sock {
 #define J1939_SOCK_RECV_OWN BIT(3)
 	int state;
 
+	int ifindex;
 	struct j1939_addr addr;
 	struct j1939_filter *filters;
 	int nfilters;
@@ -157,7 +158,7 @@ static void j1939_sk_recv_one(struct j1939_sock *jsk, struct sk_buff *oskb)
 
 	if (!(jsk->state & (J1939_SOCK_BOUND | J1939_SOCK_CONNECTED)))
 		return;
-	if (jsk->sk.sk_bound_dev_if != oskb_prv->ifindex)
+	if (jsk->ifindex != oskb_prv->ifindex)
 		/* this socket does not take packets from this iface */
 		return;
 	if (!(jsk->state & J1939_SOCK_PROMISC)) {
@@ -273,7 +274,7 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 		/* A re-bind() to a different interface is not
 		 * supported.
 		 */
-		if (jsk->sk.sk_bound_dev_if != addr->can_ifindex) {
+		if (jsk->ifindex != addr->can_ifindex) {
 			ret = -EINVAL;
 			goto out_dev_put;
 		}
@@ -291,7 +292,7 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 		if (ret < 0)
 			goto out_dev_put;
 
-		jsk->sk.sk_bound_dev_if = addr->can_ifindex;
+		jsk->ifindex = addr->can_ifindex;
 		priv = j1939_priv_get_by_ndev(ndev);
 	}
 
@@ -367,7 +368,7 @@ static void j1939_sk_sock2sockaddr_can(struct sockaddr_can *addr,
 				       const struct j1939_sock *jsk, int peer)
 {
 	addr->can_family = AF_CAN;
-	addr->can_ifindex = jsk->sk.sk_bound_dev_if;
+	addr->can_ifindex = jsk->ifindex;
 	addr->can_addr.j1939.pgn = jsk->addr.pgn;
 	if (peer) {
 		addr->can_addr.j1939.name = jsk->addr.dst_name;
@@ -420,8 +421,7 @@ static int j1939_sk_release(struct socket *sock)
 		list_del_init(&jsk->list);
 		spin_unlock_bh(&j1939_socks_lock);
 
-		ndev = dev_get_by_index(sock_net(sk),
-					  jsk->sk.sk_bound_dev_if);
+		ndev = dev_get_by_index(sock_net(sk), jsk->ifindex);
 		if (ndev) {
 			priv = j1939_priv_get_by_ndev(ndev);
 			j1939_local_ecu_put(priv, jsk->addr.src_name, jsk->addr.sa);
@@ -637,7 +637,7 @@ static int j1939_sk_sendmsg(struct socket *sock, struct msghdr *msg, size_t size
 	if (!(jsk->state & J1939_SOCK_BOUND))
 		return -EBADFD;
 
-	ifindex = sk->sk_bound_dev_if;
+	ifindex = jsk->ifindex;
 
 	if (jsk->addr.sa == J1939_NO_ADDR && !jsk->addr.src_name)
 		/* no address assigned yet */
@@ -738,7 +738,7 @@ void j1939_sk_netdev_event(struct net_device *ndev, int error_code)
 
 	spin_lock_bh(&j1939_socks_lock);
 	list_for_each_entry(jsk, &j1939_socks, list) {
-		if (jsk->sk.sk_bound_dev_if != ndev->ifindex)
+		if (jsk->ifindex != ndev->ifindex)
 			continue;
 
 		jsk->sk.sk_err = error_code;

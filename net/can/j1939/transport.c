@@ -535,7 +535,7 @@ static void _j1939_xtp_rx_bad_message(struct net *net, struct sk_buff *skb, bool
 		j1939_session_cancel(net, session, J1939_ABORT_FAULT);
 		goto out_session_put;
 	}
-	j1939_xtp_tx_abort(skb, extd, 0, J1939_ABORT_FAULT, pgn);
+	j1939_xtp_tx_abort(skb, extd, false, J1939_ABORT_FAULT, pgn);
 	if (!session)
 		return;
 
@@ -602,7 +602,7 @@ static void j1939_xtp_rx_eof(struct net *net, struct sk_buff *skb, bool extd)
 	}
 
 	if (session->skcb->addr.pgn != pgn) {
-		j1939_xtp_tx_abort(skb, extd, 1, J1939_ABORT_BUSY, pgn);
+		j1939_xtp_tx_abort(skb, extd, true, J1939_ABORT_BUSY, pgn);
 		j1939_session_cancel(net, session, J1939_ABORT_BUSY);
 	} else {
 		/* transmitted without problems */
@@ -628,7 +628,7 @@ static void j1939_xtp_rx_cts(struct net *net, struct sk_buff *skb, bool extd)
 
 	if (session->skcb->addr.pgn != pgn) {
 		/* what to do? */
-		j1939_xtp_tx_abort(skb, extd, 1, J1939_ABORT_BUSY, pgn);
+		j1939_xtp_tx_abort(skb, extd, true, J1939_ABORT_BUSY, pgn);
 		j1939_session_cancel(net, session, J1939_ABORT_BUSY);
 		goto out_session_put;
 	}
@@ -698,7 +698,8 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 		/* RTS on pending connection */
 		j1939_session_cancel(net, session, J1939_ABORT_BUSY);
 		if (pgn != session->skcb->addr.pgn && dat[0] != J1939_TP_CMD_BAM)
-			j1939_xtp_tx_abort(skb, extd, 1, J1939_ABORT_BUSY, pgn);
+			j1939_xtp_tx_abort(skb, extd, true, J1939_ABORT_BUSY, pgn);
+
 		goto out_session_put;
 	} else if (!session && j1939_tp_im_transmitter(skb)) {
 		pr_alert("%s: I should tx (%i %02x %02x)\n", __func__,
@@ -738,12 +739,12 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 				abort = J1939_ABORT_RESOURCE;
 		}
 		if (abort) {
-			j1939_xtp_tx_abort(skb, extd, 1, abort, pgn);
+			j1939_xtp_tx_abort(skb, extd, true, abort, pgn);
 			return;
 		}
 		session = j1939_session_fresh_new(len, skb, pgn);
 		if (!session) {
-			j1939_xtp_tx_abort(skb, extd, 1, J1939_ABORT_RESOURCE,
+			j1939_xtp_tx_abort(skb, extd, true, J1939_ABORT_RESOURCE,
 					   pgn);
 			return;
 		}
@@ -800,7 +801,7 @@ static void j1939_xtp_rx_dpo(struct net *net, struct sk_buff *skb, bool extd)
 
 	if (session->skcb->addr.pgn != pgn) {
 		pr_info("%s: different pgn\n", __func__);
-		j1939_xtp_tx_abort(skb, 1, 1, J1939_ABORT_BUSY, pgn);
+		j1939_xtp_tx_abort(skb, true, true, J1939_ABORT_BUSY, pgn);
 		j1939_session_cancel(net, session, J1939_ABORT_BUSY);
 		goto out_session_put;
 	}

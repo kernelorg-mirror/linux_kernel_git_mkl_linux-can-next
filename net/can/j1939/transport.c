@@ -577,7 +577,7 @@ static void j1939_xtp_rx_abort_one(struct net *net, struct sk_buff *skb, bool ex
 }
 
 /* abort packets may come in 2 directions */
-static inline void j1939_xtp_rx_abort(struct net *net, struct sk_buff *skb, bool extd)
+static void j1939_xtp_rx_abort(struct net *net, struct sk_buff *skb, bool extd)
 {
 	pr_info("%s %i, %05x\n", __func__, can_skb_prv(skb)->ifindex,
 		j1939_xtp_ctl_to_pgn(skb->data));

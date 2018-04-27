@@ -184,12 +184,12 @@ static inline void j1939_session_unlock(struct net *net, struct j1939_session *s
 	spin_unlock_bh(&session->lock);
 }
 
-static inline void j1939_sessionlist_lock(struct net *net)
+static inline void j1939_session_list_lock(struct net *net)
 {
 	spin_lock_bh(&net->can_j1939.tp_lock);
 }
 
-static inline void j1939_sessionlist_unlock(struct net *net)
+static inline void j1939_session_list_unlock(struct net *net)
 {
 	spin_unlock_bh(&net->can_j1939.tp_lock);
 }
@@ -324,9 +324,9 @@ static struct j1939_session *j1939_session_get_by_skb(struct net *net, struct li
 {
 	struct j1939_session *session;
 
-	j1939_sessionlist_lock(net);
+	j1939_session_list_lock(net);
 	session = j1939_session_get_by_skb_locked(net, root, skb, reverse);
-	j1939_sessionlist_unlock(net);
+	j1939_session_list_unlock(net);
 
 	return session;
 }
@@ -476,9 +476,9 @@ static inline void j1939_tp_set_rxtimeout(struct j1939_session *session, int mse
  */
 static void j1939_session_drop(struct net *net, struct j1939_session *session)
 {
-	j1939_sessionlist_lock(net);
+	j1939_session_list_lock(net);
 	list_del_init(&session->list);
-	j1939_sessionlist_unlock(net);
+	j1939_session_list_unlock(net);
 
 	if (session->transmission) {
 		if (session->skb && session->skb->sk)
@@ -764,9 +764,9 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 		session->pkt.done = 0;
 		session->pkt.tx = 0;
 		j1939_session_get(session); /* equivalent to j1939_tp_find() */
-		j1939_sessionlist_lock(net);
+		j1939_session_list_lock(net);
 		list_add_tail(&session->list, j1939_sessionq(net, extd));
-		j1939_sessionlist_unlock(net);
+		j1939_session_list_unlock(net);
 	}
 	session->last_cmd = dat[0];
 
@@ -1091,7 +1091,7 @@ static int j1939_session_insert(struct net *net, struct j1939_session *session)
 	struct j1939_session *pending;
 	int ret = 0;
 
-	j1939_sessionlist_lock(net);
+	j1939_session_list_lock(net);
 	pending = j1939_session_get_by_skb_locked(net, j1939_sessionq(net, session->extd),
 						  session->skb, false);
 	if (pending) {
@@ -1100,7 +1100,7 @@ static int j1939_session_insert(struct net *net, struct j1939_session *session)
 	} else {
 		list_add_tail(&session->list, j1939_sessionq(net, session->extd));
 	}
-	j1939_sessionlist_unlock(net);
+	j1939_session_list_unlock(net);
 
 	return ret;
 }
@@ -1167,9 +1167,9 @@ int j1939_tp_send(struct j1939_priv *priv, struct sk_buff *skb)
 	if (!ret)
 		/* transmission started */
 		return ret;
-	j1939_sessionlist_lock(net);
+	j1939_session_list_lock(net);
 	list_del_init(&session->list);
-	j1939_sessionlist_unlock(net);
+	j1939_session_list_unlock(net);
  failed:
 	/* hide the skb from j1939_session_drop, as it would
 	 * kfree_skb, but our caller will kfree_skb(skb) too.
@@ -1314,7 +1314,7 @@ int j1939_tp_rmdev_notifier(struct net_device *ndev)
 	struct net *net = dev_net(ndev);
 	struct j1939_session *session, *saved;
 
-	j1939_sessionlist_lock(net);
+	j1939_session_list_lock(net);
 	list_for_each_entry_safe(session, saved,
 				 &net->can_j1939.tp_sessionq, list) {
 		if (session->ifindex != ndev->ifindex)
@@ -1329,7 +1329,7 @@ int j1939_tp_rmdev_notifier(struct net_device *ndev)
 		list_del_init(&session->list);
 		j1939_session_put(session);
 	}
-	j1939_sessionlist_unlock(net);
+	j1939_session_list_unlock(net);
 	return NOTIFY_DONE;
 }
 
@@ -1351,7 +1351,7 @@ static void __net_exit j1939_tp_pernet_exit(struct net *net)
 
 	wake_up_all(&net->can_j1939.tp_wait);
 
-	j1939_sessionlist_lock(net);
+	j1939_session_list_lock(net);
 	list_for_each_entry_safe(session, saved,
 				 &net->can_j1939.tp_extsessionq, list) {
 		list_del_init(&session->list);
@@ -1362,7 +1362,7 @@ static void __net_exit j1939_tp_pernet_exit(struct net *net)
 		list_del_init(&session->list);
 		j1939_session_put(session);
 	}
-	j1939_sessionlist_unlock(net);
+	j1939_session_list_unlock(net);
 }
 
 static struct pernet_operations j1939_tp_pernet_ops = {

@@ -488,7 +488,7 @@ static void j1939_session_drop(struct net *net, struct j1939_session *session)
 	j1939_session_put(session);
 }
 
-static inline void j1939_session_completed(struct net *net, struct j1939_session *session)
+static void j1939_session_completed(struct net *net, struct j1939_session *session)
 {
 	/* distribute among j1939 receivers */
 	j1939_sk_recv(session->skb);

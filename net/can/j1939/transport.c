@@ -186,12 +186,12 @@ static inline void j1939_session_unlock(struct net *net, struct j1939_session *s
 
 static inline void j1939_session_list_lock(struct net *net)
 {
-	spin_lock_bh(&net->can_j1939.tp_lock);
+	spin_lock_bh(&net->can_j1939.tp_session_list_lock);
 }
 
 static inline void j1939_session_list_unlock(struct net *net)
 {
-	spin_unlock_bh(&net->can_j1939.tp_lock);
+	spin_unlock_bh(&net->can_j1939.tp_session_list_lock);
 }
 
 /* see if we are receiver
@@ -307,7 +307,7 @@ static struct j1939_session *j1939_session_get_by_skb_locked(struct net *net, st
 {
 	struct j1939_session *session;
 
-	lockdep_assert_held(&net->can_j1939.tp_lock);
+	lockdep_assert_held(&net->can_j1939.tp_session_list_lock);
 
 	list_for_each_entry(session, root, list) {
 		j1939_session_get(session);
@@ -1335,7 +1335,7 @@ int j1939_tp_rmdev_notifier(struct net_device *ndev)
 
 static int __net_init j1939_tp_pernet_init(struct net *net)
 {
-	spin_lock_init(&net->can_j1939.tp_lock);
+	spin_lock_init(&net->can_j1939.tp_session_list_lock);
 	INIT_LIST_HEAD(&net->can_j1939.tp_sessionq);
 	INIT_LIST_HEAD(&net->can_j1939.tp_extsessionq);
 	spin_lock_init(&net->can_j1939.tp_dellock);

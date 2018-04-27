@@ -7,7 +7,7 @@
 #define __NETNS_CAN_J1939_H__
 
 struct netns_can_j1939 {
-	spinlock_t tp_lock;
+	spinlock_t tp_session_list_lock;
 	struct list_head tp_sessionq;
 	struct list_head tp_extsessionq;
 	spinlock_t tp_dellock;

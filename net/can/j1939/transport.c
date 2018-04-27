@@ -474,7 +474,7 @@ static inline void j1939_tp_set_rxtimeout(struct j1939_session *session, int mse
 /* j1939_session_drop
  * removes a session from open session list
  */
-static inline void j1939_session_drop(struct net *net, struct j1939_session *session)
+static void j1939_session_drop(struct net *net, struct j1939_session *session)
 {
 	j1939_sessionlist_lock(net);
 	list_del_init(&session->list);

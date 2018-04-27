@@ -109,7 +109,7 @@ static inline struct list_head *j1939_sessionq(struct net *net, bool extd)
 		return &net->can_j1939.tp_sessionq;
 }
 
-static inline void j1939_session_destroy(struct j1939_session *session)
+static void j1939_session_destroy(struct j1939_session *session)
 {
 	hrtimer_cancel(&session->rxtimer);
 	hrtimer_cancel(&session->txtimer);

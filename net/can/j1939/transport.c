@@ -1097,11 +1097,8 @@ int j1939_tp_send(struct net *net, struct j1939_priv *priv, struct sk_buff *skb)
 	else if ((skb->len > J1939_MAX_ETP_PACKET_SIZE) ||
 		 (j1939_tp_max_packet_size && (skb->len > j1939_tp_max_packet_size)))
 		return -EMSGSIZE;
-
-	if (skb->len > J1939_MAX_TP_PACKET_SIZE) {
-		if (j1939_cb_is_broadcast(skcb))
-			return -EDESTADDRREQ;
-	}
+	if (skb->len > J1939_MAX_TP_PACKET_SIZE && j1939_cb_is_broadcast(skcb))
+		return -EDESTADDRREQ;
 
 	/* fill in addresses from names */
 	ret = j1939_ac_fixup(priv, skb);

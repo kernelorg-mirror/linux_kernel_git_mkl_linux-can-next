@@ -38,11 +38,11 @@
 #define J1939_ETP_CMD_EOF 0x17
 #define J1939_ETP_CMD_ABORT 0xff
 
-#define J1939_ABORT_BUSY 1
-#define J1939_ABORT_RESOURCE 2
-#define J1939_ABORT_TIMEOUT 3
-#define J1939_ABORT_GENERIC 4
-#define J1939_ABORT_FAULT 5
+#define J1939_XTP_ABORT_BUSY 1
+#define J1939_XTP_ABORT_RESOURCE 2
+#define J1939_XTP_ABORT_TIMEOUT 3
+#define J1939_XTP_ABORT_GENERIC 4
+#define J1939_XTP_ABORT_FAULT 5
 
 #define J1939_MAX_TP_PACKET_SIZE (7 * 0xff)
 #define J1939_MAX_ETP_PACKET_SIZE (7 * 0x00ffffff)
@@ -446,7 +446,7 @@ static int j1939_xtp_tx_abort(struct sk_buff *related, bool extd,
 	memset(dat, 0xff, sizeof(dat));
 	dat[0] = J1939_TP_CMD_ABORT;
 	if (extd)
-		dat[1] = J1939_ABORT_GENERIC;
+		dat[1] = J1939_XTP_ABORT_GENERIC;
 	else
 		dat[1] = err;
 	return j1939_xtp_do_tx_ctl(related, extd, swap_src_dst, pgn, dat);
@@ -526,7 +526,7 @@ static enum hrtimer_restart j1939_tp_rxtimer(struct hrtimer *hrtimer)
 
 	j1939_session_get(session);
 	pr_alert("%s: timeout on %i\n", __func__, session->ifindex);
-	j1939_session_cancel(net, session, J1939_ABORT_TIMEOUT);
+	j1939_session_cancel(net, session, J1939_XTP_ABORT_TIMEOUT);
 	j1939_session_put(session);
 
 	return HRTIMER_NORESTART;
@@ -542,10 +542,10 @@ static void j1939_xtp_rx_bad_message_one(struct net *net, struct sk_buff *skb, b
 	session = j1939_session_get_by_skb(net, j1939_sessionq(net, extd), skb, reverse);
 	if (session /*&& (session->skcb->addr.pgn == pgn)*/) {
 		/* do not allow TP control messages on 2 pgn's */
-		j1939_session_cancel(net, session, J1939_ABORT_FAULT);
+		j1939_session_cancel(net, session, J1939_XTP_ABORT_FAULT);
 		goto out_session_put;
 	}
-	j1939_xtp_tx_abort(skb, extd, false, J1939_ABORT_FAULT, pgn);
+	j1939_xtp_tx_abort(skb, extd, false, J1939_XTP_ABORT_FAULT, pgn);
 	if (!session)
 		return;
 
@@ -612,8 +612,8 @@ static void j1939_xtp_rx_eof(struct net *net, struct sk_buff *skb, bool extd)
 	}
 
 	if (session->skcb->addr.pgn != pgn) {
-		j1939_xtp_tx_abort(skb, extd, true, J1939_ABORT_BUSY, pgn);
-		j1939_session_cancel(net, session, J1939_ABORT_BUSY);
+		j1939_xtp_tx_abort(skb, extd, true, J1939_XTP_ABORT_BUSY, pgn);
+		j1939_session_cancel(net, session, J1939_XTP_ABORT_BUSY);
 	} else {
 		/* transmitted without problems */
 		j1939_session_completed(net, session);
@@ -638,8 +638,8 @@ static void j1939_xtp_rx_cts(struct net *net, struct sk_buff *skb, bool extd)
 
 	if (session->skcb->addr.pgn != pgn) {
 		/* what to do? */
-		j1939_xtp_tx_abort(skb, extd, true, J1939_ABORT_BUSY, pgn);
-		j1939_session_cancel(net, session, J1939_ABORT_BUSY);
+		j1939_xtp_tx_abort(skb, extd, true, J1939_XTP_ABORT_BUSY, pgn);
+		j1939_session_cancel(net, session, J1939_XTP_ABORT_BUSY);
 		goto out_session_put;
 	}
 
@@ -678,7 +678,7 @@ static void j1939_xtp_rx_cts(struct net *net, struct sk_buff *skb, bool extd)
 
  out_session_unlock:
 	j1939_session_unlock(net, session);
-	j1939_session_cancel(net, session, J1939_ABORT_FAULT);
+	j1939_session_cancel(net, session, J1939_XTP_ABORT_FAULT);
  out_session_put:
 	j1939_session_put(session);
 }
@@ -706,9 +706,9 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 	session = j1939_session_get_by_skb(net, j1939_sessionq(net, extd), skb, false);
 	if (session && !j1939_tp_im_transmitter(skb)) {
 		/* RTS on pending connection */
-		j1939_session_cancel(net, session, J1939_ABORT_BUSY);
+		j1939_session_cancel(net, session, J1939_XTP_ABORT_BUSY);
 		if (pgn != session->skcb->addr.pgn && dat[0] != J1939_TP_CMD_BAM)
-			j1939_xtp_tx_abort(skb, extd, true, J1939_ABORT_BUSY, pgn);
+			j1939_xtp_tx_abort(skb, extd, true, J1939_XTP_ABORT_BUSY, pgn);
 
 		goto out_session_put;
 	} else if (!session && j1939_tp_im_transmitter(skb)) {
@@ -720,7 +720,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 		/* we received a second rts on the same connection */
 		pr_alert("%s: connection exists (%i %02x %02x)\n", __func__,
 			 can_skb_prv(skb)->ifindex, skcb->addr.sa, skcb->addr.da);
-		j1939_session_cancel(net, session, J1939_ABORT_BUSY);
+		j1939_session_cancel(net, session, J1939_XTP_ABORT_BUSY);
 		goto out_session_put;
 	}
 	if (session) {
@@ -736,17 +736,17 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 		if (extd) {
 			len = j1939_etp_ctl_to_size(dat);
 			if (len > J1939_MAX_ETP_PACKET_SIZE)
-				abort = J1939_ABORT_FAULT;
+				abort = J1939_XTP_ABORT_FAULT;
 			else if (j1939_tp_max_packet_size && (len > j1939_tp_max_packet_size))
-				abort = J1939_ABORT_RESOURCE;
+				abort = J1939_XTP_ABORT_RESOURCE;
 			else if (len <= J1939_MAX_TP_PACKET_SIZE)
-				abort = J1939_ABORT_FAULT;
+				abort = J1939_XTP_ABORT_FAULT;
 		} else {
 			len = j1939_tp_ctl_to_size(dat);
 			if (len > J1939_MAX_TP_PACKET_SIZE)
-				abort = J1939_ABORT_FAULT;
+				abort = J1939_XTP_ABORT_FAULT;
 			else if (j1939_tp_max_packet_size && (len > j1939_tp_max_packet_size))
-				abort = J1939_ABORT_RESOURCE;
+				abort = J1939_XTP_ABORT_RESOURCE;
 		}
 		if (abort) {
 			j1939_xtp_tx_abort(skb, extd, true, abort, pgn);
@@ -754,7 +754,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 		}
 		session = j1939_session_fresh_new(len, skb, pgn);
 		if (!session) {
-			j1939_xtp_tx_abort(skb, extd, true, J1939_ABORT_RESOURCE,
+			j1939_xtp_tx_abort(skb, extd, true, J1939_XTP_ABORT_RESOURCE,
 					   pgn);
 			return;
 		}
@@ -811,8 +811,8 @@ static void j1939_xtp_rx_dpo(struct net *net, struct sk_buff *skb, bool extd)
 
 	if (session->skcb->addr.pgn != pgn) {
 		pr_info("%s: different pgn\n", __func__);
-		j1939_xtp_tx_abort(skb, true, true, J1939_ABORT_BUSY, pgn);
-		j1939_session_cancel(net, session, J1939_ABORT_BUSY);
+		j1939_xtp_tx_abort(skb, true, true, J1939_XTP_ABORT_BUSY, pgn);
+		j1939_session_cancel(net, session, J1939_XTP_ABORT_BUSY);
 		goto out_session_put;
 	}
 
@@ -909,7 +909,7 @@ static void j1939_xtp_rx_dat(struct net *net, struct sk_buff *skb, bool extd)
 	/* unlock session (spinlock) before trying to send */
 	j1939_session_unlock(net, session);
  out_session_cancel:
-	j1939_session_cancel(net, session, J1939_ABORT_FAULT);
+	j1939_session_cancel(net, session, J1939_XTP_ABORT_FAULT);
 	j1939_session_put(session);
 }
 

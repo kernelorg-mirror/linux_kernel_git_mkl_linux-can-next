@@ -1086,20 +1086,23 @@ static inline int j1939_tp_tx_initial(struct net *net, struct j1939_session *ses
 	return ret;
 }
 
-/* this call is to be used as probe within wait_event_xxx() */
 static int j1939_session_insert(struct net *net, struct j1939_session *session)
 {
 	struct j1939_session *pending;
+	int ret = 0;
 
 	j1939_sessionlist_lock(net);
 	pending = j1939_session_get_by_skb_locked(net, j1939_sessionq(net, session->extd),
-				       session->skb, false);
-	if (pending)
+						  session->skb, false);
+	if (pending) {
 		j1939_session_put(pending);
-	else
+		ret = -EAGAIN;
+	} else {
 		list_add_tail(&session->list, j1939_sessionq(net, session->extd));
+	}
 	j1939_sessionlist_unlock(net);
-	return pending ? 0 : 1;
+
+	return ret;
 }
 
 /* j1939 main intf */
@@ -1153,10 +1156,10 @@ int j1939_tp_send(struct j1939_priv *priv, struct sk_buff *skb)
 
 	/* insert into queue, but avoid collision with pending session */
 	if (session->skcb->msg_flags & MSG_DONTWAIT)
-		ret = j1939_session_insert(net, session) ? 0 : -EAGAIN;
+		ret = j1939_session_insert(net, session);
 	else
 		ret = wait_event_interruptible(net->can_j1939.tp_wait,
-					       j1939_session_insert(net, session));
+					       j1939_session_insert(net, session) == 0);
 	if (ret < 0)
 		goto failed;
 

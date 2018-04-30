@@ -510,7 +510,7 @@ static void j1939_session_completed(struct net *net, struct j1939_session *sessi
 
 static void j1939_session_cancel(struct net *net, struct j1939_session *session, enum j1939_xtp_abort err)
 {
-	if (err >= 0 && j1939_tp_im_involved_anydir(session->skb)) {
+	if (err && j1939_tp_im_involved_anydir(session->skb)) {
 		if (!j1939_cb_is_broadcast(session->skcb)) {
 			/* do not send aborts on incoming broadcasts */
 			j1939_xtp_tx_abort(session->skb, session->extd,

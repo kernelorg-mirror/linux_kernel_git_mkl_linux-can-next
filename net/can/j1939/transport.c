@@ -109,6 +109,16 @@ static inline struct list_head *j1939_sessionq(struct net *net, bool extd)
 		return &net->can_j1939.tp_sessionq;
 }
 
+static inline void j1939_session_list_lock(struct net *net)
+{
+	spin_lock_bh(&net->can_j1939.tp_session_list_lock);
+}
+
+static inline void j1939_session_list_unlock(struct net *net)
+{
+	spin_unlock_bh(&net->can_j1939.tp_session_list_lock);
+}
+
 static void j1939_session_list_add(struct j1939_session *session, struct list_head *list)
 {
 	list_add_tail(&session->list, list);
@@ -192,16 +202,6 @@ static inline void j1939_session_lock(struct j1939_session *session)
 static inline void j1939_session_unlock(struct net *net, struct j1939_session *session)
 {
 	spin_unlock_bh(&session->lock);
-}
-
-static inline void j1939_session_list_lock(struct net *net)
-{
-	spin_lock_bh(&net->can_j1939.tp_session_list_lock);
-}
-
-static inline void j1939_session_list_unlock(struct net *net)
-{
-	spin_unlock_bh(&net->can_j1939.tp_session_list_lock);
 }
 
 /* see if we are receiver

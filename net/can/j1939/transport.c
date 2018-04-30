@@ -38,11 +38,14 @@
 #define J1939_ETP_CMD_EOF 0x17
 #define J1939_ETP_CMD_ABORT 0xff
 
-#define J1939_XTP_ABORT_BUSY 1
-#define J1939_XTP_ABORT_RESOURCE 2
-#define J1939_XTP_ABORT_TIMEOUT 3
-#define J1939_XTP_ABORT_GENERIC 4
-#define J1939_XTP_ABORT_FAULT 5
+enum j1939_xtp_abort {
+	J1939_XTP_ABORT_NO_ERROR = 0,
+	J1939_XTP_ABORT_BUSY = 1,
+	J1939_XTP_ABORT_RESOURCE = 2,
+	J1939_XTP_ABORT_TIMEOUT = 3,
+	J1939_XTP_ABORT_GENERIC = 4,
+	J1939_XTP_ABORT_FAULT = 5,
+};
 
 #define J1939_MAX_TP_PACKET_SIZE (7 * 0xff)
 #define J1939_MAX_ETP_PACKET_SIZE (7 * 0x00ffffff)
@@ -436,7 +439,7 @@ static inline int j1939_tp_tx_ctl(struct j1939_session *session,
 }
 
 static int j1939_xtp_tx_abort(struct sk_buff *related, bool extd,
-			      bool swap_src_dst, int err, pgn_t pgn)
+			      bool swap_src_dst, enum j1939_xtp_abort err, pgn_t pgn)
 {
 	u8 dat[5];
 
@@ -505,7 +508,7 @@ static void j1939_session_completed(struct net *net, struct j1939_session *sessi
 	j1939_session_drop(net, session);
 }
 
-static void j1939_session_cancel(struct net *net, struct j1939_session *session, int err)
+static void j1939_session_cancel(struct net *net, struct j1939_session *session, enum j1939_xtp_abort err)
 {
 	if (err >= 0 && j1939_tp_im_involved_anydir(session->skb)) {
 		if (!j1939_cb_is_broadcast(session->skcb)) {
@@ -731,7 +734,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 		session->skcb->addr.sa = skcb->addr.sa;
 		session->skcb->addr.da = skcb->addr.da;
 	} else {
-		int abort = 0;
+		enum j1939_xtp_abort abort = J1939_XTP_ABORT_NO_ERROR;
 
 		if (extd) {
 			len = j1939_etp_ctl_to_size(dat);

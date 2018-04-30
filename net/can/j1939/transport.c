@@ -1094,8 +1094,8 @@ int j1939_tp_send(struct net *net, struct j1939_priv *priv, struct sk_buff *skb)
 	    skcb->addr.pgn == J1939_ETP_PGN_CTL)
 		/* avoid conflict */
 		return -EDOM;
-	else if ((skb->len > J1939_MAX_ETP_PACKET_SIZE) ||
-		 (j1939_tp_max_packet_size && (skb->len > j1939_tp_max_packet_size)))
+	if ((skb->len > J1939_MAX_ETP_PACKET_SIZE) ||
+	    (j1939_tp_max_packet_size && (skb->len > j1939_tp_max_packet_size)))
 		return -EMSGSIZE;
 	if (skb->len > J1939_MAX_TP_PACKET_SIZE && j1939_cb_is_broadcast(skcb))
 		return -EDESTADDRREQ;

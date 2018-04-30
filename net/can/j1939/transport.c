@@ -822,7 +822,7 @@ static void j1939_xtp_rx_dat(struct net *net, struct sk_buff *skb, bool extd)
 	int offset;
 	int nbytes;
 	bool final = false;
-	int do_cts_eof;
+	bool do_cts_eof = false;
 	int packet;
 
 	session = j1939_session_get_by_skb(net, j1939_sessionq(net, extd), skb, false);
@@ -876,10 +876,10 @@ static void j1939_xtp_rx_dat(struct net *net, struct sk_buff *skb, bool extd)
 	if (!extd && j1939_cb_is_broadcast(session->skcb)) {
 		if (session->pkt.done >= session->pkt.total)
 			final = true;
-		do_cts_eof = 0;
 	} else {
 		/* never final, an EOF must follow */
-		do_cts_eof = (session->pkt.done >= session->pkt.last);
+		if (session->pkt.done >= session->pkt.last)
+			do_cts_eof = true;
 	}
 	j1939_session_unlock(net, session);
 	if (final) {

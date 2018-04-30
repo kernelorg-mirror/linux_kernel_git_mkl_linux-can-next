@@ -580,7 +580,7 @@ static void j1939_xtp_rx_abort_one(struct net *net, struct sk_buff *skb, bool ex
 		 * start yet
 		 */
 	} else if (session->skcb->addr.pgn == pgn) {
-		j1939_session_drop(net, session);
+		j1939_session_cancel(net, session, J1939_XTP_ABORT_NO_ERROR);
 	}
 
 	/* TODO: maybe cancel current connection
@@ -1184,11 +1184,12 @@ int j1939_tp_send(struct j1939_priv *priv, struct sk_buff *skb)
 	j1939_session_list_del(session);
 	j1939_session_list_unlock(net);
  failed:
-	/* hide the skb from j1939_session_drop, as it would
+	/* Hide the skb from j1939_session_cancel(), as it would
 	 * kfree_skb, but our caller will kfree_skb(skb) too.
 	 */
 	session->skb = NULL;
-	j1939_session_drop(net, session);
+	j1939_session_cancel(net, session, J1939_XTP_ABORT_NO_ERROR);
+
 	return ret;
 }
 

@@ -372,14 +372,12 @@ static int j1939_tp_tx_dat(struct sk_buff *related, bool extd,
 			   const u8 *dat, int len)
 {
 	struct sk_buff *skb;
-	u8 *skdat;
 
 	skb = j1939_tp_tx_dat_prep(related, extd, false, false);
 	if (IS_ERR(skb))
 		return PTR_ERR(skb);
 
-	skdat = skb_put(skb, len);
-	memcpy(skdat, dat, len);
+	skb_put_data(skb, dat, len);
 	if (j1939_tp_padding && len < 8)
 		memset(skb_put(skb, 8 - len), 0xff, 8 - len);
 

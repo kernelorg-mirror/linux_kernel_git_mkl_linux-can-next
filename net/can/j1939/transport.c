@@ -1202,11 +1202,12 @@ int j1939_tp_send(struct j1939_priv *priv, struct sk_buff *skb)
 		goto failed;
 
 	ret = j1939_tp_tx_initial(net, session);
-	if (!ret) {
-		j1939_session_put(session);
-		/* transmission started */
-		return ret;
-	}
+	if (ret)
+		goto failed;
+
+	/* transmission started */
+	j1939_session_put(session);
+	return 0;
 
  failed:
 	/* Hide the skb from j1939_session_cancel(), as it would

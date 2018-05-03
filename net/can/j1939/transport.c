@@ -197,16 +197,16 @@ static inline void j1939_session_get(struct j1939_session *session)
 	kref_get(&session->kref);
 }
 
-static void __j1939_session_put(struct kref *kref)
+static void __j1939_session_release(struct kref *kref)
 {
 	struct j1939_session *session = container_of(kref, struct j1939_session, kref);
 
 	j1939_session_destroy(session);
 }
 
-static void j1939_session_put(struct j1939_session *session)
+static inline void j1939_session_put(struct j1939_session *session)
 {
-	kref_put(&session->kref, __j1939_session_put);
+	kref_put(&session->kref, __j1939_session_release);
 }
 
 /* transport status locking */

@@ -487,7 +487,7 @@ static inline void j1939_tp_set_rxtimeout(struct j1939_session *session, int mse
 /* j1939_session_drop
  * removes a session from open session list
  */
-static void j1939_session_drop(struct net *net, struct j1939_session *session)
+static void __j1939_session_drop(struct net *net, struct j1939_session *session)
 {
 	j1939_session_list_lock(net);
 	j1939_session_list_del(session);
@@ -505,7 +505,7 @@ static void j1939_session_completed(struct net *net, struct j1939_session *sessi
 {
 	/* distribute among j1939 receivers */
 	j1939_sk_recv(session->skb);
-	j1939_session_drop(net, session);
+	__j1939_session_drop(net, session);
 }
 
 static void j1939_session_cancel(struct net *net, struct j1939_session *session, enum j1939_xtp_abort err)
@@ -518,7 +518,7 @@ static void j1939_session_cancel(struct net *net, struct j1939_session *session,
 					   err, session->skcb->addr.pgn);
 		}
 	}
-	j1939_session_drop(net, session);
+	__j1939_session_drop(net, session);
 }
 
 static enum hrtimer_restart j1939_tp_rxtimer(struct hrtimer *hrtimer)

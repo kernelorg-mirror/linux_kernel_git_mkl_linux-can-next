@@ -97,6 +97,7 @@ static struct j1939_session *j1939_session_fresh_new(int size,
 						     pgn_t pgn);
 static int j1939_tp_txnext(struct net *net, struct j1939_session *session);
 static inline void j1939_tp_schedule_txtimer(struct j1939_session *session, int msec);
+static int j1939_session_insert(struct net *net, struct j1939_session *session);
 static void j1939_session_put(struct j1939_session *session);
 
 /* helpers */
@@ -796,9 +797,8 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 
 		session->pkt.done = 0;
 		session->pkt.tx = 0;
-		j1939_session_list_lock(net);
-		j1939_session_list_add(session, j1939_sessionq(net, extd));
-		j1939_session_list_unlock(net);
+
+		WARN_ON_ONCE(j1939_session_insert(net, session));
 	}
 	session->last_cmd = dat[0];
 

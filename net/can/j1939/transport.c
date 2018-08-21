@@ -623,6 +623,7 @@ static void j1939_xtp_rx_eof(struct net *net, struct sk_buff *skb, bool extd)
 		/* transmitted without problems */
 		j1939_session_completed(net, session);
 	}
+
 	j1939_session_put(session);
 }
 
@@ -712,6 +713,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 	if (session && !j1939_tp_im_transmitter(skb)) {
 		/* RTS on pending connection */
 		j1939_session_cancel(net, session, J1939_XTP_ABORT_BUSY);
+
 		if (pgn != session->skcb->addr.pgn && dat[0] != J1939_TP_CMD_BAM)
 			j1939_xtp_tx_abort(skb, extd, true, J1939_XTP_ABORT_BUSY, pgn);
 
@@ -719,15 +721,19 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 	} else if (!session && j1939_tp_im_transmitter(skb)) {
 		pr_alert("%s: I should tx (%i %02x %02x)\n", __func__,
 			 can_skb_prv(skb)->ifindex, skcb->addr.sa, skcb->addr.da);
+
 		return;
 	}
+
 	if (session && session->last_cmd != 0) {
 		/* we received a second rts on the same connection */
 		pr_alert("%s: connection exists (%i %02x %02x)\n", __func__,
 			 can_skb_prv(skb)->ifindex, skcb->addr.sa, skcb->addr.da);
 		j1939_session_cancel(net, session, J1939_XTP_ABORT_BUSY);
+
 		goto out_session_put;
 	}
+
 	if (session) {
 		/* make sure 'sa' & 'da' are correct !
 		 * They may be 'not filled in yet' for sending
@@ -757,6 +763,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 			j1939_xtp_tx_abort(skb, extd, true, abort, pgn);
 			return;
 		}
+
 		session = j1939_session_fresh_new(len, skb, pgn);
 		if (!session) {
 			j1939_xtp_tx_abort(skb, extd, true, J1939_XTP_ABORT_RESOURCE,
@@ -776,6 +783,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 			session->pkt.total = dat[3];
 			session->pkt.block = min(dat[3], dat[4]);
 		}
+
 		session->pkt.done = 0;
 		session->pkt.tx = 0;
 		j1939_session_get(session); /* equivalent to j1939_tp_find() */
@@ -897,6 +905,7 @@ static void j1939_xtp_rx_dat(struct net *net, struct sk_buff *skb, bool extd)
 			do_cts_eof = true;
 	}
 	j1939_session_unlock(net, session);
+
 	if (final) {
 		j1939_session_completed(net, session);
 	} else if (do_cts_eof) {
@@ -908,6 +917,7 @@ static void j1939_xtp_rx_dat(struct net *net, struct sk_buff *skb, bool extd)
 	}
 	session->last_cmd = 0xff;
 	j1939_session_put(session);
+
 	return;
 
  out_session_unlock:
@@ -1149,6 +1159,7 @@ int j1939_tp_send(struct j1939_priv *priv, struct sk_buff *skb)
 	if (j1939_address_is_unicast(skcb->addr.da) &&
 	    priv->ents[skcb->addr.da].nusers)
 		skcb->dst_flags |= J1939_ECU_LOCAL;
+
 	/* src is always local, I'm sending ... */
 	skcb->src_flags |= J1939_ECU_LOCAL;
 
@@ -1165,6 +1176,7 @@ int j1939_tp_send(struct j1939_priv *priv, struct sk_buff *skb)
 	session->pkt.total = (skb->len + 6) / 7;
 	session->pkt.block = session->extd ? 255 :
 		min(j1939_tp_block ?: 255, session->pkt.total);
+
 	if (j1939_cb_is_broadcast(session->skcb))
 		/* set the end-packet for broadcast */
 		session->pkt.last = session->pkt.total;
@@ -1182,9 +1194,11 @@ int j1939_tp_send(struct j1939_priv *priv, struct sk_buff *skb)
 	if (!ret)
 		/* transmission started */
 		return ret;
+
 	j1939_session_list_lock(net);
 	j1939_session_list_del(session);
 	j1939_session_list_unlock(net);
+
  failed:
 	/* Hide the skb from j1939_session_cancel(), as it would
 	 * kfree_skb, but our caller will kfree_skb(skb) too.
@@ -1311,8 +1325,8 @@ static struct j1939_session *j1939_session_new(struct sk_buff *skb)
 	INIT_LIST_HEAD(&session->list);
 	spin_lock_init(&session->lock);
 	kref_init(&session->kref);
-	session->skb = skb;
 
+	session->skb = skb;
 	session->skcb = j1939_skb_to_cb(session->skb);
 	session->ifindex = skb_prv->ifindex;
 

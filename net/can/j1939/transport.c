@@ -67,7 +67,6 @@ struct j1939_session {
 	 */
 	struct j1939_sk_buff_cb *skcb;
 	struct sk_buff *skb;
-	int ifindex;
 
 	/* all tx related stuff (last_txcmd, pkt.tx)
 	 * is protected (modified only) with the txtimer hrtimer
@@ -291,9 +290,8 @@ static bool j1939_session_match(struct j1939_session *session, struct sk_buff *s
 				bool reverse)
 {
 	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
-	struct can_skb_priv *skb_prv = can_skb_prv(skb);
 
-	if (session->ifindex != skb_prv->ifindex)
+	if (can_skb_prv(session->skb)->ifindex != can_skb_prv(skb)->ifindex)
 		return false;
 	if (reverse) {
 		if (session->skcb->addr.src_name) {
@@ -533,7 +531,8 @@ static enum hrtimer_restart j1939_tp_rxtimer(struct hrtimer *hrtimer)
 						     rxtimer);
 	struct net *net = dev_net(session->skb->dev);
 
-	pr_alert("%s: timeout on %i\n", __func__, session->ifindex);
+	pr_alert("%s: timeout on %i\n", __func__,
+		 can_skb_prv(session->skb)->ifindex);
 	j1939_session_txtimer_cancel(session);
 	j1939_session_cancel(net, session, J1939_XTP_ABORT_TIMEOUT);
 	j1939_session_put(session);
@@ -1300,15 +1299,13 @@ static struct j1939_session *j1939_session_fresh_new(int size,
 	struct j1939_sk_buff_cb *skcb;
 	struct j1939_session *session;
 
-	/* this SKB is allocated without headroom for CAN skb's.
-	 * This may not pose a problem, this SKB will never
-	 * enter generic CAN functions
-	 */
-	skb = alloc_skb(size, GFP_ATOMIC);
-	if (!skb)
+	skb = alloc_skb(size + sizeof(struct can_skb_priv), GFP_ATOMIC);
+	if (unlikely(!skb))
 		return NULL;
 
 	skb->dev = rel_skb->dev;
+	can_skb_reserve(skb);
+	can_skb_prv(skb)->ifindex = can_skb_prv(rel_skb)->ifindex;
 	skcb = j1939_skb_to_cb(skb);
 	memcpy(skcb, rel_skcb, sizeof(*skcb));
 	j1939_fix_cb(skcb);
@@ -1327,7 +1324,6 @@ static struct j1939_session *j1939_session_fresh_new(int size,
 
 static struct j1939_session *j1939_session_new(struct sk_buff *skb)
 {
-	const struct can_skb_priv *skb_prv = can_skb_prv(skb);
 	struct j1939_session *session;
 
 	session = kzalloc(sizeof(*session), gfp_any());
@@ -1339,7 +1335,6 @@ static struct j1939_session *j1939_session_new(struct sk_buff *skb)
 
 	session->skb = skb;
 	session->skcb = j1939_skb_to_cb(session->skb);
-	session->ifindex = skb_prv->ifindex;
 
 	hrtimer_init(&session->txtimer, CLOCK_MONOTONIC,
 		     HRTIMER_MODE_REL_SOFT);
@@ -1359,13 +1354,13 @@ int j1939_tp_rmdev_notifier(struct net_device *ndev)
 	j1939_session_list_lock(net);
 	list_for_each_entry_safe(session, saved,
 				 &net->can_j1939.tp_sessionq, list) {
-		if (session->ifindex != ndev->ifindex)
+		if (can_skb_prv(session->skb)->ifindex != ndev->ifindex)
 			continue;
 		j1939_session_timers_cancel(session);
 	}
 	list_for_each_entry_safe(session, saved,
 				 &net->can_j1939.tp_extsessionq, list) {
-		if (session->ifindex != ndev->ifindex)
+		if (can_skb_prv(session->skb)->ifindex != ndev->ifindex)
 			continue;
 		j1939_session_timers_cancel(session);
 	}

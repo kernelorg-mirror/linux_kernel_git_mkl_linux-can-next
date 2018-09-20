@@ -988,7 +988,7 @@ static int j1939_tp_txnext(struct net *net, struct j1939_session *session)
  tx_cts:
 		ret = 0;
 		len = session->pkt.total - session->pkt.done;
-		len = min(max(len, session->pkt.block), j1939_tp_block ?: 255);
+		len = min3(len, session->pkt.block, j1939_tp_block ?: 255);
 
 		if (session->extd) {
 			pkt = session->pkt.done + 1;

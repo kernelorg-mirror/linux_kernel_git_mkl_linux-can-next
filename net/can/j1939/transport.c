@@ -28,14 +28,14 @@
 
 #define J1939_TP_CMD_RTS 0x10
 #define J1939_TP_CMD_CTS 0x11
-#define J1939_TP_CMD_EOF 0x13
+#define J1939_TP_CMD_EOMA 0x13
 #define J1939_TP_CMD_BAM 0x20
 #define J1939_TP_CMD_ABORT 0xff
 
 #define J1939_ETP_CMD_RTS 0x14
 #define J1939_ETP_CMD_CTS 0x15
 #define J1939_ETP_CMD_DPO 0x16
-#define J1939_ETP_CMD_EOF 0x17
+#define J1939_ETP_CMD_EOMA 0x17
 #define J1939_ETP_CMD_ABORT 0xff
 
 enum j1939_xtp_abort {
@@ -605,7 +605,7 @@ static void j1939_xtp_rx_abort(struct net *net, struct sk_buff *skb, bool extd)
 	j1939_xtp_rx_abort_one(net, skb, extd, true);
 }
 
-static void j1939_xtp_rx_eof(struct net *net, struct sk_buff *skb, bool extd)
+static void j1939_xtp_rx_eoma(struct net *net, struct sk_buff *skb, bool extd)
 {
 	struct j1939_session *session;
 	pgn_t pgn;
@@ -614,8 +614,8 @@ static void j1939_xtp_rx_eof(struct net *net, struct sk_buff *skb, bool extd)
 	pgn = j1939_xtp_ctl_to_pgn(skb->data);
 	session = j1939_session_get_by_skb(net, j1939_sessionq(net, extd), skb, true);
 	if (!session) {
-		/* strange, we had EOF on closed connection
-		 * do nothing, as EOF closes the connection anyway
+		/* strange, we had EOMA on closed connection
+		 * do nothing, as EOMA closes the connection anyway
 		 */
 		return;
 	}
@@ -854,7 +854,7 @@ static void j1939_xtp_rx_dat(struct net *net, struct sk_buff *skb, bool extd)
 	int offset;
 	int nbytes;
 	bool final = false;
-	bool do_cts_eof = false;
+	bool do_cts_eoma = false;
 	int packet;
 
 	session = j1939_session_get_by_skb(net, j1939_sessionq(net, extd), skb, false);
@@ -909,15 +909,15 @@ static void j1939_xtp_rx_dat(struct net *net, struct sk_buff *skb, bool extd)
 		if (session->pkt.done >= session->pkt.total)
 			final = true;
 	} else {
-		/* never final, an EOF must follow */
+		/* never final, an EOMA must follow */
 		if (session->pkt.done >= session->pkt.last)
-			do_cts_eof = true;
+			do_cts_eoma = true;
 	}
 	j1939_session_unlock(net, session);
 
 	if (final) {
 		j1939_session_completed(net, session);
-	} else if (do_cts_eof) {
+	} else if (do_cts_eoma) {
 		j1939_tp_set_rxtimeout(session, 1250);
 		if (j1939_tp_im_receiver(session->skb))
 			j1939_tp_schedule_txtimer(session, 0);
@@ -1039,13 +1039,13 @@ static int j1939_tp_txnext(struct net *net, struct j1939_session *session)
 		    j1939_tp_im_receiver(session->skb)) {
 			if (session->pkt.done >= session->pkt.total) {
 				if (session->extd) {
-					dat[0] = J1939_ETP_CMD_EOF;
+					dat[0] = J1939_ETP_CMD_EOMA;
 					dat[1] = session->skb->len >> 0;
 					dat[2] = session->skb->len >> 8;
 					dat[3] = session->skb->len >> 16;
 					dat[4] = session->skb->len >> 24;
 				} else {
-					dat[0] = J1939_TP_CMD_EOF;
+					dat[0] = J1939_TP_CMD_EOMA;
 					dat[1] = session->skb->len;
 					dat[2] = session->skb->len >> 8;
 					dat[3] = session->pkt.total;
@@ -1058,7 +1058,7 @@ static int j1939_tp_txnext(struct net *net, struct j1939_session *session)
 					goto failed;
 				session->last_txcmd = dat[0];
 				j1939_tp_set_rxtimeout(session, 1250);
-				/* wait for the EOF packet to come in */
+				/* wait for the EOMA packet to come in */
 				break;
 			} else if (session->pkt.done >= session->pkt.last) {
 				session->last_txcmd = 0;
@@ -1245,8 +1245,8 @@ int j1939_tp_recv(struct sk_buff *skb)
 		case J1939_ETP_CMD_DPO:
 			j1939_xtp_rx_dpo(net, skb, J1939_EXTENDED);
 			break;
-		case J1939_ETP_CMD_EOF:
-			j1939_xtp_rx_eof(net, skb, J1939_EXTENDED);
+		case J1939_ETP_CMD_EOMA:
+			j1939_xtp_rx_eoma(net, skb, J1939_EXTENDED);
 			break;
 		case J1939_ETP_CMD_ABORT:
 			j1939_xtp_rx_abort(net, skb, J1939_EXTENDED);
@@ -1273,8 +1273,8 @@ int j1939_tp_recv(struct sk_buff *skb)
 		case J1939_TP_CMD_CTS:
 			j1939_xtp_rx_cts(net, skb, J1939_REGULAR);
 			break;
-		case J1939_TP_CMD_EOF:
-			j1939_xtp_rx_eof(net, skb, J1939_REGULAR);
+		case J1939_TP_CMD_EOMA:
+			j1939_xtp_rx_eoma(net, skb, J1939_REGULAR);
 			break;
 		case J1939_TP_CMD_ABORT:
 			j1939_xtp_rx_abort(net, skb, J1939_REGULAR);

@@ -167,29 +167,6 @@ static inline bool j1939_cb_is_broadcast(const struct j1939_sk_buff_cb *skcb)
 	return (!skcb->addr.dst_name && (skcb->addr.da == 0xff));
 }
 
-/* clean up work queue */
-static void j1939_tp_del_work(struct work_struct *work)
-{
-	struct netns_can_j1939 *ncj;
-	struct j1939_session *session;
-
-	ncj = container_of(work, struct netns_can_j1939, tp_delwork);
-
-	do {
-		session = NULL;
-		spin_lock_bh(&ncj->tp_dellock);
-		if (list_empty(&ncj->tp_delsessionq)) {
-			spin_unlock_bh(&ncj->tp_dellock);
-			break;
-		}
-		session = list_first_entry(&ncj->tp_delsessionq,
-					   struct j1939_session, list);
-		j1939_session_list_del(session);
-		spin_unlock_bh(&ncj->tp_dellock);
-		j1939_session_destroy(session);
-	} while (1);
-}
-
 /* reference counter */
 static inline void j1939_session_get(struct j1939_session *session)
 {
@@ -1373,9 +1350,6 @@ static int __net_init j1939_tp_pernet_init(struct net *net)
 	spin_lock_init(&net->can_j1939.tp_session_list_lock);
 	INIT_LIST_HEAD(&net->can_j1939.tp_sessionq);
 	INIT_LIST_HEAD(&net->can_j1939.tp_extsessionq);
-	spin_lock_init(&net->can_j1939.tp_dellock);
-	INIT_LIST_HEAD(&net->can_j1939.tp_delsessionq);
-	INIT_WORK(&net->can_j1939.tp_delwork, j1939_tp_del_work);
 	init_waitqueue_head(&net->can_j1939.tp_wait);
 	return 0;
 }

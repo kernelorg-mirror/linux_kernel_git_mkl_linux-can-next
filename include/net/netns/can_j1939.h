@@ -10,9 +10,6 @@ struct netns_can_j1939 {
 	spinlock_t tp_session_list_lock;
 	struct list_head tp_sessionq;
 	struct list_head tp_extsessionq;
-	spinlock_t tp_dellock;
-	struct list_head tp_delsessionq;
-	struct work_struct tp_delwork;
 	wait_queue_head_t tp_wait;
 };
 

@@ -339,7 +339,7 @@ static void j1939_skbcb_swap(struct j1939_sk_buff_cb *skcb)
 	swap(skcb->dst_flags, skcb->src_flags);
 }
 
-static struct sk_buff *j1939_tp_tx_dat_prep(struct sk_buff *related,
+static struct sk_buff *j1939_tp_tx_dat_new(struct sk_buff *related,
 					    bool extd, bool ctl, bool swap_src_dst)
 {
 	struct sk_buff *skb;
@@ -386,7 +386,7 @@ static int j1939_tp_tx_dat(struct sk_buff *related, bool extd,
 {
 	struct sk_buff *skb;
 
-	skb = j1939_tp_tx_dat_prep(related, extd, false, false);
+	skb = j1939_tp_tx_dat_new(related, extd, false, false);
 	if (IS_ERR(skb))
 		return PTR_ERR(skb);
 
@@ -406,7 +406,7 @@ static int j1939_xtp_do_tx_ctl(struct sk_buff *related, bool extd,
 	if (!j1939_tp_im_involved(related, swap_src_dst))
 		return 0;
 
-	skb = j1939_tp_tx_dat_prep(related, extd, true, swap_src_dst);
+	skb = j1939_tp_tx_dat_new(related, extd, true, swap_src_dst);
 	if (IS_ERR(skb))
 		return PTR_ERR(skb);
 

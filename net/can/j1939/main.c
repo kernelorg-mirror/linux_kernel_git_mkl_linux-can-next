@@ -145,7 +145,7 @@ static void __j1939_priv_release(struct kref *kref)
 			  j1939_can_recv, priv);
 
 	/* remove pending transport protocol sessions */
-	j1939_tp_rmdev_notifier(ndev);
+	j1939_tp_rmdev_notifier(priv);
 
 	/* unlink from netdev */
 	j1939_priv_set(ndev, NULL);
@@ -178,6 +178,8 @@ int j1939_netdev_start(struct net *net, struct net_device *ndev)
 	priv = j1939_priv_create(ndev);
 	if (!priv)
 		return -ENOMEM;
+
+	j1939_tp_init(priv);
 
 	/* add CAN handler */
 	ret = can_rx_register(net, ndev, J1939_CAN_ID, J1939_CAN_MASK,
@@ -308,16 +310,23 @@ static int j1939_netdev_notify(struct notifier_block *nb,
 			       unsigned long msg, void *data)
 {
 	struct net_device *ndev = netdev_notifier_info_to_dev(data);
+	struct j1939_priv *priv;
+
+	spin_lock(&j1939_netdev_lock);
+	priv = j1939_priv_get_by_ndev(ndev);
+	spin_unlock(&j1939_netdev_lock);
+	if (!priv)
+		goto notify_done;
 
 	if (!net_eq(dev_net(ndev), &init_net))
-		return NOTIFY_DONE;
+		goto notify_put;
 
 	if (ndev->type != ARPHRD_CAN)
-		return NOTIFY_DONE;
+		goto notify_put;
 
 	switch (msg) {
 	case NETDEV_UNREGISTER:
-		j1939_tp_rmdev_notifier(ndev);
+		j1939_tp_rmdev_notifier(priv);
 		j1939_sk_netdev_event(ndev, ENODEV);
 		break;
 
@@ -326,6 +335,10 @@ static int j1939_netdev_notify(struct notifier_block *nb,
 		break;
 	}
 
+notify_put:
+	j1939_priv_put(priv);
+
+notify_done:
 	return NOTIFY_DONE;
 }
 
@@ -349,14 +362,9 @@ static __init int j1939_module_init(void)
 		pr_err("can: registration of j1939 protocol failed\n");
 		goto fail_sk;
 	}
-	ret = j1939_tp_module_init();
-	if (ret < 0)
-		goto fail_tp;
 
 	return 0;
 
- fail_tp:
-	can_proto_unregister(&j1939_can_proto);
  fail_sk:
 	unregister_netdevice_notifier(&j1939_netdev_notifier);
  fail_notifier:
@@ -365,8 +373,6 @@ static __init int j1939_module_init(void)
 
 static __exit void j1939_module_exit(void)
 {
-	j1939_tp_module_exit();
-
 	can_proto_unregister(&j1939_can_proto);
 
 	unregister_netdevice_notifier(&j1939_netdev_notifier);

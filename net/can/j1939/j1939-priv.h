@@ -73,6 +73,11 @@ struct j1939_priv {
 	} ents[256];
 
 	struct kref kref;
+
+	spinlock_t tp_session_list_lock;
+	struct list_head tp_sessionq;
+	struct list_head tp_extsessionq;
+	wait_queue_head_t tp_wait;
 };
 
 void j1939_ecu_put(struct j1939_ecu *ecu);
@@ -175,15 +180,11 @@ void j1939_priv_get(struct j1939_priv *priv);
 
 /* notify/alert all j1939 sockets bound to ifindex */
 void j1939_sk_netdev_event(struct net_device *ndev, int error_code);
-int j1939_tp_rmdev_notifier(struct net_device *ndev);
+int j1939_tp_rmdev_notifier(struct j1939_priv *priv);
+void j1939_tp_init(struct j1939_priv *priv);
 
 /* decrement pending skb for a j1939 socket */
 void j1939_sock_pending_del(struct sock *sk);
-
-/* separate module-init/modules-exit's */
-__init int j1939_tp_module_init(void);
-
-void j1939_tp_module_exit(void);
 
 /* CAN protocol */
 extern const struct can_proto j1939_can_proto;

@@ -57,6 +57,7 @@ static unsigned int j1939_tp_packet_delay;
 static unsigned int j1939_tp_padding = 1;
 
 struct j1939_session {
+	struct j1939_priv *priv;
 	struct list_head list;
 	struct kref kref;
 	spinlock_t lock;
@@ -90,8 +91,8 @@ struct j1939_session {
 };
 
 /* forward declarations */
-static struct j1939_session *j1939_session_new(struct sk_buff *skb);
-static struct j1939_session *j1939_session_fresh_new(int size,
+static struct j1939_session *j1939_session_new(struct j1939_priv *priv, struct sk_buff *skb);
+static struct j1939_session *j1939_session_fresh_new(struct j1939_priv *priv, int size,
 						     struct sk_buff *rel_skb,
 						     pgn_t pgn);
 static int j1939_tp_txnext(struct net *net, struct j1939_session *session);
@@ -159,6 +160,7 @@ static void j1939_session_destroy(struct j1939_session *session)
 	j1939_session_list_del(session);
 	j1939_session_list_unlock(net);
 	kfree_skb(session->skb);
+	j1939_priv_put(session->priv);
 	kfree(session);
 }
 
@@ -673,7 +675,7 @@ static void j1939_xtp_rx_cts(struct net *net, struct sk_buff *skb, bool extd)
 	j1939_session_put(session);
 }
 
-static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
+static void j1939_xtp_rx_rts(struct j1939_priv *priv, struct net *net, struct sk_buff *skb, bool extd)
 {
 	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
 	struct j1939_session *session;
@@ -751,7 +753,7 @@ static void j1939_xtp_rx_rts(struct net *net, struct sk_buff *skb, bool extd)
 			return;
 		}
 
-		session = j1939_session_fresh_new(len, skb, pgn);
+		session = j1939_session_fresh_new(priv, len, skb, pgn);
 		if (!session) {
 			j1939_xtp_tx_abort(skb, extd, true, J1939_XTP_ABORT_RESOURCE,
 					   pgn);
@@ -1151,7 +1153,7 @@ int j1939_tp_send(struct j1939_priv *priv, struct sk_buff *skb)
 	skcb->src_flags |= J1939_ECU_LOCAL;
 
 	/* prepare new session */
-	session = j1939_session_new(skb);
+	session = j1939_session_new(priv, skb);
 	if (!session)
 		return -ENOMEM;
 
@@ -1192,7 +1194,7 @@ int j1939_tp_send(struct j1939_priv *priv, struct sk_buff *skb)
 	return ret;
 }
 
-int j1939_tp_recv(struct sk_buff *skb)
+int j1939_tp_recv(struct j1939_priv *priv, struct sk_buff *skb)
 {
 	struct net *net = dev_net(skb->dev);
 	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
@@ -1210,7 +1212,7 @@ int j1939_tp_recv(struct sk_buff *skb)
 		dat = skb->data;
 		switch (*dat) {
 		case J1939_ETP_CMD_RTS:
-			j1939_xtp_rx_rts(net, skb, J1939_EXTENDED);
+			j1939_xtp_rx_rts(priv, net, skb, J1939_EXTENDED);
 			break;
 		case J1939_ETP_CMD_CTS:
 			j1939_xtp_rx_cts(net, skb, J1939_EXTENDED);
@@ -1241,7 +1243,7 @@ int j1939_tp_recv(struct sk_buff *skb)
 		switch (*dat) {
 		case J1939_TP_CMD_BAM:
 		case J1939_TP_CMD_RTS:
-			j1939_xtp_rx_rts(net, skb, J1939_REGULAR);
+			j1939_xtp_rx_rts(priv, net, skb, J1939_REGULAR);
 			break;
 		case J1939_TP_CMD_CTS:
 			j1939_xtp_rx_cts(net, skb, J1939_REGULAR);
@@ -1263,7 +1265,7 @@ int j1939_tp_recv(struct sk_buff *skb)
 	return 1; /* "I processed the message" */
 }
 
-static struct j1939_session *j1939_session_fresh_new(int size,
+static struct j1939_session *j1939_session_fresh_new(struct j1939_priv *priv, int size,
 						     struct sk_buff *rel_skb,
 						     pgn_t pgn)
 {
@@ -1284,7 +1286,7 @@ static struct j1939_session *j1939_session_fresh_new(int size,
 	j1939_fix_cb(skcb);
 	skcb->addr.pgn = pgn;
 
-	session = j1939_session_new(skb);
+	session = j1939_session_new(priv, skb);
 	if (!session) {
 		kfree_skb(skb);
 		return NULL;
@@ -1297,7 +1299,7 @@ static struct j1939_session *j1939_session_fresh_new(int size,
 	return session;
 }
 
-static struct j1939_session *j1939_session_new(struct sk_buff *skb)
+static struct j1939_session *j1939_session_new(struct j1939_priv *priv, struct sk_buff *skb)
 {
 	struct j1939_session *session;
 
@@ -1308,6 +1310,8 @@ static struct j1939_session *j1939_session_new(struct sk_buff *skb)
 	spin_lock_init(&session->lock);
 	kref_init(&session->kref);
 
+	j1939_priv_get(priv);
+	session->priv = priv;
 	/* corresponding skb_unref() is in j1939_session_fresh_new */
 	session->skb = skb_get(skb);
 	session->skcb = j1939_skb_to_cb(session->skb);

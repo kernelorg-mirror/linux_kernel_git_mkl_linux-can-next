@@ -96,7 +96,7 @@ static void j1939_can_recv(struct sk_buff *iskb, void *data)
 	/* deliver into the j1939 stack ... */
 	j1939_ac_recv(priv, skb);
 
-	if (j1939_tp_recv(skb))
+	if (j1939_tp_recv(priv, skb))
 		/* this means the transport layer processed the message */
 		goto done;
 	j1939_sk_recv(skb);

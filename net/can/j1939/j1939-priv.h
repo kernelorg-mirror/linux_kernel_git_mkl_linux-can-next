@@ -156,7 +156,7 @@ void j1939_sk_recv(struct sk_buff *skb);
 
 /* stack entries */
 int j1939_tp_send(struct j1939_priv *priv, struct sk_buff *skb);
-int j1939_tp_recv(struct sk_buff *skb);
+int j1939_tp_recv(struct j1939_priv *priv, struct sk_buff *skb);
 int j1939_ac_fixup(struct j1939_priv *priv, struct sk_buff *skb);
 void j1939_ac_recv(struct j1939_priv *priv, struct sk_buff *skb);
 

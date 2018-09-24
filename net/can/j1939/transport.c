@@ -1103,16 +1103,16 @@ static int j1939_session_insert(struct net *net, struct j1939_session *session)
 	struct j1939_session *pending;
 	int ret = 0;
 
-	j1939_session_list_lock(net);
-	pending = j1939_session_get_by_skb_locked(net, j1939_sessionq(net, session->extd),
-						  session->skb, false);
+	pending = j1939_session_get_by_skb(net, j1939_sessionq(net, session->extd),
+									   session->skb, false);
 	if (pending) {
 		j1939_session_put(pending);
 		ret = -EAGAIN;
 	} else {
+		j1939_session_list_lock(net);
 		j1939_session_list_add(session, j1939_sessionq(net, session->extd));
+		j1939_session_list_unlock(net);
 	}
-	j1939_session_list_unlock(net);
 
 	return ret;
 }

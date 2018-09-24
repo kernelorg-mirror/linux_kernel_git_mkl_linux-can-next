@@ -1186,10 +1186,6 @@ int j1939_tp_send(struct j1939_priv *priv, struct sk_buff *skb)
 	return 0;
 
  failed:
-	/* Hide the skb from j1939_session_cancel(), as it would
-	 * kfree_skb, but our caller will kfree_skb(skb) too.
-	 */
-	session->skb = NULL;
 	j1939_session_timers_cancel(session);
 	j1939_session_cancel(net, session, J1939_XTP_ABORT_NO_ERROR);
 	j1939_session_put(session);
@@ -1296,6 +1292,8 @@ static struct j1939_session *j1939_session_fresh_new(int size,
 
 	/* alloc data area */
 	skb_put(skb, size);
+	/* The skb's refcount is increased in j1939_session_new() */
+	WARN_ON_ONCE(skb_unref(skb));
 	return session;
 }
 
@@ -1310,7 +1308,8 @@ static struct j1939_session *j1939_session_new(struct sk_buff *skb)
 	spin_lock_init(&session->lock);
 	kref_init(&session->kref);
 
-	session->skb = skb;
+	/* corresponding skb_unref() is in j1939_session_fresh_new */
+	session->skb = skb_get(skb);
 	session->skcb = j1939_skb_to_cb(session->skb);
 
 	hrtimer_init(&session->txtimer, CLOCK_MONOTONIC,

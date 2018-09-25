@@ -7,16 +7,10 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
-#include <linux/version.h>
-#include <linux/module.h>
-#include <linux/init.h>
-#include <linux/socket.h>
-#include <linux/list.h>
-#include <linux/if_arp.h>
-
 #include <linux/can/core.h>
 #include <linux/can/skb.h>
-#include <linux/can/j1939.h>
+#include <linux/if_arp.h>
+
 #include "j1939-priv.h"
 
 #define J1939_MIN_NAMELEN REQUIRED_SIZE(struct sockaddr_can, can_addr.j1939)

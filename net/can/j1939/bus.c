@@ -7,11 +7,7 @@
  * Since rtnetlink, no real bus is used.
  */
 
-#include <linux/version.h>
-#include <linux/module.h>
-#include <linux/init.h>
-#include <linux/err.h>
-#include <linux/workqueue.h>
+#include <net/sock.h>
 
 #include "j1939-priv.h"
 

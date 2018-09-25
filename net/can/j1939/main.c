@@ -7,17 +7,11 @@
 
 /* Core of can-j1939 that links j1939 to CAN. */
 
-#include <linux/version.h>
-#include <linux/mutex.h>
-#include <linux/module.h>
-#include <linux/init.h>
-#include <linux/socket.h>
-#include <linux/list.h>
-#include <linux/if_arp.h>
-#include <net/tcp_states.h>
-
-#include <linux/can.h>
+#include <linux/can/can-ml.h>
 #include <linux/can/core.h>
+#include <linux/if_arp.h>
+#include <linux/module.h>
+
 #include "j1939-priv.h"
 
 MODULE_DESCRIPTION("PF_CAN SAE J1939");

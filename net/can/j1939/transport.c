@@ -4,13 +4,8 @@
 // Copyright (c) 2017-2018 Pengutronix, Oleksij Rempel <kernel@pengutronix.de>
 // Copyright (c) 2018 Protonic, Robin van der Gracht <robin@protonic.nl>
 
-#include <linux/skbuff.h>
-#include <linux/hrtimer.h>
-#include <linux/version.h>
-#include <linux/if_arp.h>
-#include <linux/wait.h>
-#include <linux/seq_file.h>
 #include <linux/can/skb.h>
+
 #include "j1939-priv.h"
 
 #define J1939_REGULAR 0

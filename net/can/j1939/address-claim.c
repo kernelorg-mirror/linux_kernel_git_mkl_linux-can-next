@@ -21,7 +21,6 @@
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 #include <linux/skbuff.h>
-#include <linux/byteorder/generic.h>
 
 #include "j1939-priv.h"
 

@@ -1,12 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0
-/* j1939-priv.h
- *
- * Copyright (c) 2010-2011 EIA Electronics
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- */
+// Copyright (c) 2010-2011 EIA Electronics, Kurt Van Dijck <kurt.van.dijck@eia.be>
+// Copyright (c) 2017-2018 Pengutronix, Marc Kleine-Budde <kernel@pengutronix.de>
+// Copyright (c) 2017-2018 Pengutronix, Oleksij Rempel <kernel@pengutronix.de>
 
 #ifndef _J1939_PRIV_H_
 #define _J1939_PRIV_H_

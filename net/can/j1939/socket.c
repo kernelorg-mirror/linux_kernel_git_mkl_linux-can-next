@@ -1,14 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0
-/* Copyright (c) 2010-2011 EIA Electronics
- *
- * Authors:
- * Kurt Van Dijck <kurt.van.dijck@eia.be>
- * Pieter Beyens <pieter.beyens@eia.be>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the version 2 of the GNU General Public License
- * as published by the Free Software Foundation
- */
+// Copyright (c) 2010-2011 EIA Electronics, Pieter Beyens <pieter.beyens@eia.be>
+// Copyright (c) 2010-2011 EIA Electronics, Kurt Van Dijck <kurt.van.dijck@eia.be>
+// Copyright (c) 2017-2018 Pengutronix, Marc Kleine-Budde <kernel@pengutronix.de>
+// Copyright (c) 2017-2018 Pengutronix, Oleksij Rempel <kernel@pengutronix.de>
+// Copyright (c) 2018 Protonic, Robin van der Gracht <robin@protonic.nl>
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 

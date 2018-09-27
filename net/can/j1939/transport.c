@@ -1142,7 +1142,7 @@ int j1939_send_transport(struct net *net, struct sk_buff *skb)
 		return ret;
 
 	/* fix dst_flags, it may be used there soon */
-	priv = j1939_priv_get_by_ifindex(net, can_skb_prv(skb)->ifindex);
+	priv = j1939_priv_get_by_index(net, can_skb_prv(skb)->ifindex);
 	if (!priv)
 		return -EINVAL;
 	if (j1939_address_is_unicast(cb->addr.da) &&

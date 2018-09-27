@@ -119,7 +119,7 @@ u8 j1939_name_to_sa(struct net *net, name_t name, int ifindex)
 
 	if (!name)
 		return J1939_NO_ADDR;
-	priv = j1939_priv_get_by_ifindex(net, ifindex);
+	priv = j1939_priv_get_by_index(net, ifindex);
 	if (!priv)
 		return J1939_NO_ADDR;
 
@@ -167,7 +167,7 @@ struct j1939_ecu *j1939_ecu_find_by_name(struct net *net, name_t name, int ifind
 		return NULL;
 	if (!ifindex)
 		return NULL;
-	priv = j1939_priv_get_by_ifindex(net, ifindex);
+	priv = j1939_priv_get_by_index(net, ifindex);
 	if (!priv)
 		return NULL;
 	ecu = _j1939_ecu_find_by_name(name, priv);

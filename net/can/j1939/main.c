@@ -316,7 +316,7 @@ struct j1939_priv *j1939_priv_get(struct net_device *dev)
 	return priv;
 }
 
-struct j1939_priv *j1939_priv_get_by_ifindex(struct net *net, int ifindex)
+struct j1939_priv *j1939_priv_get_by_index(struct net *net, int ifindex)
 {
 	struct j1939_priv *priv;
 	struct net_device *netdev;

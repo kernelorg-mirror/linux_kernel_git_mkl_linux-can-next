@@ -78,9 +78,9 @@ static int j1939_verify_outgoing_address_claim(struct sk_buff *skb)
 
 int j1939_fixup_address_claim(struct sk_buff *skb)
 {
+	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
 	int ret;
 	u8 sa;
-	struct j1939_sk_buff_cb *skcb = j1939_get_cb(skb);
 
 	/* network mgmt: address claiming msgs */
 	if (skcb->addr.pgn == PGN_ADDRESS_CLAIMED) {

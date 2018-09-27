@@ -202,6 +202,8 @@ static int j1939sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 {
 	struct sockaddr_can *addr = (struct sockaddr_can *)uaddr;
 	struct j1939_sock *jsk = j1939_sk(sock->sk);
+	struct sock *sk = sock->sk;
+	struct net *net = sock_net(sk);
 	struct net_device *netdev;
 	struct j1939_priv *priv;
 	int ret = 0;
@@ -220,7 +222,7 @@ static int j1939sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 
 	lock_sock(sock->sk);
 
-	netdev = dev_get_by_index(&init_net, addr->can_ifindex);
+	netdev = dev_get_by_index(net, addr->can_ifindex);
 	if (!netdev) {
 		ret = -ENODEV;
 		goto out_release_sock;
@@ -246,7 +248,7 @@ static int j1939sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 			goto out_dev_put;
 		}
 
-		ret = j1939_netdev_start(netdev);
+		ret = j1939_netdev_start(net, netdev);
 		if (ret < 0)
 			goto out_dev_put;
 
@@ -384,7 +386,7 @@ static int j1939sk_release(struct socket *sock)
 		list_del_init(&jsk->list);
 		spin_unlock_bh(&j1939_socks_lock);
 
-		netdev = dev_get_by_index(&init_net, jsk->sk.sk_bound_dev_if);
+		netdev = dev_get_by_index(sock_net(sk), jsk->sk.sk_bound_dev_if);
 		if (netdev) {
 			priv = j1939_priv_get(netdev);
 			j1939_addr_local_put(priv, jsk->addr.sa);
@@ -618,7 +620,7 @@ static int j1939sk_sendmsg(struct socket *sock, struct msghdr *msg, size_t size)
 			return -EBADFD;
 	}
 
-	dev = dev_get_by_index(&init_net, ifindex);
+	dev = dev_get_by_index(sock_net(sk), ifindex);
 	if (!dev)
 		return -ENXIO;
 
@@ -679,7 +681,7 @@ static int j1939sk_sendmsg(struct socket *sock, struct msghdr *msg, size_t size)
 		j1939_sock_pending_add(&jsk->sk);
 	}
 
-	ret = j1939_send(skb);
+	ret = j1939_send(dev_net(dev), skb);
 	if (ret < 0)
 		j1939_sock_pending_del(&jsk->sk);
 

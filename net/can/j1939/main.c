@@ -44,6 +44,8 @@ MODULE_ALIAS("can-proto-" __stringify(CAN_J1939));
 static void j1939_can_recv(struct sk_buff *iskb, void *data)
 {
 	struct j1939_priv *priv = data;
+	struct net_device *netdev = priv->netdev;
+	struct net *net = dev_net(netdev);
 	struct sk_buff *skb;
 	struct j1939_sk_buff_cb *skcb;
 	struct can_frame *cf;
@@ -108,7 +110,7 @@ static void j1939_can_recv(struct sk_buff *iskb, void *data)
 	/* deliver into the j1939 stack ... */
 	j1939_recv_address_claim(skb, priv);
 
-	if (j1939_recv_transport(skb))
+	if (j1939_recv_transport(net, skb))
 		/* this means the transport layer processed the message */
 		goto done;
 	j1939_recv(skb);
@@ -116,7 +118,7 @@ static void j1939_can_recv(struct sk_buff *iskb, void *data)
 	kfree_skb(skb);
 }
 
-int j1939_send(struct sk_buff *skb)
+int j1939_send(struct net *net, struct sk_buff *skb)
 {
 	int ret, dlc;
 	canid_t canid;
@@ -125,7 +127,7 @@ int j1939_send(struct sk_buff *skb)
 
 	if (skb->len > 8)
 		/* re-route via transport protocol */
-		return j1939_send_transport(skb);
+		return j1939_send_transport(net, skb);
 
 	/* apply sanity checks */
 	skcb->addr.pgn &= (pgn_is_pdu1(skcb->addr.pgn)) ? 0x3ff00 : 0x3ffff;
@@ -197,7 +199,7 @@ static void j1939_priv_ac_task(unsigned long val)
 
 static DEFINE_SPINLOCK(j1939_netdev_lock);
 
-int j1939_netdev_start(struct net_device *netdev)
+int j1939_netdev_start(struct net *net, struct net_device *netdev)
 {
 	struct j1939_priv *priv;
 	int ret;
@@ -222,7 +224,7 @@ int j1939_netdev_start(struct net_device *netdev)
 	dev_hold(netdev);
 
 	/* add CAN handler */
-	ret = can_rx_register(&init_net, netdev, J1939_CAN_ID, J1939_CAN_MASK,
+	ret = can_rx_register(net, netdev, J1939_CAN_ID, J1939_CAN_MASK,
 			      j1939_can_recv, priv, "j1939", NULL);
 	if (ret < 0)
 		goto out_dev_put;
@@ -241,7 +243,7 @@ int j1939_netdev_start(struct net_device *netdev)
 	return 0;
 
  out_rx_unregister:
-	can_rx_unregister(&init_net, netdev, J1939_CAN_ID, J1939_CAN_MASK,
+	can_rx_unregister(net, netdev, J1939_CAN_ID, J1939_CAN_MASK,
 			  j1939_can_recv, priv);
  out_dev_put:
 	dev_put(netdev);
@@ -264,15 +266,16 @@ void j1939_netdev_stop(struct net_device *netdev)
 void __j1939_priv_release(struct kref *kref)
 {
 	struct j1939_priv *priv = container_of(kref, struct j1939_priv, kref);
+	struct net_device *netdev = priv->netdev;
 	struct j1939_ecu *ecu;
 
-	can_rx_unregister(&init_net, priv->netdev, J1939_CAN_ID, J1939_CAN_MASK,
+	can_rx_unregister(dev_net(netdev), netdev, J1939_CAN_ID, J1939_CAN_MASK,
 			  j1939_can_recv, priv);
 
 	tasklet_disable_nosync(&priv->ac_task);
 
 	/* remove pending transport protocol sessions */
-	j1939tp_rmdev_notifier(priv->netdev);
+	j1939tp_rmdev_notifier(netdev);
 
 	/* cleanup priv */
 	write_lock_bh(&priv->lock);
@@ -284,9 +287,9 @@ void __j1939_priv_release(struct kref *kref)
 	write_unlock_bh(&priv->lock);
 
 	/* unlink from netdev */
-	j1939_priv_set(priv->netdev, NULL);
+	j1939_priv_set(netdev, NULL);
 
-	dev_put(priv->netdev);
+	dev_put(netdev);
 	kfree(priv);
 }
 
@@ -304,12 +307,12 @@ struct j1939_priv *j1939_priv_get(struct net_device *dev)
 	return priv;
 }
 
-struct j1939_priv *j1939_priv_get_by_ifindex(int ifindex)
+struct j1939_priv *j1939_priv_get_by_ifindex(struct net *net, int ifindex)
 {
 	struct j1939_priv *priv;
 	struct net_device *netdev;
 
-	netdev = dev_get_by_index(&init_net, ifindex);
+	netdev = dev_get_by_index(net, ifindex);
 	if (!netdev)
 		return NULL;
 

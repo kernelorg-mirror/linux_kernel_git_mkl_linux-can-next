@@ -530,7 +530,7 @@ tx_cts:
 			}
 	/* fallthrough */
 		case J1939_TP_CMD_CTS: /* fallthrough */
-		case 0xff: /* did some data */			/* FIXME: let David Jander recheck this */
+		case 0xff: /* did some data */
 		case J1939_ETP_CMD_DPO: /* fallthrough */
 			if ((session->extd || !j1939_cb_is_broadcast(session->skcb)) &&
 					j1939_tp_im_receiver(session->skb)) {

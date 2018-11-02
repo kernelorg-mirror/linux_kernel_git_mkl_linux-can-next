@@ -84,6 +84,17 @@ void j1939_ecu_unmap(struct j1939_ecu *ecu)
 	write_unlock_bh(&ecu->priv->lock);
 }
 
+void j1939_ecu_unmap_all(struct j1939_priv *priv)
+{
+	int i;
+
+	write_lock_bh(&priv->lock);
+	for(i = 0; i < ARRAY_SIZE(priv->ents); i++)
+		if (priv->ents[i].ecu)
+			j1939_ecu_unmap_locked(priv->ents[i].ecu);
+	write_unlock_bh(&priv->lock);
+}
+
 void j1939_ecu_timer_start(struct j1939_ecu *ecu)
 {
 	/* The ECU is held here and released in the

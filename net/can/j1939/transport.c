@@ -1237,6 +1237,9 @@ int j1939_tp_recv(struct j1939_priv *priv, struct sk_buff *skb)
 	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
 	const u8 *dat;
 
+	if (!j1939_tp_im_involved_anydir(skb))
+		return 0;
+
 	switch (skcb->addr.pgn) {
 	case J1939_ETP_PGN_DAT:
 		j1939_xtp_rx_dat(priv, skb, J1939_EXTENDED);

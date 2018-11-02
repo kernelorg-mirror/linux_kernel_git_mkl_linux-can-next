@@ -54,12 +54,12 @@ static void j1939_ecu_map_locked(struct j1939_ecu *ecu)
 	struct j1939_priv *priv = ecu->priv;
 	struct j1939_addr_ent *ent;
 
-	lockdep_assert_held(&ecu->priv->lock);
+	lockdep_assert_held(&priv->lock);
 
 	if (!j1939_address_is_unicast(ecu->addr))
 		return;
 
-	ent = &ecu->priv->ents[ecu->addr];
+	ent = &priv->ents[ecu->addr];
 
 	if (ent->ecu) {
 		netdev_warn(priv->ndev, "Trying to map already mapped ECU, addr: 0x%02x, name: 0x%016llx. Skip it.\n",
@@ -75,7 +75,10 @@ static void j1939_ecu_map_locked(struct j1939_ecu *ecu)
 /* unmap ECU from a bus address space */
 void j1939_ecu_unmap_locked(struct j1939_ecu *ecu)
 {
-	lockdep_assert_held(&ecu->priv->lock);
+	struct j1939_priv *priv = ecu->priv;
+	struct j1939_addr_ent *ent;
+
+	lockdep_assert_held(&priv->lock);
 
 	if (!j1939_address_is_unicast(ecu->addr))
 		return;
@@ -83,8 +86,9 @@ void j1939_ecu_unmap_locked(struct j1939_ecu *ecu)
 	if (!j1939_ecu_is_mapped_locked(ecu))
 		return;
 
-	ecu->priv->ents[ecu->addr].ecu = NULL;
-	ecu->priv->ents[ecu->addr].nusers -= ecu->nusers;
+	ent = &priv->ents[ecu->addr];
+	ent->ecu = NULL;
+	ent->nusers -= ecu->nusers;
 	j1939_ecu_put(ecu);
 }
 

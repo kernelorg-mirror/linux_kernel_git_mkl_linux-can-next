@@ -51,14 +51,25 @@ static bool j1939_ecu_is_mapped_locked(struct j1939_ecu *ecu)
 /* map ECU to a bus address space */
 static void j1939_ecu_map_locked(struct j1939_ecu *ecu)
 {
+	struct j1939_priv *priv = ecu->priv;
+	struct j1939_addr_ent *ent;
+
 	lockdep_assert_held(&ecu->priv->lock);
 
 	if (!j1939_address_is_unicast(ecu->addr))
 		return;
 
+	ent = &ecu->priv->ents[ecu->addr];
+
+	if (ent->ecu) {
+		netdev_warn(priv->ndev, "Trying to map already mapped ECU, addr: 0x%02x, name: 0x%016llx. Skip it.\n",
+			    ecu->addr, ecu->name);
+		return;
+	}
+
 	j1939_ecu_get(ecu);
-	ecu->priv->ents[ecu->addr].ecu = ecu;
-	ecu->priv->ents[ecu->addr].nusers += ecu->nusers;
+	ent->ecu = ecu;
+	ent->nusers += ecu->nusers;
 }
 
 /* unmap ECU from a bus address space */

@@ -95,9 +95,6 @@ struct can_rcv_lists_stats {
 	unsigned long rcv_entries_max;
 };
 
-/* receive filters subscribed for 'all' CAN devices */
-extern struct dev_rcv_lists can_rx_alldev_list;
-
 /* function prototypes for the CAN networklayer procfs (proc.c) */
 void can_init_proc(struct net *net);
 void can_remove_proc(struct net *net);

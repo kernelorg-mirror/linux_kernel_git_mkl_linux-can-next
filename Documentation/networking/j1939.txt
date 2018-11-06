@@ -465,4 +465,3 @@ This file contains
 
   Kurt Van Dijck (j1939 core, transport protocol, API)
   Pieter Beyens (j1939 core, address claiming)
-

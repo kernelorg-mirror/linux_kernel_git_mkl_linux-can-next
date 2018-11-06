@@ -20,4 +20,3 @@ config CAN_J1939_DEBUG
 	default n
 	---help---
 	  Say Y to add extra debug code (via printk) in the j1939 stack
-

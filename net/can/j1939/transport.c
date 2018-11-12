@@ -658,9 +658,10 @@ static enum hrtimer_restart j1939_tp_rxtimer(struct hrtimer *hrtimer)
 {
 	struct j1939_session *session = container_of(hrtimer, struct j1939_session,
 						     rxtimer);
+	struct j1939_priv *priv = session->priv;
 
-	pr_alert("%s: timeout on %i\n", __func__,
-		 can_skb_prv(session->skb)->ifindex);
+	netdev_alert(priv->ndev, "%s: timeout on %i\n", __func__,
+		     can_skb_prv(session->skb)->ifindex);
 	j1939_session_txtimer_cancel(session);
 	j1939_session_cancel(session, J1939_XTP_ABORT_TIMEOUT);
 	j1939_session_put(session);
@@ -692,7 +693,8 @@ static void j1939_xtp_rx_bad_message_one(struct j1939_priv *priv, struct sk_buff
 /* abort packets may come in 2 directions */
 static void j1939_xtp_rx_bad_message(struct j1939_priv *priv, struct sk_buff *skb, bool extd)
 {
-	pr_info("%s, pgn %05x\n", __func__, j1939_xtp_ctl_to_pgn(skb->data));
+	netdev_info(priv->ndev, "%s, pgn %05x\n", __func__,
+		    j1939_xtp_ctl_to_pgn(skb->data));
 
 	j1939_xtp_rx_bad_message_one(priv, skb, extd, false);
 	j1939_xtp_rx_bad_message_one(priv, skb, extd, true);
@@ -726,8 +728,8 @@ static void j1939_xtp_rx_abort_one(struct j1939_priv *priv, struct sk_buff *skb,
 /* abort packets may come in 2 directions */
 static void j1939_xtp_rx_abort(struct j1939_priv *priv, struct sk_buff *skb, bool extd)
 {
-	pr_info("%s %i, %05x\n", __func__, can_skb_prv(skb)->ifindex,
-		j1939_xtp_ctl_to_pgn(skb->data));
+	netdev_info(priv->ndev, "%s %i, %05x\n", __func__,
+		    can_skb_prv(skb)->ifindex, j1939_xtp_ctl_to_pgn(skb->data));
 
 	j1939_xtp_rx_abort_one(priv, skb, extd, false);
 	j1939_xtp_rx_abort_one(priv, skb, extd, true);
@@ -917,8 +919,9 @@ static void j1939_xtp_rx_rts(struct j1939_priv *priv, struct sk_buff *skb, bool 
 	pgn = j1939_xtp_ctl_to_pgn(dat);
 
 	if (dat[0] == J1939_TP_CMD_RTS && j1939_cb_is_broadcast(skcb)) {
-		pr_alert("%s: rts without destination (%i %02x)\n", __func__,
-			 can_skb_prv(skb)->ifindex, skcb->addr.sa);
+		netdev_alert(priv->ndev, "%s: rts without destination (%i %02x)\n",
+			     __func__, can_skb_prv(skb)->ifindex,
+			     skcb->addr.sa);
 		return;
 	}
 
@@ -936,16 +939,18 @@ static void j1939_xtp_rx_rts(struct j1939_priv *priv, struct sk_buff *skb, bool 
 
 		goto out_session_put;
 	} else if (!session && j1939_tp_im_transmitter(skb)) {
-		pr_alert("%s: I should tx (%i %02x %02x)\n", __func__,
-			 can_skb_prv(skb)->ifindex, skcb->addr.sa, skcb->addr.da);
+		netdev_alert(priv->ndev, "%s: I should tx (%i %02x %02x)\n",
+			     __func__, can_skb_prv(skb)->ifindex,
+			     skcb->addr.sa, skcb->addr.da);
 
 		return;
 	}
 
 	if (session && session->last_cmd != 0) {
 		/* we received a second rts on the same connection */
-		pr_alert("%s: connection exists (%i %02x %02x)\n", __func__,
-			 can_skb_prv(skb)->ifindex, skcb->addr.sa, skcb->addr.da);
+		netdev_alert(priv->ndev, "%s: connection exists (%i %02x %02x)\n",
+			     __func__, can_skb_prv(skb)->ifindex, skcb->addr.sa,
+			     skcb->addr.da);
 
 		j1939_session_timers_cancel(session);
 		j1939_session_cancel(session, J1939_XTP_ABORT_BUSY);
@@ -996,9 +1001,9 @@ static void j1939_xtp_rx_rts(struct j1939_priv *priv, struct sk_buff *skb, bool 
 		session->pkt.block = 0xff;
 		if (!extd) {
 			if (dat[3] != session->pkt.total)
-				pr_alert("%s: strange total, %u != %u\n",
-					 __func__, session->pkt.total,
-					 dat[3]);
+				netdev_alert(priv->ndev, "%s: strange total, %u != %u\n",
+					     __func__, session->pkt.total,
+					     dat[3]);
 			session->pkt.total = dat[3];
 			session->pkt.block = min(dat[3], dat[4]);
 		}
@@ -1035,12 +1040,12 @@ static void j1939_xtp_rx_dpo(struct j1939_priv *priv, struct sk_buff *skb, bool 
 	pgn = j1939_xtp_ctl_to_pgn(dat);
 	session = j1939_session_get_by_skb(priv, j1939_sessionq(priv, extd), skb, false);
 	if (!session) {
-		pr_info("%s: %s\n", __func__, "no connection found");
+		netdev_info(priv->ndev, "%s: no connection found\n", __func__);
 		return;
 	}
 
 	if (session->skcb->addr.pgn != pgn) {
-		pr_info("%s: different pgn\n", __func__);
+		netdev_info(priv->ndev, "%s: different pgn\n", __func__);
 		j1939_xtp_tx_abort(skb, true, true, J1939_XTP_ABORT_BUSY, pgn);
 		j1939_session_timers_cancel(session);
 		j1939_session_cancel(session, J1939_XTP_ABORT_BUSY);
@@ -1068,7 +1073,7 @@ static void j1939_xtp_rx_dat(struct j1939_priv *priv, struct sk_buff *skb, bool 
 
 	session = j1939_session_get_by_skb(priv, j1939_sessionq(priv, extd), skb, false);
 	if (!session) {
-		pr_info("%s:%s\n", __func__, "no connection found");
+		netdev_info(priv->ndev, "%s: no connection found\n", __func__);
 		return;
 	}
 	dat = skb->data;
@@ -1089,8 +1094,8 @@ static void j1939_xtp_rx_dat(struct j1939_priv *priv, struct sk_buff *skb, bool 
 		if (!extd)
 			break;
 	default:
-		pr_info("%s: last %02x\n", __func__,
-			session->last_cmd);
+		netdev_info(priv->ndev, "%s: last %02x\n", __func__,
+			    session->last_cmd);
 		goto out_session_unlock;
 	}
 
@@ -1098,15 +1103,16 @@ static void j1939_xtp_rx_dat(struct j1939_priv *priv, struct sk_buff *skb, bool 
 	offset = packet * 7;
 	if (packet > session->pkt.total ||
 	    (session->pkt.done + 1) > session->pkt.total) {
-		pr_info("%s: should have been completed\n", __func__);
+		netdev_info(priv->ndev, "%s: should have been completed\n",
+			    __func__);
 		goto out_session_unlock;
 	}
 	nbytes = session->skb->len - offset;
 	if (nbytes > 7)
 		nbytes = 7;
 	if (nbytes <= 0 || (nbytes + 1) > skb->len) {
-		pr_info("%s: nbytes %i, len %i\n", __func__, nbytes,
-			skb->len);
+		netdev_info(priv->ndev, "%s: nbytes %i, len %i\n", __func__,
+			    nbytes, skb->len);
 		goto out_session_unlock;
 	}
 	tpdat = session->skb->data;

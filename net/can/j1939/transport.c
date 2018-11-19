@@ -660,14 +660,13 @@ static void j1939_session_completed(struct j1939_session *session)
 static void j1939_session_cancel(struct j1939_session *session,
 				 enum j1939_xtp_abort err)
 {
-	if (err && j1939_tp_im_involved_anydir(session->skb)) {
-		if (!j1939_cb_is_broadcast(session->skcb)) {
-			/* do not send aborts on incoming broadcasts */
-			j1939_xtp_tx_abort(session->skb, session->extd,
-					   !(session->skcb->src_flags & J1939_ECU_LOCAL),
-					   err, session->skcb->addr.pgn);
-		}
-	}
+	/* do not send aborts on incoming broadcasts */
+	if (err && j1939_tp_im_involved_anydir(session->skb) &&
+	    !j1939_cb_is_broadcast(session->skcb))
+		j1939_xtp_tx_abort(session->skb, session->extd,
+				   !(session->skcb->src_flags & J1939_ECU_LOCAL),
+				   err, session->skcb->addr.pgn);
+
 	__j1939_session_drop(session);
 }
 

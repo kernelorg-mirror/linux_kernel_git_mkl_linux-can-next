@@ -58,6 +58,7 @@ struct j1939_priv {
 
 	struct kref kref;
 
+	/* protects both tp_session lists below*/
 	spinlock_t tp_session_list_lock;
 	struct list_head tp_sessionq;
 	struct list_head tp_extsessionq;

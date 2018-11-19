@@ -6,7 +6,7 @@
 config CAN_J1939
 	tristate "SAE J1939"
 	depends on CAN
-	---help---
+	help
 	  SAE J1939
 	  Say Y to have in-kernel support for j1939 socket type. This
 	  allows communication according to SAE j1939.
@@ -17,6 +17,5 @@ config CAN_J1939
 config CAN_J1939_DEBUG
 	bool "debug SAE J1939"
 	depends on CAN_J1939
-	default n
-	---help---
+	help
 	  Say Y to add extra debug code (via printk) in the j1939 stack

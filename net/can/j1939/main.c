@@ -118,7 +118,8 @@ static struct j1939_priv *j1939_priv_create(struct net_device *ndev)
 	return priv;
 }
 
-static inline void j1939_priv_set(struct net_device *ndev, struct j1939_priv *priv)
+static inline void j1939_priv_set(struct net_device *ndev,
+				  struct j1939_priv *priv)
 {
 	struct can_ml_priv *can_ml_priv = ndev->ml_priv;
 

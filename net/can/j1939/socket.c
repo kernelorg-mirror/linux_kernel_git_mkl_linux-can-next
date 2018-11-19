@@ -365,7 +365,8 @@ static void j1939_sk_sock2sockaddr_can(struct sockaddr_can *addr,
 	}
 }
 
-static int j1939_sk_getname(struct socket *sock, struct sockaddr *uaddr, int peer)
+static int j1939_sk_getname(struct socket *sock, struct sockaddr *uaddr,
+			    int peer)
 {
 	struct sockaddr_can *addr = (struct sockaddr_can *)uaddr;
 	struct sock *sk = sock->sk;
@@ -410,7 +411,8 @@ static int j1939_sk_release(struct socket *sock)
 		ndev = dev_get_by_index(sock_net(sk), jsk->ifindex);
 		if (ndev) {
 			priv = j1939_priv_get_by_ndev(ndev);
-			j1939_local_ecu_put(priv, jsk->addr.src_name, jsk->addr.sa);
+			j1939_local_ecu_put(priv, jsk->addr.src_name,
+					    jsk->addr.sa);
 			j1939_priv_put(priv);
 
 			j1939_netdev_stop(ndev);
@@ -608,7 +610,8 @@ static int j1939_sk_recvmsg(struct socket *sock, struct msghdr *msg,
 	return size;
 }
 
-static int j1939_sk_sendmsg(struct socket *sock, struct msghdr *msg, size_t size)
+static int j1939_sk_sendmsg(struct socket *sock, struct msghdr *msg,
+			    size_t size)
 {
 	struct sock *sk = sock->sk;
 	struct j1939_sock *jsk = j1939_sk(sk);
@@ -736,7 +739,8 @@ void j1939_sk_netdev_event(struct net_device *ndev, int error_code)
 			struct j1939_priv *priv;
 
 			priv = j1939_priv_get_by_ndev(ndev);
-			j1939_local_ecu_put(priv, jsk->addr.src_name, jsk->addr.sa);
+			j1939_local_ecu_put(priv, jsk->addr.src_name,
+					    jsk->addr.sa);
 			j1939_priv_put(priv);
 
 			j1939_netdev_stop(ndev);

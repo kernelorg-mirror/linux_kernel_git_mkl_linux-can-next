@@ -174,7 +174,8 @@ struct j1939_ecu *j1939_ecu_create_locked(struct j1939_priv *priv, name_t name)
 	return ecu;
 }
 
-struct j1939_ecu *j1939_ecu_find_by_addr_locked(struct j1939_priv *priv, u8 addr)
+struct j1939_ecu *j1939_ecu_find_by_addr_locked(struct j1939_priv *priv,
+						u8 addr)
 {
 	lockdep_assert_held(&priv->lock);
 
@@ -209,7 +210,8 @@ struct j1939_ecu *j1939_ecu_get_by_addr(struct j1939_priv *priv, u8 addr)
 }
 
 /* get pointer to ecu without increasing ref counter */
-static struct j1939_ecu *j1939_ecu_find_by_name_locked(struct j1939_priv *priv, name_t name)
+static struct j1939_ecu *j1939_ecu_find_by_name_locked(struct j1939_priv *priv,
+						       name_t name)
 {
 	struct j1939_ecu *ecu;
 
@@ -223,7 +225,8 @@ static struct j1939_ecu *j1939_ecu_find_by_name_locked(struct j1939_priv *priv, 
 	return NULL;
 }
 
-struct j1939_ecu *j1939_ecu_get_by_name_locked(struct j1939_priv *priv, name_t name)
+struct j1939_ecu *j1939_ecu_get_by_name_locked(struct j1939_priv *priv,
+					       name_t name)
 {
 	struct j1939_ecu *ecu;
 

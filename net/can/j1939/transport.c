@@ -969,7 +969,8 @@ static void j1939_xtp_rx_rts(struct j1939_priv *priv, struct sk_buff *skb,
 		j1939_session_timers_cancel(session);
 		j1939_session_cancel(session, J1939_XTP_ABORT_BUSY);
 
-		if (pgn != session->skcb->addr.pgn && dat[0] != J1939_TP_CMD_BAM)
+		if (pgn != session->skcb->addr.pgn &&
+		    dat[0] != J1939_TP_CMD_BAM)
 			j1939_xtp_tx_abort(skb, extd, true,
 					   J1939_XTP_ABORT_BUSY, pgn);
 
@@ -1219,8 +1220,8 @@ int j1939_tp_send(struct j1939_priv *priv, struct sk_buff *skb)
 	    skcb->addr.pgn == J1939_ETP_PGN_CTL)
 		/* avoid conflict */
 		return -EDOM;
-	if ((skb->len > J1939_MAX_ETP_PACKET_SIZE) ||
-	    (j1939_tp_max_packet_size && (skb->len > j1939_tp_max_packet_size)))
+	if (skb->len > J1939_MAX_ETP_PACKET_SIZE ||
+	    (j1939_tp_max_packet_size && skb->len > j1939_tp_max_packet_size))
 		return -EMSGSIZE;
 	if (skb->len > J1939_MAX_TP_PACKET_SIZE && j1939_cb_is_broadcast(skcb))
 		return -EDESTADDRREQ;

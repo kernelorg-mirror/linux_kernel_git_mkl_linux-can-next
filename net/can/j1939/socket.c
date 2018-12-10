@@ -681,6 +681,7 @@ static int j1939_sk_send_multi(struct j1939_priv *priv,  struct sock *sk,
 			       struct msghdr *msg, size_t size)
 
 {
+	struct j1939_session *session;
 	struct sk_buff *skb;
 	int ret;
 
@@ -688,7 +689,13 @@ static int j1939_sk_send_multi(struct j1939_priv *priv,  struct sock *sk,
 	if (ret)
 		return ret;
 
-	return j1939_tp_send(priv, skb);
+	session = j1939_tp_send(priv, skb, size);
+	if (IS_ERR(session))
+		return PTR_ERR(session);
+
+	j1939_session_put(session);
+
+	return 0;
 }
 
 static int j1939_sk_send_one(struct j1939_priv *priv,  struct sock *sk,

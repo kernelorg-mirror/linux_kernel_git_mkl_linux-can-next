@@ -860,14 +860,13 @@ static int j1939_sk_send_multi(struct j1939_priv *priv,  struct sock *sk,
 
 		if (!session) {
 			if (jsk->etp_tx_done_size) {
-				bool extd = J1939_REGULAR;
-
 				if (jsk->etp_tx_complete_size >
 				    J1939_MAX_TP_PACKET_SIZE)
-					extd = J1939_EXTENDED;
+					skcb->addr.type = J1939_ETP;
+				else
+					skcb->addr.type = J1939_TP;
 
 				session = j1939_session_get_by_skcb(priv, skcb,
-								    extd,
 								    false);
 				if (IS_ERR(session)) {
 					ret = PTR_ERR(session);

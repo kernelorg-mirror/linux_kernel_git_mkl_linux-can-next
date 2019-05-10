@@ -65,7 +65,6 @@ struct j1939_priv {
 	/* protects both tp_session lists below*/
 	spinlock_t tp_session_list_lock;
 	struct list_head tp_sessionq;
-	struct list_head tp_extsessionq;
 	wait_queue_head_t tp_wait;
 	unsigned int tp_max_packet_size;
 
@@ -114,6 +113,11 @@ struct j1939_ecu *j1939_ecu_get_by_name(struct j1939_priv *priv, name_t name);
 struct j1939_ecu *j1939_ecu_get_by_name_locked(struct j1939_priv *priv,
 					       name_t name);
 
+enum j1939_transfer_type {
+	J1939_TP,
+	J1939_ETP,
+};
+
 struct j1939_addr {
 	name_t src_name;
 	name_t dst_name;
@@ -121,6 +125,8 @@ struct j1939_addr {
 
 	u8 sa;
 	u8 da;
+
+	u8 type;
 };
 
 /* control buffer of the sk_buff */
@@ -249,7 +255,7 @@ void j1939_session_skb_queue(struct j1939_session *session,
 			     struct sk_buff *skb);
 struct j1939_session *j1939_session_get_by_skcb(struct j1939_priv *priv,
 						struct j1939_sk_buff_cb *skcb,
-						bool extd, bool reverse);
+						bool reverse);
 
 #define J1939_MAX_TP_PACKET_SIZE (7 * 0xff)
 #define J1939_MAX_ETP_PACKET_SIZE (7 * 0x00ffffff)

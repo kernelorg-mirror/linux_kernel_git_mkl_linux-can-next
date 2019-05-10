@@ -62,6 +62,8 @@ static void j1939_can_recv(struct sk_buff *iskb, void *data)
 	skcb->priority = (cf->can_id >> 26) & 0x7;
 	skcb->addr.sa = cf->can_id;
 	skcb->addr.pgn = (cf->can_id >> 8) & J1939_PGN_MAX;
+	/* set default message type */
+	skcb->addr.type = J1939_TP;
 	if (j1939_pgn_is_pdu1(skcb->addr.pgn)) {
 		/* Type 1: with destination address */
 		skcb->addr.da = skcb->addr.pgn;

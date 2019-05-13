@@ -1401,17 +1401,6 @@ static void j1939_xtp_rx_dat(struct j1939_priv *priv, struct sk_buff *skb)
 	j1939_session_put(session);
 }
 
-static inline int j1939_tp_tx_initial(struct j1939_session *session)
-{
-	int ret;
-
-	ret = j1939_tp_txnext(session);
-	/* set nonblocking for further packets */
-	session->skcb.msg_flags |= MSG_DONTWAIT;
-
-	return ret;
-}
-
 /* j1939 main intf */
 struct j1939_session *j1939_tp_send(struct j1939_priv *priv,
 				    struct sk_buff *skb, size_t size)
@@ -1478,12 +1467,11 @@ struct j1939_session *j1939_tp_send(struct j1939_priv *priv,
 	if (ret < 0)
 		goto failed;
 
-	ret = j1939_tp_tx_initial(session);
-	if (ret)
-		goto failed;
-
-	/* transmission started */
 	session->tskey = session->sk->sk_tskey++;
+	session->skcb.msg_flags |= MSG_DONTWAIT;
+	/* transmission started */
+	j1939_tp_schedule_txtimer(session, 0);
+
 	return session;
 
  failed:

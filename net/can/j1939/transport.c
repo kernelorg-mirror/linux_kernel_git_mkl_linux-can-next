@@ -116,7 +116,6 @@ enum j1939_xtp_abort {
 };
 
 static unsigned int j1939_tp_block = 255;
-static unsigned int j1939_tp_retry_ms = 20;
 static unsigned int j1939_tp_packet_delay;
 static unsigned int j1939_tp_padding = 1;
 
@@ -854,7 +853,8 @@ static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 
 	ret = j1939_tp_txnext(session);
 	if (ret < 0)
-		j1939_tp_schedule_txtimer(session, j1939_tp_retry_ms ?: 20);
+		j1939_tp_schedule_txtimer(session, 10 + prandom_u32_max(16));
+
 	j1939_session_put(session);
 
 	return HRTIMER_NORESTART;

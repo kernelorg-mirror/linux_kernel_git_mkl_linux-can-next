@@ -929,22 +929,6 @@ static int j1939_sk_send_multi(struct j1939_priv *priv,  struct sock *sk,
 	return ret;
 }
 
-static int j1939_sk_send_one(struct j1939_priv *priv,  struct sock *sk,
-			     struct msghdr *msg, size_t size)
-
-{
-	struct sk_buff *skb;
-	int ret;
-
-	skb = j1939_sk_alloc_skb(priv->ndev, sk, msg, size, &ret);
-	if (ret)
-		return ret;
-
-	ret = j1939_send_one(priv, skb);
-
-	return ret ? ret : size;
-}
-
 static int j1939_sk_sendmsg(struct socket *sock, struct msghdr *msg,
 			    size_t size)
 {
@@ -1002,11 +986,7 @@ static int j1939_sk_sendmsg(struct socket *sock, struct msghdr *msg,
 	if (!priv)
 		return -EINVAL;
 
-	if (size > 8)
-		/* re-route via transport protocol */
-		ret = j1939_sk_send_multi(priv, sk, msg, size);
-	else
-		ret = j1939_sk_send_one(priv, sk, msg, size);
+	ret = j1939_sk_send_multi(priv, sk, msg, size);
 
 	j1939_priv_put(priv);
 

@@ -116,6 +116,7 @@ struct j1939_ecu *j1939_ecu_get_by_name_locked(struct j1939_priv *priv,
 enum j1939_transfer_type {
 	J1939_TP,
 	J1939_ETP,
+	J1939_SIMPLE,
 };
 
 struct j1939_addr {

@@ -849,9 +849,19 @@ static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 {
 	struct j1939_session *session =
 		container_of(hrtimer, struct j1939_session, txtimer);
-	int ret;
+	int ret = 0;
 
-	ret = j1939_tp_txnext(session);
+	if (session->skcb.addr.type == J1939_SIMPLE) {
+		struct j1939_priv *priv = session->priv;
+		struct sk_buff *se_skb = j1939_session_skb_find(session);
+
+		if (se_skb)
+			ret = j1939_send_one(priv,
+					     skb_clone(se_skb, GFP_ATOMIC));
+	} else {
+		ret = j1939_tp_txnext(session);
+	}
+
 	if (ret < 0)
 		j1939_tp_schedule_txtimer(session, 10 + prandom_u32_max(16));
 
@@ -1419,7 +1429,9 @@ struct j1939_session *j1939_tp_send(struct j1939_priv *priv,
 	if (size > priv->tp_max_packet_size)
 		return ERR_PTR(-EMSGSIZE);
 
-	if (size > J1939_MAX_TP_PACKET_SIZE)
+	if (size <= 8)
+		skcb->addr.type = J1939_SIMPLE;
+	else if (size > J1939_MAX_TP_PACKET_SIZE)
 		skcb->addr.type = J1939_ETP;
 	else
 		skcb->addr.type = J1939_TP;

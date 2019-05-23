@@ -844,10 +844,8 @@ static int j1939_sk_send_multi(struct j1939_priv *priv,  struct sock *sk,
 	while (todo_size) {
 		struct j1939_sk_buff_cb *skcb;
 
-		if (todo_size > J1939_MAX_TP_PACKET_SIZE)
-			segment_size = J1939_MAX_TP_PACKET_SIZE;
-		else
-			segment_size = todo_size;
+		segment_size = min_t(size_t, J1939_MAX_TP_PACKET_SIZE,
+				     todo_size);
 
 		/* Allocate skb for one segment */
 		skb = j1939_sk_alloc_skb(priv->ndev, sk, msg, segment_size,

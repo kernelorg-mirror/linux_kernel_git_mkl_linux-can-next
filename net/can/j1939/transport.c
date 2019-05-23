@@ -876,7 +876,7 @@ static void j1939_session_cancel(struct j1939_session *session,
 				   err, session->skcb.addr.pgn);
 
 	if (session->sk)
-		j1939_sk_send_multi_abort(priv, session->sk, session->err);
+		j1939_sk_send_loop_abort(priv, session->sk, session->err);
 }
 
 static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
@@ -987,7 +987,7 @@ static void j1939_xtp_rx_abort_one(struct j1939_priv *priv, struct sk_buff *skb,
 	j1939_session_timers_cancel(session);
 	session->err = j1939_xtp_abort_to_errno(priv, abort);
 	if (session->sk)
-		j1939_sk_send_multi_abort(priv, session->sk,
+		j1939_sk_send_loop_abort(priv, session->sk,
 					  session->err);
 	j1939_session_deactivate_activate_next(session);
 

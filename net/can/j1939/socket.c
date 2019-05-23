@@ -879,7 +879,7 @@ void j1939_sk_errqueue(struct j1939_session *session,
 		kfree_skb(skb);
 };
 
-void j1939_sk_send_multi_abort(struct j1939_priv *priv, struct sock *sk,
+void j1939_sk_send_loop_abort(struct j1939_priv *priv, struct sock *sk,
 			       int err)
 {
 	sk->sk_err = err;
@@ -887,7 +887,7 @@ void j1939_sk_send_multi_abort(struct j1939_priv *priv, struct sock *sk,
 	sk->sk_error_report(sk);
 }
 
-static int j1939_sk_send_multi(struct j1939_priv *priv,  struct sock *sk,
+static int j1939_sk_send_loop(struct j1939_priv *priv,  struct sock *sk,
 			       struct msghdr *msg, size_t size)
 
 {
@@ -1034,7 +1034,7 @@ static int j1939_sk_sendmsg(struct socket *sock, struct msghdr *msg,
 	if (!priv)
 		return -EINVAL;
 
-	ret = j1939_sk_send_multi(priv, sk, msg, size);
+	ret = j1939_sk_send_loop(priv, sk, msg, size);
 
 	j1939_priv_put(priv);
 

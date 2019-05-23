@@ -853,6 +853,13 @@ static int j1939_sk_send_multi(struct j1939_priv *priv,  struct sock *sk,
 					ret = PTR_ERR(session);
 					goto kfree_skb;
 				}
+
+				if (!j1939_session_insert(session)) {
+					j1939_tp_schedule_txtimer(session, 0);
+				} else {
+					ret = session->err = -EBUSY;
+					break;
+				}
 			}
 		} else {
 			j1939_session_skb_queue(session, skb);

@@ -65,7 +65,6 @@ struct j1939_priv {
 	/* protects both tp_session lists below*/
 	spinlock_t tp_session_list_lock;
 	struct list_head tp_sessionq;
-	wait_queue_head_t tp_wait;
 	unsigned int tp_max_packet_size;
 
 	struct list_head j1939_socks;
@@ -293,6 +292,8 @@ void j1939_session_skb_queue(struct j1939_session *session,
 struct j1939_session *j1939_session_get_by_skcb(struct j1939_priv *priv,
 						struct j1939_sk_buff_cb *skcb,
 						bool reverse);
+int j1939_session_insert(struct j1939_session *session);
+void j1939_tp_schedule_txtimer(struct j1939_session *session, int msec);
 
 #define J1939_MAX_TP_PACKET_SIZE (7 * 0xff)
 #define J1939_MAX_ETP_PACKET_SIZE (7 * 0x00ffffff)

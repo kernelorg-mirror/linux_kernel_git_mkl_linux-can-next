@@ -240,13 +240,10 @@ void j1939_session_get(struct j1939_session *session)
 /* session completion functions */
 static void __j1939_session_drop(struct j1939_session *session)
 {
-	struct j1939_priv *priv = session->priv;
-
 	if (!session->transmission)
 		return;
 
 	j1939_sock_pending_del(session->sk);
-	wake_up_all(&priv->tp_wait);
 }
 
 static void j1939_session_destroy(struct j1939_session *session)
@@ -637,8 +634,7 @@ static int j1939_xtp_tx_abort(struct j1939_priv *priv,
 	return j1939_xtp_do_tx_ctl(priv, re_skcb, swap_src_dst, pgn, dat);
 }
 
-static inline void j1939_tp_schedule_txtimer(struct j1939_session *session,
-					     int msec)
+void j1939_tp_schedule_txtimer(struct j1939_session *session, int msec)
 {
 	j1939_session_get(session);
 	hrtimer_start(&session->txtimer, ms_to_ktime(msec),
@@ -1469,27 +1465,10 @@ struct j1939_session *j1939_tp_send(struct j1939_priv *priv,
 		/* set the end-packet for broadcast */
 		session->pkt.last = session->pkt.total;
 
-	/* insert into queue, but avoid collision with pending session */
-	if (session->skcb.msg_flags & MSG_DONTWAIT)
-		ret = j1939_session_insert(session);
-	else
-		ret = wait_event_interruptible(priv->tp_wait,
-					       j1939_session_insert(session) ==
-					       0);
-	if (ret < 0)
-		goto failed;
-
 	session->tskey = session->sk->sk_tskey++;
 	session->skcb.msg_flags |= MSG_DONTWAIT;
-	/* transmission started */
-	j1939_tp_schedule_txtimer(session, 0);
 
 	return session;
-
- failed:
-	j1939_session_timers_cancel(session);
-	j1939_session_put(session);
-	return ERR_PTR(ret);
 }
 
 static void j1939_tp_cmd_recv(struct j1939_priv *priv, struct sk_buff *skb)
@@ -1638,6 +1617,5 @@ void j1939_tp_init(struct j1939_priv *priv)
 {
 	spin_lock_init(&priv->tp_session_list_lock);
 	INIT_LIST_HEAD(&priv->tp_sessionq);
-	init_waitqueue_head(&priv->tp_wait);
 	priv->tp_max_packet_size = J1939_MAX_ETP_PACKET_SIZE;
 }

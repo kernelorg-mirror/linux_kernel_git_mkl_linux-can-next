@@ -791,7 +791,7 @@ static int j1939_tp_txnext(struct j1939_session *session)
 
 		se_skb = j1939_session_skb_find(session);
 		if (!se_skb)
-			break;
+			return -EPIPE;
 
 		skcb = j1939_skb_to_cb(se_skb);
 		tpdat = se_skb->data;

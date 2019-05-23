@@ -198,6 +198,12 @@ void j1939_tp_init(struct j1939_priv *priv);
 /* decrement pending skb for a j1939 socket */
 void j1939_sock_pending_del(struct sock *sk);
 
+enum j1939_session_state {
+	J1939_SESSION_NEW,
+	J1939_SESSION_ACTIVE,
+	J1939_SESSION_DONE,
+};
+
 struct j1939_session {
 	struct j1939_priv *priv;
 	struct list_head list;
@@ -225,6 +231,7 @@ struct j1939_session {
 	unsigned int total_message_size; /* Total message size, number of bytes */
 	int err;
 	u32 tskey;
+	enum j1939_session_state state;
 
 	/* Packets counters for a (extended) transfer session. The packet is
 	 * maximal of 7 bytes. */

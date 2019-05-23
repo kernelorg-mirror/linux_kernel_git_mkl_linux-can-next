@@ -1083,6 +1083,7 @@ static struct j1939_session *j1939_session_new(struct j1939_priv *priv,
 	j1939_priv_get(priv);
 	session->priv = priv;
 	session->total_message_size = size;
+	session->state = J1939_SESSION_NEW;
 
 	skb_queue_head_init(&session->skb_queue);
 	skb_queue_tail(&session->skb_queue, skb);
@@ -1146,7 +1147,9 @@ static int j1939_session_insert(struct j1939_session *session)
 		ret = -EAGAIN;
 	} else {
 		j1939_session_list_lock(priv);
+		WARN_ON_ONCE(session->state != J1939_SESSION_NEW);
 		j1939_session_list_add(session);
+		session->state = J1939_SESSION_ACTIVE;
 		j1939_session_list_unlock(priv);
 	}
 

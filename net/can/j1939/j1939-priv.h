@@ -62,9 +62,15 @@ struct j1939_priv {
 
 	struct kref kref;
 
-	/* protects both tp_session lists below*/
-	spinlock_t tp_session_list_lock;
-	struct list_head tp_sessionq;
+	/* List of active sessions to prevent start of conflicting one.
+	 *
+	 * Do not start two sessions of same type, addresses and direction.
+	 */
+	struct list_head active_session_list;
+
+	/* protects active_session_list */
+	spinlock_t active_session_list_lock;
+
 	unsigned int tp_max_packet_size;
 
 	struct list_head j1939_socks;
@@ -207,7 +213,7 @@ enum j1939_session_state {
 
 struct j1939_session {
 	struct j1939_priv *priv;
-	struct list_head list;
+	struct list_head active_session_list_entry;
 	struct list_head jsk_fifo;
 	struct kref kref;
 	spinlock_t lock;

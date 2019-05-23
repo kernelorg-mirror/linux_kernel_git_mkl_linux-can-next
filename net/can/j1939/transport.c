@@ -212,24 +212,12 @@ static inline void j1939_fix_cb(struct j1939_sk_buff_cb *skcb)
 
 static inline void j1939_session_list_lock(struct j1939_priv *priv)
 {
-	spin_lock_bh(&priv->tp_session_list_lock);
+	spin_lock_bh(&priv->active_session_list_lock);
 }
 
 static inline void j1939_session_list_unlock(struct j1939_priv *priv)
 {
-	spin_unlock_bh(&priv->tp_session_list_lock);
-}
-
-static void j1939_session_list_add(struct j1939_session *session)
-{
-	struct j1939_priv *priv = session->priv;
-
-	list_add_tail(&session->list, &priv->tp_sessionq);
-}
-
-static void j1939_session_list_del(struct j1939_session *session)
-{
-	list_del_init(&session->list);
+	spin_unlock_bh(&priv->active_session_list_lock);
 }
 
 void j1939_session_get(struct j1939_session *session)
@@ -489,9 +477,9 @@ j1939_session *j1939_session_get_by_skcb_locked(struct j1939_priv *priv,
 {
 	struct j1939_session *session;
 
-	lockdep_assert_held(&priv->tp_session_list_lock);
+	lockdep_assert_held(&priv->active_session_list_lock);
 
-	list_for_each_entry(session, root, list) {
+	list_for_each_entry(session, root, active_session_list_entry) {
 		j1939_session_get(session);
 		if (j1939_session_match(session, skcb, reverse))
 			return session;
@@ -508,7 +496,8 @@ struct j1939_session *j1939_session_get_by_skcb(struct j1939_priv *priv,
 	struct j1939_session *session;
 
 	j1939_session_list_lock(priv);
-	session = j1939_session_get_by_skcb_locked(priv, &priv->tp_sessionq,
+	session = j1939_session_get_by_skcb_locked(priv,
+						   &priv->active_session_list,
 						   skcb, reverse);
 	j1939_session_list_unlock(priv);
 
@@ -845,7 +834,7 @@ bool j1939_session_deactivate(struct j1939_session *session)
 	if (session->state == J1939_SESSION_ACTIVE) {
 		active = true;
 
-		j1939_session_list_del(session);
+		list_del_init(&session->active_session_list_entry);
 		session->state = J1939_SESSION_DONE;
 		j1939_session_put(session);
 
@@ -1103,7 +1092,7 @@ static struct j1939_session *j1939_session_new(struct j1939_priv *priv,
 	session = kzalloc(sizeof(*session), gfp_any());
 	if (!session)
 		return NULL;
-	INIT_LIST_HEAD(&session->list);
+	INIT_LIST_HEAD(&session->active_session_list_entry);
 	INIT_LIST_HEAD(&session->jsk_fifo);
 	spin_lock_init(&session->lock);
 	kref_init(&session->kref);
@@ -1170,14 +1159,15 @@ int j1939_session_activate(struct j1939_session *session)
 	int ret = 0;
 
 	j1939_session_list_lock(priv);
-	pending = j1939_session_get_by_skcb_locked(priv, &priv->tp_sessionq,
+	pending = j1939_session_get_by_skcb_locked(priv, &priv->active_session_list,
 						   &session->skcb, false);
 	if (pending) {
 		j1939_session_put(pending);
 		ret = -EAGAIN;
 	} else {
 		WARN_ON_ONCE(session->state != J1939_SESSION_NEW);
-		j1939_session_list_add(session);
+		list_add_tail(&session->active_session_list_entry,
+			      &priv->active_session_list);
 		j1939_session_get(session);
 		session->state = J1939_SESSION_ACTIVE;
 	}
@@ -1630,7 +1620,8 @@ int j1939_tp_rmdev_notifier(struct j1939_priv *priv)
 
 	j1939_session_list_lock(priv);
 	list_for_each_entry_safe(session, saved,
-				 &priv->tp_sessionq, list) {
+				 &priv->active_session_list,
+				 active_session_list_entry) {
 		j1939_session_timers_cancel(session);
 		j1939_session_deactivate_activate_next(session);
 	}
@@ -1640,7 +1631,7 @@ int j1939_tp_rmdev_notifier(struct j1939_priv *priv)
 
 void j1939_tp_init(struct j1939_priv *priv)
 {
-	spin_lock_init(&priv->tp_session_list_lock);
-	INIT_LIST_HEAD(&priv->tp_sessionq);
+	spin_lock_init(&priv->active_session_list_lock);
+	INIT_LIST_HEAD(&priv->active_session_list);
 	priv->tp_max_packet_size = J1939_MAX_ETP_PACKET_SIZE;
 }

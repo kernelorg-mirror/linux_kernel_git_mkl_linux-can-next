@@ -840,7 +840,24 @@ static int j1939_tp_txnext(struct j1939_session *session)
 	return ret;
 }
 
-/* timer & scheduler functions */
+static void j1939_session_cancel(struct j1939_session *session,
+				 enum j1939_xtp_abort err)
+{
+	struct j1939_priv *priv = session->priv;
+
+	WARN_ON_ONCE(!err);
+
+	session->err = j1939_xtp_abort_to_errno(priv, err);
+	/* do not send aborts on incoming broadcasts */
+	if (!j1939_cb_is_broadcast(&session->skcb))
+		j1939_xtp_tx_abort(priv, &session->skcb,
+				   !(session->skcb.src_flags & J1939_ECU_LOCAL),
+				   err, session->skcb.addr.pgn);
+
+	if (session->sk)
+		j1939_sk_send_multi_abort(priv, session->sk, session->err);
+}
+
 static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 {
 	struct j1939_session *session =
@@ -858,8 +875,11 @@ static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 		ret = j1939_tp_txnext(session);
 	}
 
-	if (ret < 0)
+	if (ret == -ENOBUFS) {
 		j1939_tp_schedule_txtimer(session, 10 + prandom_u32_max(16));
+	} else if (ret) {
+		j1939_session_cancel(session, J1939_XTP_ABORT_OTHER);
+	}
 
 	j1939_session_put(session);
 
@@ -872,24 +892,6 @@ static void j1939_session_completed(struct j1939_session *session)
 
 	/* distribute among j1939 receivers */
 	j1939_sk_recv(session->priv, se_skb);
-}
-
-static void j1939_session_cancel(struct j1939_session *session,
-				 enum j1939_xtp_abort err)
-{
-	struct j1939_priv *priv = session->priv;
-
-	WARN_ON_ONCE(!err);
-
-	session->err = j1939_xtp_abort_to_errno(priv, err);
-	/* do not send aborts on incoming broadcasts */
-	if (!j1939_cb_is_broadcast(&session->skcb))
-		j1939_xtp_tx_abort(priv, &session->skcb,
-				   !(session->skcb.src_flags & J1939_ECU_LOCAL),
-				   err, session->skcb.addr.pgn);
-
-	if (session->sk)
-		j1939_sk_send_multi_abort(priv, session->sk, session->err);
 }
 
 static enum hrtimer_restart j1939_tp_rxtimer(struct hrtimer *hrtimer)

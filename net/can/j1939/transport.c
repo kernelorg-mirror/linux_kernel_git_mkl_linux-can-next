@@ -1518,8 +1518,10 @@ static void j1939_tp_cmd_recv(struct j1939_priv *priv, struct sk_buff *skb)
 		 * TP is pending in the other direction
 		 */
 		if (session) {
-			if (j1939_xtp_rx_rts_current(session, skb))
+			if (j1939_xtp_rx_rts_current(session, skb)) {
+				j1939_session_put(session);
 				break;
+			}
 		} else {
 			session = j1939_xtp_rx_rts_new(priv, skb);
 			if (!session)

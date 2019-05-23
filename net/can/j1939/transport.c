@@ -1141,17 +1141,18 @@ static int j1939_session_insert(struct j1939_session *session)
 	struct j1939_session *pending;
 	int ret = 0;
 
-	pending = j1939_session_get_by_skcb(priv, &session->skcb, false);
+	j1939_session_list_lock(priv);
+	pending = j1939_session_get_by_skcb_locked(priv, &priv->tp_sessionq,
+						   &session->skcb, false);
 	if (pending) {
 		j1939_session_put(pending);
 		ret = -EAGAIN;
 	} else {
-		j1939_session_list_lock(priv);
 		WARN_ON_ONCE(session->state != J1939_SESSION_NEW);
 		j1939_session_list_add(session);
 		session->state = J1939_SESSION_ACTIVE;
-		j1939_session_list_unlock(priv);
 	}
+	j1939_session_list_unlock(priv);
 
 	return ret;
 }

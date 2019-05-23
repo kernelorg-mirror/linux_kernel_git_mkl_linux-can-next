@@ -214,7 +214,7 @@ enum j1939_session_state {
 struct j1939_session {
 	struct j1939_priv *priv;
 	struct list_head active_session_list_entry;
-	struct list_head jsk_fifo;
+	struct list_head sk_session_queue_entry;
 	struct kref kref;
 	spinlock_t lock;
 	struct sock *sk;
@@ -290,8 +290,8 @@ struct j1939_sock {
 	atomic_t skb_pending;
 	wait_queue_head_t waitq;
 
-	spinlock_t session_fifo_lock;
-	struct list_head session_fifo;
+	spinlock_t sk_session_queue_lock;
+	struct list_head sk_session_queue;
 };
 
 static inline struct j1939_sock *j1939_sk(const struct sock *sk)

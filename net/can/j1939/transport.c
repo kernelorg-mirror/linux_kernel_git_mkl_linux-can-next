@@ -1093,7 +1093,7 @@ static struct j1939_session *j1939_session_new(struct j1939_priv *priv,
 	if (!session)
 		return NULL;
 	INIT_LIST_HEAD(&session->active_session_list_entry);
-	INIT_LIST_HEAD(&session->jsk_fifo);
+	INIT_LIST_HEAD(&session->sk_session_queue_entry);
 	spin_lock_init(&session->lock);
 	kref_init(&session->kref);
 

@@ -74,11 +74,11 @@ static bool j1939_sk_queue_session(struct j1939_session *session)
 	struct j1939_sock *jsk = j1939_sk(session->sk);
 	bool empty;
 
-	spin_lock_bh(&jsk->session_fifo_lock);
-	empty = list_empty(&jsk->session_fifo);
+	spin_lock_bh(&jsk->sk_session_queue_lock);
+	empty = list_empty(&jsk->sk_session_queue);
 	j1939_session_get(session);
-	list_add_tail(&session->jsk_fifo, &jsk->session_fifo);
-	spin_unlock_bh(&jsk->session_fifo_lock);
+	list_add_tail(&session->sk_session_queue_entry, &jsk->sk_session_queue);
+	spin_unlock_bh(&jsk->sk_session_queue_lock);
 	j1939_sock_pending_add(&jsk->sk);
 
 	return empty;
@@ -89,16 +89,17 @@ j1939_session *j1939_sk_get_incomplete_session(struct j1939_sock *jsk)
 {
 	struct j1939_session *session = NULL;
 
-	spin_lock_bh(&jsk->session_fifo_lock);
-	if (!list_empty(&jsk->session_fifo)) {
-		session = list_last_entry(&jsk->session_fifo,
-					  struct j1939_session, jsk_fifo);
+	spin_lock_bh(&jsk->sk_session_queue_lock);
+	if (!list_empty(&jsk->sk_session_queue)) {
+		session = list_last_entry(&jsk->sk_session_queue,
+					  struct j1939_session,
+					  sk_session_queue_entry);
 		if (session->total_queued_size == session->total_message_size)
 			session = NULL;
 		else
 			j1939_session_get(session);
 	}
-	spin_unlock_bh(&jsk->session_fifo_lock);
+	spin_unlock_bh(&jsk->sk_session_queue_lock);
 
 	return session;
 }
@@ -107,15 +108,15 @@ static void j1939_sk_queue_drop_all(struct j1939_sock *jsk)
 {
 	struct j1939_session *session, *tmp;
 
-	spin_lock_bh(&jsk->session_fifo_lock);
-	list_for_each_entry_safe_reverse(session, tmp, &jsk->session_fifo,
-					 jsk_fifo) {
-		list_del_init(&session->jsk_fifo);
+	spin_lock_bh(&jsk->sk_session_queue_lock);
+	list_for_each_entry_safe_reverse(session, tmp, &jsk->sk_session_queue,
+					 sk_session_queue_entry) {
+		list_del_init(&session->sk_session_queue_entry);
 		j1939_session_timers_cancel(session);
 		j1939_session_deactivate(session);
 		j1939_session_put(session);
 	}
-	spin_unlock_bh(&jsk->session_fifo_lock);
+	spin_unlock_bh(&jsk->sk_session_queue_lock);
 }
 
 static void j1939_sk_queue_activate_next_locked(struct j1939_session *session)
@@ -128,17 +129,19 @@ static void j1939_sk_queue_activate_next_locked(struct j1939_session *session)
 		return;
 
 	jsk = j1939_sk(session->sk);
-	lockdep_assert_held(&jsk->session_fifo_lock);
+	lockdep_assert_held(&jsk->sk_session_queue_lock);
 
 	err = session->err;
 
-	cur = list_first_entry_or_null(&jsk->session_fifo,
-					struct j1939_session, jsk_fifo);
+	cur = list_first_entry_or_null(&jsk->sk_session_queue,
+					struct j1939_session,
+					sk_session_queue_entry);
 	if (cur == session) {
-		list_del_init(&session->jsk_fifo);
+		list_del_init(&session->sk_session_queue_entry);
 		j1939_session_put(session);
-		next = list_first_entry_or_null(&jsk->session_fifo,
-						struct j1939_session, jsk_fifo);
+		next = list_first_entry_or_null(&jsk->sk_session_queue,
+						struct j1939_session,
+						sk_session_queue_entry);
 		if (next) {
 			/* Give receiver some time (arbitrary chosen) to recover */
 			int time_ms = 0;
@@ -161,9 +164,9 @@ void j1939_sk_queue_activate_next(struct j1939_session *session)
 
 	jsk = j1939_sk(session->sk);
 
-	spin_lock_bh(&jsk->session_fifo_lock);
+	spin_lock_bh(&jsk->sk_session_queue_lock);
 	j1939_sk_queue_activate_next_locked(session);
-	spin_unlock_bh(&jsk->session_fifo_lock);
+	spin_unlock_bh(&jsk->sk_session_queue_lock);
 }
 
 static bool j1939_sk_match_dst(struct j1939_sock *jsk,
@@ -301,8 +304,8 @@ static int j1939_sk_init(struct sock *sk)
 	jsk->addr.pgn = J1939_NO_PGN;
 	jsk->pgn_rx_filter = J1939_NO_PGN;
 	atomic_set(&jsk->skb_pending, 0);
-	spin_lock_init(&jsk->session_fifo_lock);
-	INIT_LIST_HEAD(&jsk->session_fifo);
+	spin_lock_init(&jsk->sk_session_queue_lock);
+	INIT_LIST_HEAD(&jsk->sk_session_queue);
 
 	return 0;
 }

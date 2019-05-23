@@ -7,11 +7,11 @@
 #define _J1939_PRIV_H_
 
 #include <linux/can/j1939.h>
+#include <net/sock.h>
 
 /* TODO: return ENETRESET on busoff. */
 
 struct j1939_session;
-
 enum j1939_sk_errqueue_type {
 	J1939_ERRQUEUE_ACK,
 	J1939_ERRQUEUE_SCHED,
@@ -249,6 +249,42 @@ struct j1939_session {
 	} pkt;
 	struct hrtimer txtimer, rxtimer;
 };
+
+struct j1939_sock {
+	struct sock sk; /* must be first to skip with memset */
+	struct list_head list;
+
+#define J1939_SOCK_BOUND BIT(0)
+#define J1939_SOCK_CONNECTED BIT(1)
+#define J1939_SOCK_PROMISC BIT(2)
+#define J1939_SOCK_RECV_OWN BIT(3)
+#define J1939_SOCK_ERRQUEUE BIT(4)
+	int state;
+
+	int ifindex;
+	struct j1939_addr addr;
+	struct j1939_filter *filters;
+	int nfilters;
+	pgn_t pgn_rx_filter;
+
+	size_t etp_tx_complete_size;
+	size_t etp_tx_done_size;
+
+	/* j1939 may emit equal PGN (!= equal CAN-id's) out of order
+	 * when transport protocol comes in.
+	 * To allow emitting in order, keep a 'pending' nr. of packets
+	 */
+	atomic_t skb_pending;
+	wait_queue_head_t waitq;
+
+	spinlock_t session_fifo_lock;
+	struct list_head session_fifo;
+};
+
+static inline struct j1939_sock *j1939_sk(const struct sock *sk)
+{
+	return container_of(sk, struct j1939_sock, sk);
+}
 
 void j1939_session_get(struct j1939_session *session);
 void j1939_session_put(struct j1939_session *session);

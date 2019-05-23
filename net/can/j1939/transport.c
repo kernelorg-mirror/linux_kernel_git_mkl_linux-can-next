@@ -950,6 +950,7 @@ static void j1939_xtp_rx_abort_one(struct j1939_priv *priv, struct sk_buff *skb,
 {
 	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
 	struct j1939_session *session;
+	u8 abort = skb->data[1];
 	pgn_t pgn;
 
 	pgn = j1939_xtp_ctl_to_pgn(skb->data);
@@ -957,24 +958,12 @@ static void j1939_xtp_rx_abort_one(struct j1939_priv *priv, struct sk_buff *skb,
 	if (!session)
 		return;
 
-	if (session->transmission && !session->last_txcmd) {
-		/* empty block:
-		 * do not drop session when a transmit session did not
-		 * start yet
-		 */
-	} else if (session->skcb.addr.pgn == pgn) {
-		u8 abort = skb->data[1];
+	j1939_session_timers_cancel(session);
+	session->err = j1939_xtp_abort_to_errno(priv, abort);
+	if (session->sk)
+		j1939_sk_send_multi_abort(priv, session->sk,
+					  session->err);
 
-		j1939_session_timers_cancel(session);
-		session->err = j1939_xtp_abort_to_errno(priv, abort);
-		if (session->sk)
-			j1939_sk_send_multi_abort(priv, session->sk,
-						  session->err);
-	}
-
-	/* TODO: maybe cancel current connection
-	 * as another pgn was communicated
-	 */
 	j1939_session_put(session);
 }
 

@@ -69,6 +69,103 @@ void j1939_sock_pending_del(struct sock *sk)
 		wake_up(&jsk->waitq);	/* no pending SKB's */
 }
 
+static bool j1939_sk_queue_session(struct j1939_session *session)
+{
+	struct j1939_sock *jsk = j1939_sk(session->sk);
+	bool empty;
+
+	spin_lock_bh(&jsk->session_fifo_lock);
+	empty = list_empty(&jsk->session_fifo);
+	j1939_session_get(session);
+	list_add_tail(&session->jsk_fifo, &jsk->session_fifo);
+	spin_unlock_bh(&jsk->session_fifo_lock);
+	j1939_sock_pending_add(&jsk->sk);
+
+	return empty;
+}
+
+static struct
+j1939_session *j1939_sk_get_incomplete_session(struct j1939_sock *jsk)
+{
+	struct j1939_session *session = NULL;
+
+	spin_lock_bh(&jsk->session_fifo_lock);
+	if (!list_empty(&jsk->session_fifo)) {
+		session = list_last_entry(&jsk->session_fifo,
+					  struct j1939_session, jsk_fifo);
+		if (session->total_queued_size == session->total_message_size)
+			session = NULL;
+		else
+			j1939_session_get(session);
+	}
+	spin_unlock_bh(&jsk->session_fifo_lock);
+
+	return session;
+}
+
+static void j1939_sk_queue_drop_all(struct j1939_sock *jsk)
+{
+	struct j1939_session *session, *tmp;
+
+	spin_lock_bh(&jsk->session_fifo_lock);
+	list_for_each_entry_safe_reverse(session, tmp, &jsk->session_fifo,
+					 jsk_fifo) {
+		list_del_init(&session->jsk_fifo);
+		j1939_session_timers_cancel(session);
+		j1939_session_deactivate(session);
+		j1939_session_put(session);
+	}
+	spin_unlock_bh(&jsk->session_fifo_lock);
+}
+
+static void j1939_sk_queue_activate_next_locked(struct j1939_session *session)
+{
+	struct j1939_sock *jsk;
+	struct j1939_session *cur, *next = NULL;
+	int err;
+
+	if (!session->sk)
+		return;
+
+	jsk = j1939_sk(session->sk);
+	lockdep_assert_held(&jsk->session_fifo_lock);
+
+	err = session->err;
+
+	cur = list_first_entry_or_null(&jsk->session_fifo,
+					struct j1939_session, jsk_fifo);
+	if (cur == session) {
+		list_del_init(&session->jsk_fifo);
+		j1939_session_put(session);
+		next = list_first_entry_or_null(&jsk->session_fifo,
+						struct j1939_session, jsk_fifo);
+		if (next) {
+			/* Give receiver some time (arbitrary chosen) to recover */
+			int time_ms = 0;
+
+			if (err)
+				time_ms = 10 + prandom_u32_max(16);
+
+			WARN_ON_ONCE(j1939_session_activate(next));
+			j1939_tp_schedule_txtimer(next, time_ms);
+		}
+	}
+}
+
+void j1939_sk_queue_activate_next(struct j1939_session *session)
+{
+	struct j1939_sock *jsk;
+
+	if (!session->sk)
+		return;
+
+	jsk = j1939_sk(session->sk);
+
+	spin_lock_bh(&jsk->session_fifo_lock);
+	j1939_sk_queue_activate_next_locked(session);
+	spin_unlock_bh(&jsk->session_fifo_lock);
+}
+
 static bool j1939_sk_match_dst(struct j1939_sock *jsk,
 			       const struct j1939_sk_buff_cb *skcb)
 {
@@ -204,8 +301,8 @@ static int j1939_sk_init(struct sock *sk)
 	jsk->addr.pgn = J1939_NO_PGN;
 	jsk->pgn_rx_filter = J1939_NO_PGN;
 	atomic_set(&jsk->skb_pending, 0);
-	jsk->etp_tx_complete_size = 0;
-	jsk->etp_tx_done_size = 0;
+	spin_lock_init(&jsk->session_fifo_lock);
+	INIT_LIST_HEAD(&jsk->session_fifo);
 
 	return 0;
 }
@@ -406,8 +503,9 @@ static int j1939_sk_release(struct socket *sock)
 		struct j1939_priv *priv;
 		struct net_device *ndev;
 
-		wait_event_interruptible(jsk->waitq,
-					 j1939_sock_pending_get(&jsk->sk) == 0);
+		if (wait_event_interruptible(jsk->waitq,
+					 j1939_sock_pending_get(&jsk->sk) == 0))
+			j1939_sk_queue_drop_all(jsk);
 
 		ndev = dev_get_by_index(sock_net(sk), jsk->ifindex);
 		priv = j1939_priv_get_by_ndev(ndev);
@@ -794,15 +892,14 @@ static int j1939_sk_send_multi(struct j1939_priv *priv,  struct sock *sk,
 
 {
 	struct j1939_sock *jsk = j1939_sk(sk);
-	struct j1939_session *session = NULL;
+	struct j1939_session *session = j1939_sk_get_incomplete_session(jsk);
 	struct sk_buff *skb;
 	size_t segment_size, todo_size;
 	int ret = 0;
 
-	if (!jsk->etp_tx_done_size) {
-		j1939_sock_pending_add(&jsk->sk);
-		jsk->etp_tx_complete_size = size;
-	} else if (jsk->etp_tx_complete_size != jsk->etp_tx_done_size + size) {
+	if (session &&
+	    session->total_message_size != session->total_queued_size + size) {
+		j1939_session_put(session);
 		return -EIO;
 	}
 
@@ -821,52 +918,34 @@ static int j1939_sk_send_multi(struct j1939_priv *priv,  struct sock *sk,
 			break;
 
 		skcb = j1939_skb_to_cb(skb);
-		skcb->offset = jsk->etp_tx_done_size;
 
 		if (!session) {
-			if (jsk->etp_tx_done_size) {
-				if (jsk->etp_tx_complete_size >
-				    J1939_MAX_TP_PACKET_SIZE)
-					skcb->addr.type = J1939_ETP;
-				else
-					skcb->addr.type = J1939_TP;
-
-				session = j1939_session_get_by_skcb(priv, skcb,
-								    false);
-				if (IS_ERR(session)) {
-					ret = PTR_ERR(session);
-					goto kfree_skb;
-				} else if (!session) {
-					ret = -ENOENT;
-					goto kfree_skb;
-				}
-
-				j1939_session_skb_queue(session, skb);
-			} else {
-				/* create new session with
-				 * etp_tx_complete_size and attach skb
-				 * segment
-				 */
-				session = j1939_tp_send(priv, skb,
-							jsk->etp_tx_complete_size);
-				if (IS_ERR(session)) {
-					ret = PTR_ERR(session);
-					goto kfree_skb;
-				}
-
-				if (!j1939_session_insert(session)) {
+			/* at this point the size should be full size of the
+			 * session */
+			skcb->offset = 0;
+			session = j1939_tp_send(priv, skb, size);
+			if (IS_ERR(session)) {
+				ret = PTR_ERR(session);
+				goto kfree_skb;
+			}
+			if (j1939_sk_queue_session(session)) {
+				/* try to activate session if we a fist in the
+				 * queue */
+				if (!j1939_session_activate(session)) {
 					j1939_tp_schedule_txtimer(session, 0);
 				} else {
 					ret = session->err = -EBUSY;
+					j1939_sk_queue_drop_all(jsk);
 					break;
 				}
 			}
 		} else {
+			skcb->offset = session->total_queued_size;
 			j1939_session_skb_queue(session, skb);
 		}
 
 		todo_size -= segment_size;
-		jsk->etp_tx_done_size += segment_size;
+		session->total_queued_size += segment_size;
 	}
 
 	switch (ret) {
@@ -876,7 +955,6 @@ static int j1939_sk_send_multi(struct j1939_priv *priv,  struct sock *sk,
 				    "no error found and not completely queued?! %zu\n",
 				    todo_size);
 		ret = size;
-		jsk->etp_tx_done_size = 0;
 		break;
 	case -ERESTARTSYS:
 		ret = -EINTR;
@@ -886,8 +964,7 @@ static int j1939_sk_send_multi(struct j1939_priv *priv,  struct sock *sk,
 			ret = size - todo_size;
 		break;
 	default: /* ERROR */
-		/* skb session queue will be purged if we are the last user */
-		jsk->etp_tx_done_size = 0;
+		break;
 	}
 
 	if (session)
@@ -897,7 +974,6 @@ static int j1939_sk_send_multi(struct j1939_priv *priv,  struct sock *sk,
 
  kfree_skb:
 	kfree_skb(skb);
-	jsk->etp_tx_done_size = 0;
 	return ret;
 }
 

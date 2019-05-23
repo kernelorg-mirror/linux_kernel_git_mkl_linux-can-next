@@ -168,6 +168,7 @@ void j1939_sk_send_multi_abort(struct j1939_priv *priv, struct sock *sk,
 			       int err);
 void j1939_sk_errqueue(struct j1939_session *session,
 		       enum j1939_sk_errqueue_type type);
+void j1939_sk_queue_activate_next(struct j1939_session *session);
 
 /* stack entries */
 struct j1939_session *j1939_tp_send(struct j1939_priv *priv,
@@ -207,6 +208,7 @@ enum j1939_session_state {
 struct j1939_session {
 	struct j1939_priv *priv;
 	struct list_head list;
+	struct list_head jsk_fifo;
 	struct kref kref;
 	spinlock_t lock;
 	struct sock *sk;
@@ -229,6 +231,8 @@ struct j1939_session {
 	bool transmission;
 	bool extd;
 	unsigned int total_message_size; /* Total message size, number of bytes */
+	unsigned int total_queued_size; /* Total number of bytes queue from socket
+					   to the session */
 	int err;
 	u32 tskey;
 	enum j1939_session_state state;
@@ -273,9 +277,6 @@ struct j1939_sock {
 	int nfilters;
 	pgn_t pgn_rx_filter;
 
-	size_t etp_tx_complete_size;
-	size_t etp_tx_done_size;
-
 	/* j1939 may emit equal PGN (!= equal CAN-id's) out of order
 	 * when transport protocol comes in.
 	 * To allow emitting in order, keep a 'pending' nr. of packets
@@ -299,8 +300,10 @@ void j1939_session_skb_queue(struct j1939_session *session,
 struct j1939_session *j1939_session_get_by_skcb(struct j1939_priv *priv,
 						struct j1939_sk_buff_cb *skcb,
 						bool reverse);
-int j1939_session_insert(struct j1939_session *session);
+int j1939_session_activate(struct j1939_session *session);
+bool j1939_session_deactivate(struct j1939_session *session);
 void j1939_tp_schedule_txtimer(struct j1939_session *session, int msec);
+void j1939_session_timers_cancel(struct j1939_session *session);
 
 #define J1939_MAX_TP_PACKET_SIZE (7 * 0xff)
 #define J1939_MAX_ETP_PACKET_SIZE (7 * 0x00ffffff)

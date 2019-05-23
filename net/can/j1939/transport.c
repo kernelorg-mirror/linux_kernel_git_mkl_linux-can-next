@@ -248,14 +248,11 @@ static void __j1939_session_drop(struct j1939_session *session)
 
 static void j1939_session_destroy(struct j1939_session *session)
 {
-
 	if (session->err)
 		j1939_sk_errqueue(session, J1939_ERRQUEUE_ABORT);
 	else
 		j1939_sk_errqueue(session, J1939_ERRQUEUE_ACK);
-	j1939_session_list_lock(session->priv);
-	j1939_session_list_del(session);
-	j1939_session_list_unlock(session->priv);
+
 	skb_queue_purge(&session->skb_queue);
 	__j1939_session_drop(session);
 	j1939_priv_put(session->priv);
@@ -287,7 +284,7 @@ static void j1939_session_rxtimer_cancel(struct j1939_session *session)
 		j1939_session_put(session);
 }
 
-static void j1939_session_timers_cancel(struct j1939_session *session)
+void j1939_session_timers_cancel(struct j1939_session *session)
 {
 	j1939_session_txtimer_cancel(session);
 	j1939_session_rxtimer_cancel(session);
@@ -840,6 +837,30 @@ static int j1939_tp_txnext(struct j1939_session *session)
 	return ret;
 }
 
+bool j1939_session_deactivate(struct j1939_session *session)
+{
+	bool active = false;
+
+	j1939_session_list_lock(session->priv);
+	if (session->state == J1939_SESSION_ACTIVE) {
+		active = true;
+
+		j1939_session_list_del(session);
+		session->state = J1939_SESSION_DONE;
+		j1939_session_put(session);
+
+	}
+	j1939_session_list_unlock(session->priv);
+
+	return active;
+}
+
+static void j1939_session_deactivate_activate_next(struct j1939_session *session)
+{
+	if (j1939_session_deactivate(session))
+		j1939_sk_queue_activate_next(session);
+}
+
 static void j1939_session_cancel(struct j1939_session *session,
 				 enum j1939_xtp_abort err)
 {
@@ -868,9 +889,12 @@ static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 		struct j1939_priv *priv = session->priv;
 		struct sk_buff *se_skb = j1939_session_skb_find(session);
 
-		if (se_skb)
+		if (se_skb) {
 			ret = j1939_send_one(priv,
 					     skb_clone(se_skb, GFP_ATOMIC));
+			if (!ret)
+				j1939_session_deactivate_activate_next(session);
+		}
 	} else {
 		ret = j1939_tp_txnext(session);
 	}
@@ -892,6 +916,8 @@ static void j1939_session_completed(struct j1939_session *session)
 
 	/* distribute among j1939 receivers */
 	j1939_sk_recv(session->priv, se_skb);
+
+	j1939_session_deactivate_activate_next(session);
 }
 
 static enum hrtimer_restart j1939_tp_rxtimer(struct hrtimer *hrtimer)
@@ -963,6 +989,7 @@ static void j1939_xtp_rx_abort_one(struct j1939_priv *priv, struct sk_buff *skb,
 	if (session->sk)
 		j1939_sk_send_multi_abort(priv, session->sk,
 					  session->err);
+	j1939_session_deactivate_activate_next(session);
 
 	j1939_session_put(session);
 }
@@ -1077,6 +1104,7 @@ static struct j1939_session *j1939_session_new(struct j1939_priv *priv,
 	if (!session)
 		return NULL;
 	INIT_LIST_HEAD(&session->list);
+	INIT_LIST_HEAD(&session->jsk_fifo);
 	spin_lock_init(&session->lock);
 	kref_init(&session->kref);
 
@@ -1135,7 +1163,7 @@ j1939_session *j1939_session_fresh_new(struct j1939_priv *priv,
 	return session;
 }
 
-static int j1939_session_insert(struct j1939_session *session)
+int j1939_session_activate(struct j1939_session *session)
 {
 	struct j1939_priv *priv = session->priv;
 	struct j1939_session *pending;
@@ -1150,6 +1178,7 @@ static int j1939_session_insert(struct j1939_session *session)
 	} else {
 		WARN_ON_ONCE(session->state != J1939_SESSION_NEW);
 		j1939_session_list_add(session);
+		j1939_session_get(session);
 		session->state = J1939_SESSION_ACTIVE;
 	}
 	j1939_session_list_unlock(priv);
@@ -1221,7 +1250,7 @@ j1939_session *j1939_xtp_rx_rts_new(struct j1939_priv *priv,
 	session->pkt.done = 0;
 	session->pkt.tx = 0;
 
-	WARN_ON_ONCE(j1939_session_insert(session));
+	WARN_ON_ONCE(j1939_session_activate(session));
 
 	return session;
 }
@@ -1603,6 +1632,7 @@ int j1939_tp_rmdev_notifier(struct j1939_priv *priv)
 	list_for_each_entry_safe(session, saved,
 				 &priv->tp_sessionq, list) {
 		j1939_session_timers_cancel(session);
+		j1939_session_deactivate_activate_next(session);
 	}
 	j1939_session_list_unlock(priv);
 	return NOTIFY_DONE;

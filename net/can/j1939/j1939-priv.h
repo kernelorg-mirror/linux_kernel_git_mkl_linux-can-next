@@ -208,6 +208,9 @@ void j1939_sock_pending_del(struct sock *sk);
 enum j1939_session_state {
 	J1939_SESSION_NEW,
 	J1939_SESSION_ACTIVE,
+	/* waiting for abort signal on the bus */
+	J1939_SESSION_WAITING_ABORT,
+	J1939_SESSION_ACTIVE_MAX,
 	J1939_SESSION_DONE,
 };
 

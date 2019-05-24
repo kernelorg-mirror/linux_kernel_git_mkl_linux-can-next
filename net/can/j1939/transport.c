@@ -833,7 +833,8 @@ bool j1939_session_deactivate(struct j1939_session *session)
 	bool active = false;
 
 	j1939_session_list_lock(session->priv);
-	if (session->state == J1939_SESSION_ACTIVE) {
+	if (session->state >= J1939_SESSION_ACTIVE &&
+	    session->state < J1939_SESSION_ACTIVE_MAX) {
 		active = true;
 
 		list_del_init(&session->active_session_list_entry);
@@ -934,9 +935,27 @@ static enum hrtimer_restart j1939_tp_rxtimer(struct hrtimer *hrtimer)
 						     rxtimer);
 	struct j1939_priv *priv = session->priv;
 
-	netdev_alert(priv->ndev, "%s: timeout\n", __func__);
-	j1939_session_txtimer_cancel(session);
-	j1939_session_cancel(session, J1939_XTP_ABORT_TIMEOUT);
+	if (session->state == J1939_SESSION_WAITING_ABORT) {
+		netdev_alert(priv->ndev, "%s: abort rx timeout. Force session deactivation\n",
+			     __func__);
+
+		j1939_session_deactivate_activate_next(session);
+	} else {
+		netdev_alert(priv->ndev, "%s: rx timeout, send abort\n",
+			     __func__);
+
+		j1939_session_list_lock(session->priv);
+		if (session->state >= J1939_SESSION_ACTIVE &&
+		    session->state < J1939_SESSION_ACTIVE_MAX) {
+			session->state = J1939_SESSION_WAITING_ABORT;
+			j1939_session_get(session);
+			hrtimer_start(&session->rxtimer, ms_to_ktime(1250),
+				      HRTIMER_MODE_REL_SOFT);
+			j1939_session_cancel(session, J1939_XTP_ABORT_TIMEOUT);
+		}
+		j1939_session_list_unlock(session->priv);
+	}
+
 	j1939_session_put(session);
 
 	return HRTIMER_NORESTART;

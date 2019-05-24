@@ -239,6 +239,8 @@ struct j1939_session {
 	unsigned int total_message_size; /* Total message size, number of bytes */
 	unsigned int total_queued_size; /* Total number of bytes queue from socket
 					   to the session */
+	unsigned int tx_retry;
+
 	int err;
 	u32 tskey;
 	enum j1939_session_state state;

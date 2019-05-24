@@ -8,6 +8,8 @@
 
 #include "j1939-priv.h"
 
+#define J1939_XTP_TX_RETRY_LIMIT 100
+
 #define J1939_ETP_PGN_CTL 0xc800
 #define J1939_ETP_PGN_DAT 0xc700
 #define J1939_TP_PGN_CTL 0xec00
@@ -872,6 +874,7 @@ static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 {
 	struct j1939_session *session =
 		container_of(hrtimer, struct j1939_session, txtimer);
+	struct j1939_priv *priv = session->priv;
 	int ret = 0;
 
 	if (session->skcb.addr.type == J1939_SIMPLE) {
@@ -889,9 +892,24 @@ static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 	}
 
 	if (ret == -ENOBUFS) {
-		j1939_tp_schedule_txtimer(session, 10 + prandom_u32_max(16));
+		/* Retry limit is currently arbitrary chosen */
+		if (session->tx_retry < J1939_XTP_TX_RETRY_LIMIT) {
+			session->tx_retry++;
+			j1939_tp_schedule_txtimer(session,
+						  10 + prandom_u32_max(16));
+		} else {
+			netdev_alert(priv->ndev, "%s: tx retry count reached\n",
+				     __func__);
+			session->err = -ENETUNREACH;
+			j1939_session_rxtimer_cancel(session);
+			j1939_session_deactivate_activate_next(session);
+		}
 	} else if (ret) {
+		netdev_alert(priv->ndev, "%s: tx aborted with unknown reason: %i\n",
+			     __func__, ret);
 		j1939_session_cancel(session, J1939_XTP_ABORT_OTHER);
+	} else {
+		session->tx_retry = 0;
 	}
 
 	j1939_session_put(session);

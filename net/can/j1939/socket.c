@@ -122,9 +122,10 @@ static void j1939_sk_queue_drop_all(struct j1939_sock *jsk)
 static void j1939_sk_queue_activate_next_locked(struct j1939_session *session)
 {
 	struct j1939_sock *jsk;
-	struct j1939_session *cur, *next = NULL;
+	struct j1939_session *first;
 	int err;
 
+	/* RX-Session don't have a socket (yet) */
 	if (!session->sk)
 		return;
 
@@ -133,25 +134,34 @@ static void j1939_sk_queue_activate_next_locked(struct j1939_session *session)
 
 	err = session->err;
 
-	cur = list_first_entry_or_null(&jsk->sk_session_queue,
+	first = list_first_entry_or_null(&jsk->sk_session_queue,
 					struct j1939_session,
 					sk_session_queue_entry);
-	if (cur == session) {
-		list_del_init(&session->sk_session_queue_entry);
-		j1939_session_put(session);
-		next = list_first_entry_or_null(&jsk->sk_session_queue,
-						struct j1939_session,
-						sk_session_queue_entry);
-		if (next) {
-			/* Give receiver some time (arbitrary chosen) to recover */
-			int time_ms = 0;
 
-			if (err)
-				time_ms = 10 + prandom_u32_max(16);
+	/* Some else has already activated the next session */
+	if (first != session)
+		return;
 
-			WARN_ON_ONCE(j1939_session_activate(next));
-			j1939_tp_schedule_txtimer(next, time_ms);
-		}
+activate_next:
+	list_del_init(&first->sk_session_queue_entry);
+	j1939_session_put(first);
+	first = list_first_entry_or_null(&jsk->sk_session_queue,
+					struct j1939_session,
+					sk_session_queue_entry);
+	if (!first)
+		return;
+
+	if (WARN_ON_ONCE(j1939_session_activate(first))) {
+		first->err = -EBUSY;
+		goto activate_next;
+	} else {
+		/* Give receiver some time (arbitrary chosen) to recover */
+		int time_ms = 0;
+
+		if (err)
+			time_ms = 10 + prandom_u32_max(16);
+
+		j1939_tp_schedule_txtimer(first, time_ms);
 	}
 }
 

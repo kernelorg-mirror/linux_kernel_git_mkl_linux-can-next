@@ -1155,14 +1155,14 @@ j1939_session *j1939_session_fresh_new(struct j1939_priv *priv,
 int j1939_session_activate(struct j1939_session *session)
 {
 	struct j1939_priv *priv = session->priv;
-	struct j1939_session *pending;
+	struct j1939_session *active;
 	int ret = 0;
 
 	j1939_session_list_lock(priv);
-	pending = j1939_session_get_by_skcb_locked(priv, &priv->active_session_list,
+	active = j1939_session_get_by_skcb_locked(priv, &priv->active_session_list,
 						   &session->skcb, false);
-	if (pending) {
-		j1939_session_put(pending);
+	if (active) {
+		j1939_session_put(active);
 		ret = -EAGAIN;
 	} else {
 		WARN_ON_ONCE(session->state != J1939_SESSION_NEW);

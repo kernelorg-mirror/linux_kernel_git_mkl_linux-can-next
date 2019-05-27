@@ -250,28 +250,37 @@ static bool j1939_sk_match_filter(struct j1939_sock *jsk,
 	return false;
 }
 
+static bool j1939_sk_recv_match_one(struct j1939_sock *jsk,
+				    const struct j1939_sk_buff_cb *skcb)
+{
+	if (!(jsk->state & (J1939_SOCK_BOUND | J1939_SOCK_CONNECTED)))
+		return false;
+
+	if (skcb->insock == &jsk->sk && !(jsk->state & J1939_SOCK_RECV_OWN))
+		/* own message */
+		return false;
+
+	if (!j1939_sk_match_dst(jsk, skcb))
+		return false;
+
+	if (!j1939_sk_match_filter(jsk, skcb))
+		return false;
+
+	return true;
+}
+
 static void j1939_sk_recv_one(struct j1939_sock *jsk, struct sk_buff *oskb)
 {
-	struct sk_buff *skb;
 	const struct j1939_sk_buff_cb *oskcb = j1939_skb_to_cb(oskb);
 	const struct can_skb_priv *oskb_prv = can_skb_prv(oskb);
 	struct j1939_sk_buff_cb *skcb;
-
-	if (!(jsk->state & (J1939_SOCK_BOUND | J1939_SOCK_CONNECTED)))
-		return;
+	struct sk_buff *skb;
 
 	if (jsk->ifindex != oskb_prv->ifindex)
 		/* this socket does not take packets from this iface */
 		return;
 
-	if (oskcb->insock == &jsk->sk && !(jsk->state & J1939_SOCK_RECV_OWN))
-		/* own message */
-		return;
-
-	if (!j1939_sk_match_dst(jsk, oskcb))
-		return;
-
-	if (!j1939_sk_match_filter(jsk, oskcb))
+	if (!j1939_sk_recv_match_one(jsk, oskcb))
 		return;
 
 	skb = skb_clone(oskb, GFP_ATOMIC);
@@ -288,6 +297,22 @@ static void j1939_sk_recv_one(struct j1939_sock *jsk, struct sk_buff *oskb)
 
 	if (sock_queue_rcv_skb(&jsk->sk, skb) < 0)
 		kfree_skb(skb);
+}
+
+bool j1939_sk_recv_match(struct j1939_priv *priv, struct j1939_sk_buff_cb *skcb)
+{
+	struct j1939_sock *jsk;
+	bool match = false;
+
+	spin_lock_bh(&priv->j1939_socks_lock);
+	list_for_each_entry(jsk, &priv->j1939_socks, list) {
+		match = j1939_sk_recv_match_one(jsk, skcb);
+		if (match)
+			break;
+	}
+	spin_unlock_bh(&priv->j1939_socks_lock);
+
+	return match;
 }
 
 void j1939_sk_recv(struct j1939_priv *priv, struct sk_buff *skb)

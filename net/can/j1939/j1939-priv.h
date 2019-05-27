@@ -170,6 +170,7 @@ static inline struct j1939_sk_buff_cb *j1939_skb_to_cb(struct sk_buff *skb)
 
 int j1939_send_one(struct j1939_priv *priv, struct sk_buff *skb);
 void j1939_sk_recv(struct j1939_priv *priv, struct sk_buff *skb);
+bool j1939_sk_recv_match(struct j1939_priv *priv, struct j1939_sk_buff_cb *skcb);
 void j1939_sk_send_loop_abort(struct j1939_priv *priv, struct sock *sk,
 			       int err);
 void j1939_sk_errqueue(struct j1939_session *session,

@@ -1159,8 +1159,7 @@ static struct j1939_session *j1939_session_new(struct j1939_priv *priv,
 static struct
 j1939_session *j1939_session_fresh_new(struct j1939_priv *priv,
 				       int size,
-				       const struct j1939_sk_buff_cb *rel_skcb,
-				       pgn_t pgn)
+				       const struct j1939_sk_buff_cb *rel_skcb)
 {
 	struct sk_buff *skb;
 	struct j1939_sk_buff_cb *skcb;
@@ -1175,7 +1174,6 @@ j1939_session *j1939_session_fresh_new(struct j1939_priv *priv,
 	can_skb_prv(skb)->ifindex = priv->ndev->ifindex;
 	skcb = j1939_skb_to_cb(skb);
 	memcpy(skcb, rel_skcb, sizeof(*skcb));
-	skcb->addr.pgn = pgn;
 
 	session = j1939_session_new(priv, skb, skb->len);
 	if (!session) {
@@ -1218,23 +1216,24 @@ j1939_session *j1939_xtp_rx_rts_new(struct j1939_priv *priv,
 				    struct sk_buff *skb)
 {
 	enum j1939_xtp_abort abort = J1939_XTP_NO_ABORT;
-	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
+	struct j1939_sk_buff_cb skcb = *j1939_skb_to_cb(skb);
 	struct j1939_session *session;
 	const u8 *dat;
 	pgn_t pgn;
 	int len;
 
-	if (j1939_tp_im_transmitter(skcb)) {
+	if (j1939_tp_im_transmitter(&skcb)) {
 		netdev_alert(priv->ndev, "%s: I should tx (%02x %02x)\n",
-			     __func__, skcb->addr.sa, skcb->addr.da);
+			     __func__, skcb.addr.sa, skcb.addr.da);
 
 		return NULL;
 	}
 
 	dat = skb->data;
 	pgn = j1939_xtp_ctl_to_pgn(dat);
+	skcb.addr.pgn = pgn;
 
-	if (skcb->addr.type == J1939_ETP) {
+	if (skcb.addr.type == J1939_ETP) {
 		len = j1939_etp_ctl_to_size(dat);
 		if (len > J1939_MAX_ETP_PACKET_SIZE)
 			abort = J1939_XTP_ABORT_FAULT;
@@ -1251,13 +1250,16 @@ j1939_session *j1939_xtp_rx_rts_new(struct j1939_priv *priv,
 	}
 
 	if (abort != J1939_XTP_NO_ABORT) {
-		j1939_xtp_tx_abort(priv, skcb, true, abort, pgn);
+		j1939_xtp_tx_abort(priv, &skcb, true, abort, pgn);
 		return NULL;
 	}
 
-	session = j1939_session_fresh_new(priv, len, skcb, pgn);
+	if (!j1939_sk_recv_match(priv, &skcb))
+		return NULL;
+
+	session = j1939_session_fresh_new(priv, len, &skcb);
 	if (!session) {
-		j1939_xtp_tx_abort(priv, skcb, true,
+		j1939_xtp_tx_abort(priv, &skcb, true,
 				   J1939_XTP_ABORT_RESOURCE, pgn);
 		return NULL;
 	}
@@ -1265,7 +1267,7 @@ j1939_session *j1939_xtp_rx_rts_new(struct j1939_priv *priv,
 	/* initialize the control buffer: plain copy */
 	session->pkt.total = (len + 6) / 7;
 	session->pkt.block = 0xff;
-	if (skcb->addr.type != J1939_ETP) {
+	if (skcb.addr.type != J1939_ETP) {
 		if (dat[3] != session->pkt.total)
 			netdev_alert(priv->ndev, "%s: strange total, %u != %u\n",
 				     __func__, session->pkt.total,

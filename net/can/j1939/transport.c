@@ -883,10 +883,16 @@ static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 		struct sk_buff *se_skb = j1939_session_skb_find(session);
 
 		if (se_skb) {
-			ret = j1939_send_one(priv,
-					     skb_clone(se_skb, GFP_ATOMIC));
-			if (!ret)
-				j1939_session_deactivate_activate_next(session);
+			struct sk_buff *skb;
+
+			skb = skb_clone(se_skb, GFP_ATOMIC);
+			if (skb) {
+				ret = j1939_send_one(priv, skb);
+				if (!ret)
+					j1939_session_deactivate_activate_next(session);
+			} else {
+				ret = session->err = -ENOMEM;
+			}
 		}
 	} else {
 		ret = j1939_tp_txnext(session);
@@ -908,7 +914,8 @@ static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 	} else if (ret) {
 		netdev_alert(priv->ndev, "%s: tx aborted with unknown reason: %i\n",
 			     __func__, ret);
-		j1939_session_cancel(session, J1939_XTP_ABORT_OTHER);
+		if (session->skcb.addr.type != J1939_SIMPLE)
+			j1939_session_cancel(session, J1939_XTP_ABORT_OTHER);
 	} else {
 		session->tx_retry = 0;
 	}

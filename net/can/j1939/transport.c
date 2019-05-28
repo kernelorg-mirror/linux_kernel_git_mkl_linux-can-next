@@ -207,11 +207,6 @@ static int j1939_xtp_abort_to_errno(struct j1939_priv *priv,
 	return EPROTO;
 }
 
-static inline void j1939_fix_cb(struct j1939_sk_buff_cb *skcb)
-{
-	skcb->msg_flags &= ~MSG_SYN;
-}
-
 static inline void j1939_session_list_lock(struct j1939_priv *priv)
 {
 	spin_lock_bh(&priv->active_session_list_lock);
@@ -534,7 +529,6 @@ static struct sk_buff *j1939_tp_tx_dat_new(struct j1939_priv *priv,
 
 	memcpy(skb->cb, re_skcb, sizeof(skb->cb));
 	skcb = j1939_skb_to_cb(skb);
-	j1939_fix_cb(skcb);
 	if (swap_src_dst)
 		j1939_skbcb_swap(skcb);
 
@@ -1181,7 +1175,6 @@ j1939_session *j1939_session_fresh_new(struct j1939_priv *priv,
 	can_skb_prv(skb)->ifindex = priv->ndev->ifindex;
 	skcb = j1939_skb_to_cb(skb);
 	memcpy(skcb, rel_skcb, sizeof(*skcb));
-	j1939_fix_cb(skcb);
 	skcb->addr.pgn = pgn;
 
 	session = j1939_session_new(priv, skb, skb->len);

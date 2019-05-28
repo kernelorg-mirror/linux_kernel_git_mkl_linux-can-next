@@ -858,7 +858,7 @@ static void j1939_session_cancel(struct j1939_session *session,
 	/* do not send aborts on incoming broadcasts */
 	if (!j1939_cb_is_broadcast(&session->skcb))
 		j1939_xtp_tx_abort(priv, &session->skcb,
-				   !(session->skcb.src_flags & J1939_ECU_LOCAL),
+				   !j1939_tp_im_transmitter(&session->skcb),
 				   err, session->skcb.addr.pgn);
 
 	if (session->sk)

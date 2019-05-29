@@ -1008,6 +1008,11 @@ static void j1939_xtp_rx_abort_one(struct j1939_priv *priv, struct sk_buff *skb,
 	if (!session)
 		return;
 
+	if (session->skcb.addr.pgn != pgn) {
+		netdev_warn(priv->ndev, "%s: abort with pgn %05x for running session with different pgn %05x. Ignoring abort\n", __func__, pgn, session->skcb.addr.pgn);
+		return;
+	}
+
 	j1939_session_timers_cancel(session);
 	session->err = j1939_xtp_abort_to_errno(priv, abort);
 	if (session->sk)

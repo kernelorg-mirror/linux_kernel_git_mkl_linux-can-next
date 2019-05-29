@@ -309,9 +309,6 @@ void j1939_session_get(struct j1939_session *session);
 void j1939_session_put(struct j1939_session *session);
 void j1939_session_skb_queue(struct j1939_session *session,
 			     struct sk_buff *skb);
-struct j1939_session *j1939_session_get_by_skcb(struct j1939_priv *priv,
-						struct j1939_sk_buff_cb *skcb,
-						bool reverse);
 int j1939_session_activate(struct j1939_session *session);
 bool j1939_session_deactivate(struct j1939_session *session);
 void j1939_tp_schedule_txtimer(struct j1939_session *session, int msec);

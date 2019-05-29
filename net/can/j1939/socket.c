@@ -813,7 +813,6 @@ static struct sk_buff *j1939_sk_alloc_skb(struct net_device *ndev,
 	memset(skcb, 0, sizeof(*skcb));
 	skcb->addr = jsk->addr;
 	skcb->priority = j1939_prio(sk->sk_priority);
-	skcb->msg_flags = msg->msg_flags;
 
 	if (msg->msg_name) {
 		struct sockaddr_can *addr = msg->msg_name;

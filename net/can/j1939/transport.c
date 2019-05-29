@@ -1519,7 +1519,6 @@ struct j1939_session *j1939_tp_send(struct j1939_priv *priv,
 		session->pkt.last = session->pkt.total;
 
 	session->tskey = session->sk->sk_tskey++;
-	session->skcb.msg_flags |= MSG_DONTWAIT;
 
 	return session;
 }

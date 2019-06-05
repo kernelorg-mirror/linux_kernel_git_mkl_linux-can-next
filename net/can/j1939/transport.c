@@ -1651,10 +1651,8 @@ int j1939_tp_recv(struct j1939_priv *priv, struct sk_buff *skb)
 	case J1939_ETP_PGN_CTL:
 		skcb->addr.type = J1939_ETP;
 	case J1939_TP_PGN_CTL: /* falltrough */
-		if (skb->len < 8) {
-			j1939_xtp_rx_bad_message(priv, skb);
-			break;
-		}
+		if (skb->len < 8)
+			return 0; /* Don't care. Nothing to extract here */
 
 		j1939_tp_cmd_recv(priv, skb);
 		break;

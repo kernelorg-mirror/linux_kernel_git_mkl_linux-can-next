@@ -1322,7 +1322,7 @@ static int j1939_xtp_rx_rts_session_active(struct j1939_session *session,
 	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
 	struct j1939_priv *priv = session->priv;
 
-	if (!j1939_tp_im_transmitter(skcb)) {
+	if (j1939_tp_im_receiver(skcb)) {
 		if (j1939_xtp_rx_cmd_bad_pgn(session, skb))
 			return -EBUSY;
 

@@ -1012,40 +1012,6 @@ static bool j1939_xtp_rx_cmd_bad_pgn(struct j1939_session *session,
 	return true;
 }
 
-/* receive packet functions */
-static void j1939_xtp_rx_bad_message_one(struct j1939_priv *priv,
-					 struct sk_buff *skb,
-					 bool reverse)
-{
-	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
-	struct j1939_session *session;
-	pgn_t pgn;
-
-	pgn = j1939_xtp_ctl_to_pgn(skb->data);
-	session = j1939_session_get_by_addr(priv, &skcb->addr, reverse);
-	if (!session) {
-		j1939_xtp_tx_abort(priv, skcb, false,
-				   J1939_XTP_ABORT_FAULT, pgn);
-		return;
-	}
-
-	if (!j1939_xtp_rx_cmd_bad_pgn(session, skb))
-		j1939_session_cancel(session, J1939_XTP_ABORT_FAULT);
-
-	j1939_session_put(session);
-}
-
-/* abort packets may come in 2 directions */
-static void j1939_xtp_rx_bad_message(struct j1939_priv *priv,
-				     struct sk_buff *skb)
-{
-	netdev_info(priv->ndev, "%s, pgn %05x\n", __func__,
-		    j1939_xtp_ctl_to_pgn(skb->data));
-
-	j1939_xtp_rx_bad_message_one(priv, skb, false);
-	j1939_xtp_rx_bad_message_one(priv, skb, true);
-}
-
 static void j1939_xtp_rx_abort_one(struct j1939_priv *priv, struct sk_buff *skb,
 				   bool reverse)
 {
@@ -1548,7 +1514,7 @@ static void j1939_tp_cmd_recv(struct j1939_priv *priv, struct sk_buff *skb)
 	case J1939_TP_CMD_BAM: /* falltrough */
 	case J1939_TP_CMD_RTS: /* falltrough */
 		if (skcb->addr.type != extd)
-			goto rx_bad_message;
+			return;
 
 		if (cmd == J1939_TP_CMD_RTS && j1939_cb_is_broadcast(skcb)) {
 			netdev_alert(priv->ndev, "%s: rts without destination (%02x)\n",
@@ -1585,7 +1551,7 @@ static void j1939_tp_cmd_recv(struct j1939_priv *priv, struct sk_buff *skb)
 		extd = J1939_ETP;
 	case J1939_TP_CMD_CTS: /* falltrough */
 		if (skcb->addr.type != extd)
-			goto rx_bad_message;
+			return;
 
 		session = j1939_session_get_by_addr(priv, &skcb->addr, true);
 		if (!session)
@@ -1596,7 +1562,7 @@ static void j1939_tp_cmd_recv(struct j1939_priv *priv, struct sk_buff *skb)
 
 	case J1939_ETP_CMD_DPO:
 		if (skcb->addr.type != J1939_ETP)
-			goto rx_bad_message;
+			return;
 
 		session = j1939_session_get_by_addr(priv, &skcb->addr, false);
 		if (!session) {
@@ -1612,7 +1578,7 @@ static void j1939_tp_cmd_recv(struct j1939_priv *priv, struct sk_buff *skb)
 		extd = J1939_ETP;
 	case J1939_TP_CMD_EOMA: /* falltrough */
 		if (skcb->addr.type != extd)
-			goto rx_bad_message;
+			return;
 
 		session = j1939_session_get_by_addr(priv, &skcb->addr, true);
 		if (!session)
@@ -1625,13 +1591,10 @@ static void j1939_tp_cmd_recv(struct j1939_priv *priv, struct sk_buff *skb)
 		j1939_xtp_rx_abort(priv, skb);
 		break;
 	default:
-		goto rx_bad_message;
+		return;
 	}
 
 	return;
-
-rx_bad_message:
-	j1939_xtp_rx_bad_message(priv, skb);
 }
 
 int j1939_tp_recv(struct j1939_priv *priv, struct sk_buff *skb)

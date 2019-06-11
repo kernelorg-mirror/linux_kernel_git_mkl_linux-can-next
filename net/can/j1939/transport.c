@@ -1244,8 +1244,8 @@ int j1939_session_activate(struct j1939_session *session)
 }
 
 static struct
-j1939_session *j1939_xtp_rx_rts_new(struct j1939_priv *priv,
-				    struct sk_buff *skb)
+j1939_session *j1939_xtp_rx_rts_session_new(struct j1939_priv *priv,
+					    struct sk_buff *skb)
 {
 	enum j1939_xtp_abort abort = J1939_XTP_NO_ABORT;
 	struct j1939_sk_buff_cb skcb = *j1939_skb_to_cb(skb);
@@ -1316,8 +1316,8 @@ j1939_session *j1939_xtp_rx_rts_new(struct j1939_priv *priv,
 	return session;
 }
 
-static int j1939_xtp_rx_rts_current(struct j1939_session *session,
-				    struct sk_buff *skb)
+static int j1939_xtp_rx_rts_session_active(struct j1939_session *session,
+					   struct sk_buff *skb)
 {
 	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
 	struct j1939_priv *priv = session->priv;
@@ -1326,7 +1326,7 @@ static int j1939_xtp_rx_rts_current(struct j1939_session *session,
 		if (j1939_xtp_rx_cmd_bad_pgn(session, skb))
 			return -EBUSY;
 
-		/* RTS on pending connection */
+		/* RTS on active session */
 		j1939_session_timers_cancel(session);
 		j1939_session_cancel(session, J1939_XTP_ABORT_BUSY);
 	}
@@ -1561,12 +1561,12 @@ static void j1939_tp_cmd_recv(struct j1939_priv *priv, struct sk_buff *skb)
 		 * TP is pending in the other direction
 		 */
 		if (session) {
-			if (j1939_xtp_rx_rts_current(session, skb)) {
+			if (j1939_xtp_rx_rts_session_active(session, skb)) {
 				j1939_session_put(session);
 				break;
 			}
 		} else {
-			session = j1939_xtp_rx_rts_new(priv, skb);
+			session = j1939_xtp_rx_rts_session_new(priv, skb);
 			if (!session)
 				break;
 		}

@@ -301,7 +301,7 @@ static void j1939_session_skb_drop_old(struct j1939_session *session)
 	if (skb_queue_len(&session->skb_queue) < 2)
 		return;
 
-	offset_start = session->pkt.rx * 7;
+	offset_start = session->pkt.tx_acked * 7;
 
 	spin_lock_irqsave(&session->skb_queue.lock, flags);
 	do_skb = skb_peek(&session->skb_queue);
@@ -712,9 +712,9 @@ static int j1939_tp_txnext(struct j1939_session *session)
 		    session->last_txcmd != J1939_ETP_CMD_DPO) {
 			/* do dpo */
 			dat[0] = J1939_ETP_CMD_DPO;
-			session->pkt.dpo = session->pkt.rx;
+			session->pkt.dpo = session->pkt.tx_acked;
 			pkt = session->pkt.dpo;
-			dat[1] = session->pkt.last - session->pkt.rx;
+			dat[1] = session->pkt.last - session->pkt.tx_acked;
 			dat[2] = (pkt >> 0);
 			dat[3] = (pkt >> 8);
 			dat[4] = (pkt >> 16);
@@ -723,7 +723,7 @@ static int j1939_tp_txnext(struct j1939_session *session)
 				goto failed;
 			session->last_txcmd = dat[0];
 			j1939_tp_set_rxtimeout(session, 1250);
-			session->pkt.tx = session->pkt.rx;
+			session->pkt.tx = session->pkt.tx_acked;
 		}
 		/* fallthrough */
 	case J1939_TP_CMD_CTS: /* fallthrough */
@@ -1092,14 +1092,14 @@ j1939_xtp_rx_cts(struct j1939_session *session, struct sk_buff *skb)
 		goto out_session_unlock;
 	} else {
 		/* set packet counters only when not CTS(0) */
-		session->pkt.rx = pkt - 1;
+		session->pkt.tx_acked = pkt - 1;
 		j1939_session_skb_drop_old(session);
-		session->pkt.last = session->pkt.rx + dat[1];
+		session->pkt.last = session->pkt.tx_acked + dat[1];
 		if (session->pkt.last > session->pkt.total)
 			/* safety measure */
 			session->pkt.last = session->pkt.total;
 		/* TODO: do not set tx here, do it in txtimer */
-		session->pkt.tx = session->pkt.rx;
+		session->pkt.tx = session->pkt.tx_acked;
 	}
 
 	session->last_cmd = dat[0];

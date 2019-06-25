@@ -261,6 +261,7 @@ struct j1939_session {
 		 * this counter can be set back if responder node didn't
 		 * received all packets send by originator. */
 		unsigned int tx;
+		unsigned int tx_acked;
 		/* rx - number of packets received */
 		unsigned int rx;
 		/* block - amount of packets expected in one block */

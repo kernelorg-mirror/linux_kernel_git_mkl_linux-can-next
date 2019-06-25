@@ -301,7 +301,7 @@ static void j1939_session_skb_drop_old(struct j1939_session *session)
 	if (skb_queue_len(&session->skb_queue) < 2)
 		return;
 
-	offset_start = session->pkt.done * 7;
+	offset_start = session->pkt.rx * 7;
 
 	spin_lock_irqsave(&session->skb_queue.lock, flags);
 	do_skb = skb_peek(&session->skb_queue);
@@ -680,11 +680,11 @@ static int j1939_tp_txnext(struct j1939_session *session)
 			break;
  tx_cts:
 		ret = 0;
-		len = session->pkt.total - session->pkt.done;
+		len = session->pkt.total - session->pkt.rx;
 		len = min3(len, session->pkt.block, j1939_tp_block ?: 255);
 
 		if (session->skcb.addr.type == J1939_ETP) {
-			pkt = session->pkt.done + 1;
+			pkt = session->pkt.rx + 1;
 			dat[0] = J1939_ETP_CMD_CTS;
 			dat[1] = len;
 			dat[2] = (pkt >> 0);
@@ -693,7 +693,7 @@ static int j1939_tp_txnext(struct j1939_session *session)
 		} else {
 			dat[0] = J1939_TP_CMD_CTS;
 			dat[1] = len;
-			dat[2] = session->pkt.done + 1;
+			dat[2] = session->pkt.rx + 1;
 		}
 		if (dat[0] == session->last_txcmd)
 			/* done already */
@@ -712,9 +712,9 @@ static int j1939_tp_txnext(struct j1939_session *session)
 		    session->last_txcmd != J1939_ETP_CMD_DPO) {
 			/* do dpo */
 			dat[0] = J1939_ETP_CMD_DPO;
-			session->pkt.dpo = session->pkt.done;
+			session->pkt.dpo = session->pkt.rx;
 			pkt = session->pkt.dpo;
-			dat[1] = session->pkt.last - session->pkt.done;
+			dat[1] = session->pkt.last - session->pkt.rx;
 			dat[2] = (pkt >> 0);
 			dat[3] = (pkt >> 8);
 			dat[4] = (pkt >> 16);
@@ -723,7 +723,7 @@ static int j1939_tp_txnext(struct j1939_session *session)
 				goto failed;
 			session->last_txcmd = dat[0];
 			j1939_tp_set_rxtimeout(session, 1250);
-			session->pkt.tx = session->pkt.done;
+			session->pkt.tx = session->pkt.rx;
 		}
 		/* fallthrough */
 	case J1939_TP_CMD_CTS: /* fallthrough */
@@ -732,7 +732,7 @@ static int j1939_tp_txnext(struct j1939_session *session)
 		if ((session->skcb.addr.type == J1939_ETP ||
 		     !j1939_cb_is_broadcast(&session->skcb)) &&
 		    j1939_tp_im_receiver(&session->skcb)) {
-			if (session->pkt.done >= session->pkt.total) {
+			if (session->pkt.rx >= session->pkt.total) {
 				if (session->skcb.addr.type == J1939_ETP) {
 					dat[0] = J1939_ETP_CMD_EOMA;
 					dat[1] = session->total_message_size >> 0;
@@ -755,7 +755,7 @@ static int j1939_tp_txnext(struct j1939_session *session)
 				j1939_tp_set_rxtimeout(session, 1250);
 				/* wait for the EOMA packet to come in */
 				break;
-			} else if (session->pkt.done >= session->pkt.last) {
+			} else if (session->pkt.rx >= session->pkt.last) {
 				session->last_txcmd = 0;
 				goto tx_cts;
 			}
@@ -1093,14 +1093,14 @@ j1939_xtp_rx_cts(struct j1939_session *session, struct sk_buff *skb)
 		goto out_session_unlock;
 	} else {
 		/* set packet counters only when not CTS(0) */
-		session->pkt.done = pkt - 1;
+		session->pkt.rx = pkt - 1;
 		j1939_session_skb_drop_old(session);
-		session->pkt.last = session->pkt.done + dat[1];
+		session->pkt.last = session->pkt.rx + dat[1];
 		if (session->pkt.last > session->pkt.total)
 			/* safety measure */
 			session->pkt.last = session->pkt.total;
 		/* TODO: do not set tx here, do it in txtimer */
-		session->pkt.tx = session->pkt.done;
+		session->pkt.tx = session->pkt.rx;
 	}
 
 	session->last_cmd = dat[0];
@@ -1277,7 +1277,7 @@ j1939_session *j1939_xtp_rx_rts_session_new(struct j1939_priv *priv,
 		session->pkt.block = min(dat[3], dat[4]);
 	}
 
-	session->pkt.done = 0;
+	session->pkt.rx = 0;
 	session->pkt.tx = 0;
 
 	WARN_ON_ONCE(j1939_session_activate(session));
@@ -1385,7 +1385,7 @@ static void j1939_xtp_rx_dat(struct j1939_priv *priv, struct sk_buff *skb)
 
 	packet = (dat[0] - 1 + session->pkt.dpo);
 	if (packet > session->pkt.total ||
-	    (session->pkt.done + 1) > session->pkt.total) {
+	    (session->pkt.rx + 1) > session->pkt.total) {
 		netdev_info(priv->ndev, "%s: should have been completed\n",
 			    __func__);
 		goto out_session_unlock;
@@ -1404,16 +1404,16 @@ static void j1939_xtp_rx_dat(struct j1939_priv *priv, struct sk_buff *skb)
 
 	tpdat = se_skb->data;
 	memcpy(&tpdat[offset], &dat[1], nbytes);
-	if (packet == session->pkt.done)
-		++session->pkt.done;
+	if (packet == session->pkt.rx)
+		session->pkt.rx++;
 
 	if (skcb->addr.type != J1939_ETP &&
 	    j1939_cb_is_broadcast(&session->skcb)) {
-		if (session->pkt.done >= session->pkt.total)
+		if (session->pkt.rx >= session->pkt.total)
 			final = true;
 	} else {
 		/* never final, an EOMA must follow */
-		if (session->pkt.done >= session->pkt.last)
+		if (session->pkt.rx >= session->pkt.last)
 			do_cts_eoma = true;
 	}
 	j1939_session_unlock(session);

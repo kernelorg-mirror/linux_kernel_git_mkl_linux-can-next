@@ -261,9 +261,8 @@ struct j1939_session {
 		 * this counter can be set back if responder node didn't
 		 * received all packets send by originator. */
 		unsigned int tx;
-		/* done - number of packets received and confirmed by
-		 * responder */
-		unsigned int done;
+		/* rx - number of packets received */
+		unsigned int rx;
 		/* block - amount of packets expected in one block */
 		unsigned int block;
 		/* dpo - ETP.CM_DPO, Data Packet Offset */

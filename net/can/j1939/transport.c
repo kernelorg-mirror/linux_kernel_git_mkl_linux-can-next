@@ -1066,7 +1066,6 @@ j1939_xtp_rx_eoma(struct j1939_session *session, struct sk_buff *skb)
 static void
 j1939_xtp_rx_cts(struct j1939_session *session, struct sk_buff *skb)
 {
-	struct j1939_priv *priv = session->priv;
 	enum j1939_xtp_abort err = J1939_XTP_ABORT_FAULT;
 	unsigned int pkt;
 	const u8 *dat;

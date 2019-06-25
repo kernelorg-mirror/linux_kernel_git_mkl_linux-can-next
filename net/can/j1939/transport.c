@@ -365,19 +365,19 @@ static struct sk_buff *j1939_session_skb_find(struct j1939_session *session)
 /* see if we are receiver
  * returns 0 for broadcasts, although we will receive them
  */
-static inline int j1939_tp_im_receiver(struct j1939_sk_buff_cb *skcb)
+static inline int j1939_tp_im_receiver(const struct j1939_sk_buff_cb *skcb)
 {
 	return skcb->dst_flags & J1939_ECU_LOCAL;
 }
 
 /* see if we are sender */
-static inline int j1939_tp_im_transmitter(struct j1939_sk_buff_cb *skcb)
+static inline int j1939_tp_im_transmitter(const struct j1939_sk_buff_cb *skcb)
 {
 	return skcb->src_flags & J1939_ECU_LOCAL;
 }
 
 /* see if we are involved as either receiver or transmitter */
-static int j1939_tp_im_involved(struct j1939_sk_buff_cb *skcb, bool swap)
+static int j1939_tp_im_involved(const struct j1939_sk_buff_cb *skcb, bool swap)
 {
 	if (swap)
 		return j1939_tp_im_receiver(skcb);
@@ -506,7 +506,7 @@ static void j1939_skbcb_swap(struct j1939_sk_buff_cb *skcb)
 }
 
 static struct sk_buff *j1939_tp_tx_dat_new(struct j1939_priv *priv,
-					   struct j1939_sk_buff_cb *re_skcb,
+					   const struct j1939_sk_buff_cb *re_skcb,
 					   bool ctl,
 					   bool swap_src_dst)
 {
@@ -564,7 +564,7 @@ static int j1939_tp_tx_dat(struct j1939_session *session,
 }
 
 static int j1939_xtp_do_tx_ctl(struct j1939_priv *priv,
-			       struct j1939_sk_buff_cb *re_skcb,
+			       const struct j1939_sk_buff_cb *re_skcb,
 			       bool swap_src_dst, pgn_t pgn, const u8 *dat)
 {
 	struct sk_buff *skb;
@@ -597,7 +597,7 @@ static inline int j1939_tp_tx_ctl(struct j1939_session *session,
 }
 
 static int j1939_xtp_tx_abort(struct j1939_priv *priv,
-			      struct j1939_sk_buff_cb *re_skcb,
+			      const struct j1939_sk_buff_cb *re_skcb,
 			      bool swap_src_dst,
 			      enum j1939_xtp_abort err,
 			      pgn_t pgn)

@@ -810,7 +810,7 @@ static int j1939_tp_txnext(struct j1939_session *session)
 			j1939_tp_set_rxtimeout(session, 250);
 		if (ret)
 			goto failed;
-		j1939_sk_errqueue(session, J1939_ERRQUEUE_SCHED);
+
 		break;
 	}
 
@@ -1058,6 +1058,7 @@ j1939_xtp_rx_eoma(struct j1939_session *session, struct sk_buff *skb)
 	if (j1939_xtp_rx_cmd_bad_pgn(session, skb))
 		return;
 
+	session->pkt.tx_acked = session->pkt.total;
 	j1939_session_timers_cancel(session);
 	/* transmitted without problems */
 	j1939_session_completed(session);
@@ -1106,8 +1107,11 @@ j1939_xtp_rx_cts(struct j1939_session *session, struct sk_buff *skb)
 	j1939_session_unlock(session);
 	if (dat[1]) {
 		j1939_tp_set_rxtimeout(session, 1250);
-		if (j1939_tp_im_transmitter(&session->skcb))
+		if (j1939_tp_im_transmitter(&session->skcb)) {
+			if (session->pkt.tx_acked)
+				j1939_sk_errqueue(session, J1939_ERRQUEUE_SCHED);
 			j1939_tp_schedule_txtimer(session, 0);
+		}
 	} else {
 		/* CTS(0) */
 		j1939_tp_set_rxtimeout(session, 550);

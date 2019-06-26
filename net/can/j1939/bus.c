@@ -255,7 +255,7 @@ u8 j1939_name_to_addr(struct j1939_priv *priv, name_t name)
 
 	read_lock_bh(&priv->lock);
 	ecu = j1939_ecu_find_by_name_locked(priv, name);
-	if (j1939_ecu_is_mapped_locked(ecu))
+	if (ecu && j1939_ecu_is_mapped_locked(ecu))
 		/* ecu's SA is registered */
 		addr = ecu->addr;
 

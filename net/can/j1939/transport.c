@@ -630,8 +630,9 @@ static inline void j1939_tp_set_rxtimeout(struct j1939_session *session,
 }
 
 /* transmit function */
-static int j1939_tp_txnext(struct j1939_session *session)
+static int j1939_xtp_txnext_transmiter(struct j1939_session *session)
 {
+	struct j1939_priv *priv = session->priv;
 	u8 dat[8];
 	const u8 *tpdat;
 	int ret, offset, pkt_done, pkt_end;
@@ -641,10 +642,14 @@ static int j1939_tp_txnext(struct j1939_session *session)
 
 	memset(dat, 0xff, sizeof(dat));
 
+	if (!j1939_tp_im_transmitter(&session->skcb)) {
+		netdev_alert(priv->ndev, "%s: called by not transmitter!\n",
+			     __func__);
+		return -EINVAL;
+	}
+
 	switch (session->last_cmd) {
 	case 0:
-		if (!j1939_tp_im_transmitter(&session->skcb))
-			break;
 		dat[1] = (session->total_message_size >> 0);
 		dat[2] = (session->total_message_size >> 8);
 		dat[3] = session->pkt.total;
@@ -674,10 +679,105 @@ static int j1939_tp_txnext(struct j1939_session *session)
 			j1939_tp_schedule_txtimer(session, 50);
 		j1939_tp_set_rxtimeout(session, 1250);
 		break;
+	case J1939_ETP_CMD_CTS:
+		if (session->skcb.addr.type == J1939_ETP &&
+		    session->last_txcmd != J1939_ETP_CMD_DPO) {
+			/* do dpo */
+			dat[0] = J1939_ETP_CMD_DPO;
+			session->pkt.dpo = session->pkt.tx_acked;
+			pkt = session->pkt.dpo;
+			dat[1] = session->pkt.last - session->pkt.tx_acked;
+			dat[2] = (pkt >> 0);
+			dat[3] = (pkt >> 8);
+			dat[4] = (pkt >> 16);
+			ret = j1939_tp_tx_ctl(session, false, dat);
+			if (ret < 0)
+				goto failed;
+			session->last_txcmd = dat[0];
+			j1939_tp_set_rxtimeout(session, 1250);
+			session->pkt.tx = session->pkt.tx_acked;
+		}
+		/* fallthrough */
+	case J1939_TP_CMD_CTS: /* fallthrough */
+	case 0xff: /* did some data */
+	case J1939_ETP_CMD_DPO: /* fallthrough */
+	case J1939_TP_CMD_BAM: /* fallthrough */
+		se_skb = j1939_session_skb_find(session);
+		if (!se_skb)
+			return -EPIPE;
+
+		skcb = j1939_skb_to_cb(se_skb);
+		tpdat = se_skb->data;
+		ret = 0;
+		pkt_done = 0;
+		if (session->skcb.addr.type != J1939_ETP &&
+		    j1939_cb_is_broadcast(&session->skcb))
+			pkt_end = session->pkt.total;
+		else
+			pkt_end = session->pkt.last;
+
+		while (session->pkt.tx < pkt_end) {
+			dat[0] = session->pkt.tx - session->pkt.dpo + 1;
+			offset = (session->pkt.tx * 7) - skcb->offset;
+			len =  se_skb->len - offset;
+			if (len > 7)
+				len = 7;
+			memcpy(&dat[1], &tpdat[offset], len);
+			ret = j1939_tp_tx_dat(session, dat, len + 1);
+			if (ret < 0) {
+				/* ENOBUS == CAN interface TX queue is full */
+				if (ret != -ENOBUFS)
+					netdev_alert(priv->ndev,
+						     "%s: queue data error: %i\n",
+						     __func__, ret);
+				break;
+			}
+			session->last_txcmd = 0xff;
+			pkt_done++;
+			session->pkt.tx++;
+			pdelay = j1939_cb_is_broadcast(&session->skcb) ? 50 :
+				j1939_tp_packet_delay;
+			if (session->pkt.tx < session->pkt.total && pdelay) {
+				j1939_tp_schedule_txtimer(session, pdelay);
+				break;
+			}
+		}
+		if (pkt_done)
+			j1939_tp_set_rxtimeout(session, 250);
+		if (ret)
+			goto failed;
+
+		break;
+	default:
+		netdev_alert(priv->ndev, "%s: unexpected last_cmd: %x\n",
+			     __func__, session->last_cmd);
+
+	}
+
+	return 0;
+
+ failed:
+	return ret;
+}
+
+static int j1939_xtp_txnext_receiver(struct j1939_session *session)
+{
+	struct j1939_priv *priv = session->priv;
+	unsigned int pkt, len;
+	u8 dat[8];
+	int ret;
+
+	if (!j1939_tp_im_receiver(&session->skcb)) {
+		netdev_alert(priv->ndev, "%s: called by not receiver!\n",
+			     __func__);
+		return -EINVAL;
+	}
+
+	memset(dat, 0xff, sizeof(dat));
+
+	switch (session->last_cmd) {
 	case J1939_TP_CMD_RTS:
 	case J1939_ETP_CMD_RTS: /* fallthrough */
-		if (!j1939_tp_im_receiver(&session->skcb))
-			break;
  tx_cts:
 		ret = 0;
 		len = session->pkt.total - session->pkt.rx;
@@ -707,31 +807,12 @@ static int j1939_tp_txnext(struct j1939_session *session)
 		j1939_tp_set_rxtimeout(session, 1250);
 		break;
 	case J1939_ETP_CMD_CTS:
-		if (j1939_tp_im_transmitter(&session->skcb) &&
-		    session->skcb.addr.type == J1939_ETP &&
-		    session->last_txcmd != J1939_ETP_CMD_DPO) {
-			/* do dpo */
-			dat[0] = J1939_ETP_CMD_DPO;
-			session->pkt.dpo = session->pkt.tx_acked;
-			pkt = session->pkt.dpo;
-			dat[1] = session->pkt.last - session->pkt.tx_acked;
-			dat[2] = (pkt >> 0);
-			dat[3] = (pkt >> 8);
-			dat[4] = (pkt >> 16);
-			ret = j1939_tp_tx_ctl(session, false, dat);
-			if (ret < 0)
-				goto failed;
-			session->last_txcmd = dat[0];
-			j1939_tp_set_rxtimeout(session, 1250);
-			session->pkt.tx = session->pkt.tx_acked;
-		}
 		/* fallthrough */
 	case J1939_TP_CMD_CTS: /* fallthrough */
 	case 0xff: /* did some data */
 	case J1939_ETP_CMD_DPO: /* fallthrough */
 		if ((session->skcb.addr.type == J1939_ETP ||
-		     !j1939_cb_is_broadcast(&session->skcb)) &&
-		    j1939_tp_im_receiver(&session->skcb)) {
+		     !j1939_cb_is_broadcast(&session->skcb))) {
 			if (session->pkt.rx >= session->pkt.total) {
 				if (session->skcb.addr.type == J1939_ETP) {
 					dat[0] = J1939_ETP_CMD_EOMA;
@@ -760,58 +841,10 @@ static int j1939_tp_txnext(struct j1939_session *session)
 				goto tx_cts;
 			}
 		}
-	case J1939_TP_CMD_BAM: /* fallthrough */
-		if (!j1939_tp_im_transmitter(&session->skcb))
-			break;
-
-		se_skb = j1939_session_skb_find(session);
-		if (!se_skb)
-			return -EPIPE;
-
-		skcb = j1939_skb_to_cb(se_skb);
-		tpdat = se_skb->data;
-		ret = 0;
-		pkt_done = 0;
-		if (session->skcb.addr.type != J1939_ETP &&
-		    j1939_cb_is_broadcast(&session->skcb))
-			pkt_end = session->pkt.total;
-		else
-			pkt_end = session->pkt.last;
-
-		while (session->pkt.tx < pkt_end) {
-			struct j1939_priv *priv = session->priv;
-
-			dat[0] = session->pkt.tx - session->pkt.dpo + 1;
-			offset = (session->pkt.tx * 7) - skcb->offset;
-			len =  se_skb->len - offset;
-			if (len > 7)
-				len = 7;
-			memcpy(&dat[1], &tpdat[offset], len);
-			ret = j1939_tp_tx_dat(session, dat, len + 1);
-			if (ret < 0) {
-				/* ENOBUS == CAN interface TX queue is full */
-				if (ret != -ENOBUFS)
-					netdev_alert(priv->ndev,
-						     "%s: queue data error: %i\n",
-						     __func__, ret);
-				break;
-			}
-			session->last_txcmd = 0xff;
-			++pkt_done;
-			++session->pkt.tx;
-			pdelay = j1939_cb_is_broadcast(&session->skcb) ? 50 :
-				j1939_tp_packet_delay;
-			if (session->pkt.tx < session->pkt.total && pdelay) {
-				j1939_tp_schedule_txtimer(session, pdelay);
-				break;
-			}
-		}
-		if (pkt_done)
-			j1939_tp_set_rxtimeout(session, 250);
-		if (ret)
-			goto failed;
-
 		break;
+	default:
+		netdev_alert(priv->ndev, "%s: unexpected last_cmd: %x\n",
+			     __func__, session->last_cmd);
 	}
 
 	return 0;
@@ -888,7 +921,10 @@ static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 			}
 		}
 	} else {
-		ret = j1939_tp_txnext(session);
+		if (session->transmission)
+			ret = j1939_xtp_txnext_transmiter(session);
+		else
+			ret = j1939_xtp_txnext_receiver(session);
 	}
 
 	if (ret == -ENOBUFS) {

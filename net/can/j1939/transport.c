@@ -802,9 +802,13 @@ static int j1939_xtp_txnext_transmiter(struct j1939_session *session)
 
 static int j1939_session_tx_cts(struct j1939_session *session)
 {
+	struct j1939_priv *priv = session->priv;
 	unsigned int pkt, len;
 	int ret;
 	u8 dat[8];
+
+	if (!j1939_sk_recv_match(priv, &session->skcb))
+		return -ENOENT;
 
 	len = session->pkt.total - session->pkt.rx;
 	len = min3(len, session->pkt.block, j1939_tp_block ?: 255);
@@ -841,8 +845,12 @@ static int j1939_session_tx_cts(struct j1939_session *session)
 
 static int j1939_session_tx_eoma(struct j1939_session *session)
 {
+	struct j1939_priv *priv = session->priv;
 	u8 dat[8];
 	int ret;
+
+	if (!j1939_sk_recv_match(priv, &session->skcb))
+		return -ENOENT;
 
 	memset(dat, 0xff, sizeof(dat));
 

@@ -1026,10 +1026,10 @@ static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 
 static void j1939_session_completed(struct j1939_session *session)
 {
-	struct sk_buff *se_skb = j1939_session_skb_find(session);
+	struct sk_buff *skb = j1939_session_skb_find(session);
 
 	/* distribute among j1939 receivers */
-	j1939_sk_recv(session->priv, se_skb);
+	j1939_sk_recv(session->priv, skb);
 
 	j1939_session_deactivate_activate_next(session);
 }

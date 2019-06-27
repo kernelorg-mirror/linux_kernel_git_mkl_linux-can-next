@@ -273,13 +273,8 @@ static bool j1939_sk_recv_match_one(struct j1939_sock *jsk,
 static void j1939_sk_recv_one(struct j1939_sock *jsk, struct sk_buff *oskb)
 {
 	const struct j1939_sk_buff_cb *oskcb = j1939_skb_to_cb(oskb);
-	const struct can_skb_priv *oskb_prv = can_skb_prv(oskb);
 	struct j1939_sk_buff_cb *skcb;
 	struct sk_buff *skb;
-
-	if (jsk->ifindex != oskb_prv->ifindex)
-		/* this socket does not take packets from this iface */
-		return;
 
 	if (!j1939_sk_recv_match_one(jsk, oskcb))
 		return;

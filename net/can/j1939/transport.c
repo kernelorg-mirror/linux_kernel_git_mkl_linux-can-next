@@ -780,6 +780,7 @@ static int j1939_tp_txnext(struct j1939_session *session)
 
 		while (session->pkt.tx < pkt_end) {
 			struct j1939_priv *priv = session->priv;
+
 			dat[0] = session->pkt.tx - session->pkt.dpo + 1;
 			offset = (session->pkt.tx * 7) - skcb->offset;
 			len =  se_skb->len - offset;
@@ -831,14 +832,14 @@ bool j1939_session_deactivate(struct j1939_session *session)
 		list_del_init(&session->active_session_list_entry);
 		session->state = J1939_SESSION_DONE;
 		j1939_session_put(session);
-
 	}
 	j1939_session_list_unlock(session->priv);
 
 	return active;
 }
 
-static void j1939_session_deactivate_activate_next(struct j1939_session *session)
+static void
+j1939_session_deactivate_activate_next(struct j1939_session *session)
 {
 	if (j1939_session_deactivate(session))
 		j1939_sk_queue_activate_next(session);
@@ -882,7 +883,8 @@ static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 				if (!ret)
 					j1939_session_deactivate_activate_next(session);
 			} else {
-				ret = session->err = -ENOMEM;
+				ret = -ENOMEM;
+				session->err = ret;
 			}
 		}
 	} else {
@@ -1030,7 +1032,7 @@ static void j1939_xtp_rx_abort_one(struct j1939_priv *priv, struct sk_buff *skb,
 	session->err = j1939_xtp_abort_to_errno(priv, abort);
 	if (session->sk)
 		j1939_sk_send_loop_abort(priv, session->sk,
-					  session->err);
+					 session->err);
 	j1939_session_deactivate_activate_next(session);
 
 abort_put:
@@ -1192,8 +1194,9 @@ int j1939_session_activate(struct j1939_session *session)
 	int ret = 0;
 
 	j1939_session_list_lock(priv);
-	active = j1939_session_get_by_addr_locked(priv, &priv->active_session_list,
-						   &session->skcb.addr, false);
+	active = j1939_session_get_by_addr_locked(priv,
+						  &priv->active_session_list,
+						  &session->skcb.addr, false);
 	if (active) {
 		j1939_session_put(active);
 		ret = -EAGAIN;
@@ -1593,8 +1596,6 @@ static void j1939_tp_cmd_recv(struct j1939_priv *priv, struct sk_buff *skb)
 	default:
 		return;
 	}
-
-	return;
 }
 
 int j1939_tp_recv(struct j1939_priv *priv, struct sk_buff *skb)

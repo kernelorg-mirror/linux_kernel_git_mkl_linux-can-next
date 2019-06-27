@@ -135,8 +135,8 @@ static void j1939_sk_queue_activate_next_locked(struct j1939_session *session)
 	err = session->err;
 
 	first = list_first_entry_or_null(&jsk->sk_session_queue,
-					struct j1939_session,
-					sk_session_queue_entry);
+					 struct j1939_session,
+					 sk_session_queue_entry);
 
 	/* Some else has already activated the next session */
 	if (first != session)
@@ -146,8 +146,8 @@ activate_next:
 	list_del_init(&first->sk_session_queue_entry);
 	j1939_session_put(first);
 	first = list_first_entry_or_null(&jsk->sk_session_queue,
-					struct j1939_session,
-					sk_session_queue_entry);
+					 struct j1939_session,
+					 sk_session_queue_entry);
 	if (!first)
 		return;
 
@@ -200,7 +200,8 @@ static bool j1939_sk_match_dst(struct j1939_sock *jsk,
 				return false;
 		} else if (!sock_flag(&jsk->sk, SOCK_BROADCAST)) {
 			/* receiving broadcast without SO_BROADCAST
-			 * flag is not allowed */
+			 * flag is not allowed
+			 */
 			return false;
 		}
 	}
@@ -542,7 +543,7 @@ static int j1939_sk_release(struct socket *sock)
 		struct net_device *ndev;
 
 		if (wait_event_interruptible(jsk->waitq,
-					 j1939_sock_pending_get(&jsk->sk) == 0))
+					     j1939_sock_pending_get(&jsk->sk) == 0))
 			j1939_sk_queue_drop_all(jsk);
 
 		ndev = dev_get_by_index(sock_net(sk), jsk->ifindex);
@@ -843,7 +844,8 @@ static size_t j1939_sk_opt_stats_get_size(void)
 		0;
 }
 
-static struct sk_buff *j1939_sk_get_timestamping_opt_stats(struct j1939_session *session)
+static struct sk_buff *
+j1939_sk_get_timestamping_opt_stats(struct j1939_session *session)
 {
 	struct sk_buff *stats;
 
@@ -917,7 +919,7 @@ void j1939_sk_errqueue(struct j1939_session *session,
 };
 
 void j1939_sk_send_loop_abort(struct j1939_priv *priv, struct sock *sk,
-			       int err)
+			      int err)
 {
 	sk->sk_err = err;
 
@@ -925,7 +927,7 @@ void j1939_sk_send_loop_abort(struct j1939_priv *priv, struct sock *sk,
 }
 
 static int j1939_sk_send_loop(struct j1939_priv *priv,  struct sock *sk,
-			       struct msghdr *msg, size_t size)
+			      struct msghdr *msg, size_t size)
 
 {
 	struct j1939_sock *jsk = j1939_sk(sk);
@@ -957,8 +959,9 @@ static int j1939_sk_send_loop(struct j1939_priv *priv,  struct sock *sk,
 		skcb = j1939_skb_to_cb(skb);
 
 		if (!session) {
-			/* at this point the size should be full size of the
-			 * session */
+			/* at this point the size should be full size
+			 * of the session
+			 */
 			skcb->offset = 0;
 			session = j1939_tp_send(priv, skb, size);
 			if (IS_ERR(session)) {
@@ -966,12 +969,14 @@ static int j1939_sk_send_loop(struct j1939_priv *priv,  struct sock *sk,
 				goto kfree_skb;
 			}
 			if (j1939_sk_queue_session(session)) {
-				/* try to activate session if we a fist in the
-				 * queue */
+				/* try to activate session if we a
+				 * fist in the queue
+				 */
 				if (!j1939_session_activate(session)) {
 					j1939_tp_schedule_txtimer(session, 0);
 				} else {
-					ret = session->err = -EBUSY;
+					ret = -EBUSY;
+					session->err = ret;
 					j1939_sk_queue_drop_all(jsk);
 					break;
 				}

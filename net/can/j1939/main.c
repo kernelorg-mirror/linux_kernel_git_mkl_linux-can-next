@@ -137,9 +137,6 @@ static void __j1939_priv_release(struct kref *kref)
 	can_rx_unregister(dev_net(ndev), ndev, J1939_CAN_ID, J1939_CAN_MASK,
 			  j1939_can_recv, priv);
 
-	/* remove pending transport protocol sessions */
-	j1939_tp_rmdev_notifier(priv);
-
 	/* unlink from netdev */
 	j1939_priv_set(ndev, NULL);
 	netdev_dbg(priv->ndev, "__j1939_priv_release: 0x%p\n", priv);

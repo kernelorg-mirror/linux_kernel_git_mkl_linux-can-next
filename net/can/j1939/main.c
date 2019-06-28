@@ -116,6 +116,7 @@ static struct j1939_priv *j1939_priv_create(struct net_device *ndev)
 	priv->ndev = ndev;
 	kref_init(&priv->kref);
 	dev_hold(ndev);
+	netdev_dbg(priv->ndev, "j1939_priv_create: 0x%p\n", priv);
 
 	return priv;
 }
@@ -141,6 +142,7 @@ static void __j1939_priv_release(struct kref *kref)
 
 	/* unlink from netdev */
 	j1939_priv_set(ndev, NULL);
+	netdev_dbg(priv->ndev, "__j1939_priv_release: 0x%p\n", priv);
 
 	dev_put(ndev);
 	kfree(priv);

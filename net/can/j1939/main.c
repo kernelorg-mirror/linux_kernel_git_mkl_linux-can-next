@@ -156,14 +156,47 @@ void j1939_priv_get(struct j1939_priv *priv)
 	kref_get(&priv->kref);
 }
 
+/* get pointer to priv without increasing ref counter */
+static inline struct j1939_priv *j1939_ndev_to_priv(struct net_device *ndev)
+{
+	struct can_ml_priv *can_ml_priv = ndev->ml_priv;
+
+	return can_ml_priv->j1939_priv;
+}
+
+static struct j1939_priv *j1939_priv_get_by_ndev_locked(struct net_device *ndev)
+{
+	struct j1939_priv *priv;
+
+	lockdep_assert_held(&j1939_netdev_lock);
+
+	if (ndev->type != ARPHRD_CAN)
+		return NULL;
+
+	priv = j1939_ndev_to_priv(ndev);
+	if (priv)
+		j1939_priv_get(priv);
+
+	return priv;
+}
+
+struct j1939_priv *j1939_priv_get_by_ndev(struct net_device *ndev)
+{
+	struct j1939_priv *priv;
+
+	spin_lock_bh(&j1939_netdev_lock);
+	priv = j1939_priv_get_by_ndev_locked(ndev);
+	spin_unlock_bh(&j1939_netdev_lock);
+
+	return priv;
+}
+
 int j1939_netdev_start(struct net *net, struct net_device *ndev)
 {
 	struct j1939_priv *priv;
 	int ret;
 
-	spin_lock(&j1939_netdev_lock);
 	priv = j1939_priv_get_by_ndev(ndev);
-	spin_unlock(&j1939_netdev_lock);
 	if (priv)
 		return 0;
 
@@ -182,7 +215,7 @@ int j1939_netdev_start(struct net *net, struct net_device *ndev)
 		goto out_dev_put;
 
 	spin_lock(&j1939_netdev_lock);
-	if (j1939_priv_get_by_ndev(ndev)) {
+	if (j1939_priv_get_by_ndev_locked(ndev)) {
 		/* Someone was faster than us, use their priv and roll
 		 * back our's.
 		 */
@@ -204,14 +237,6 @@ int j1939_netdev_start(struct net *net, struct net_device *ndev)
 	return ret;
 }
 
-/* get pointer to priv without increasing ref counter */
-static inline struct j1939_priv *j1939_ndev_to_priv(struct net_device *ndev)
-{
-	struct can_ml_priv *can_ml_priv = ndev->ml_priv;
-
-	return can_ml_priv->j1939_priv;
-}
-
 void j1939_netdev_stop(struct net_device *ndev)
 {
 	struct j1939_priv *priv;
@@ -220,20 +245,6 @@ void j1939_netdev_stop(struct net_device *ndev)
 	priv = j1939_ndev_to_priv(ndev);
 	j1939_priv_put(priv);
 	spin_unlock(&j1939_netdev_lock);
-}
-
-struct j1939_priv *j1939_priv_get_by_ndev(struct net_device *ndev)
-{
-	struct j1939_priv *priv;
-
-	if (ndev->type != ARPHRD_CAN)
-		return NULL;
-
-	priv = j1939_ndev_to_priv(ndev);
-	if (priv)
-		j1939_priv_get(priv);
-
-	return priv;
 }
 
 int j1939_send_one(struct j1939_priv *priv, struct sk_buff *skb)
@@ -286,9 +297,7 @@ static int j1939_netdev_notify(struct notifier_block *nb,
 	struct net_device *ndev = netdev_notifier_info_to_dev(data);
 	struct j1939_priv *priv;
 
-	spin_lock(&j1939_netdev_lock);
 	priv = j1939_priv_get_by_ndev(ndev);
-	spin_unlock(&j1939_netdev_lock);
 	if (!priv)
 		goto notify_done;
 

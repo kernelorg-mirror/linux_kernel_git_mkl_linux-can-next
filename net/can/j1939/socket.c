@@ -410,6 +410,7 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 
 		/* drop old references */
 		priv = j1939_priv_get_by_ndev(ndev);
+		j1939_jsk_del(priv, jsk);
 		j1939_local_ecu_put(priv, jsk->addr.src_name, jsk->addr.sa);
 		j1939_priv_put(priv);
 	} else {
@@ -440,8 +441,7 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 		goto out_dev_put;
 	}
 
-	if (!(jsk->state & J1939_SOCK_BOUND))
-		j1939_jsk_add(priv, jsk);
+	j1939_jsk_add(priv, jsk);
 
  out_dev_put: /* fallthrough */
 	dev_put(ndev);

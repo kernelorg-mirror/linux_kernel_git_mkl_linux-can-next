@@ -75,6 +75,7 @@ struct j1939_priv {
 
 	struct list_head j1939_socks;
 	spinlock_t j1939_socks_lock;
+	struct kref rx_kref;
 };
 
 void j1939_ecu_put(struct j1939_ecu *ecu);

@@ -115,6 +115,7 @@ static struct j1939_priv *j1939_priv_create(struct net_device *ndev)
 	INIT_LIST_HEAD(&priv->ecus);
 	priv->ndev = ndev;
 	kref_init(&priv->kref);
+	kref_init(&priv->rx_kref);
 	dev_hold(ndev);
 	netdev_dbg(priv->ndev, "j1939_priv_create: 0x%p\n", priv);
 
@@ -134,9 +135,6 @@ static void __j1939_priv_release(struct kref *kref)
 	struct j1939_priv *priv = container_of(kref, struct j1939_priv, kref);
 	struct net_device *ndev = priv->ndev;
 
-	can_rx_unregister(dev_net(ndev), ndev, J1939_CAN_ID, J1939_CAN_MASK,
-			  j1939_can_recv, priv);
-
 	/* unlink from netdev */
 	j1939_priv_set(ndev, NULL);
 	netdev_dbg(priv->ndev, "__j1939_priv_release: 0x%p\n", priv);
@@ -153,6 +151,41 @@ void j1939_priv_put(struct j1939_priv *priv)
 void j1939_priv_get(struct j1939_priv *priv)
 {
 	kref_get(&priv->kref);
+}
+
+static int j1939_can_rx_register(struct j1939_priv *priv)
+{
+	struct net_device *ndev = priv->ndev;
+	int ret;
+
+	j1939_priv_get(priv);
+	ret = can_rx_register(dev_net(ndev), ndev, J1939_CAN_ID, J1939_CAN_MASK,
+			      j1939_can_recv, priv, "j1939", NULL);
+	if (ret < 0) {
+		j1939_priv_put(priv);
+		return ret;
+	}
+
+	return 0;
+}
+
+void j1939_can_rx_unregister(struct j1939_priv *priv)
+{
+	struct net_device *ndev = priv->ndev;
+
+	can_rx_unregister(dev_net(ndev), ndev, J1939_CAN_ID, J1939_CAN_MASK,
+			  j1939_can_recv, priv);
+
+	j1939_priv_put(priv);
+}
+
+static void __j1939_rx_release(struct kref *kref)
+{
+	struct j1939_priv *priv = container_of(kref, struct j1939_priv,
+					       rx_kref);
+
+	j1939_can_rx_unregister(priv);
+	j1939_ecu_unmap_all(priv);
 }
 
 /* get pointer to priv without increasing ref counter */
@@ -196,8 +229,10 @@ struct j1939_priv *j1939_netdev_start(struct net *net, struct net_device *ndev)
 	int ret;
 
 	priv = j1939_priv_get_by_ndev(ndev);
-	if (priv)
+	if (priv) {
+		kref_get(&priv->rx_kref);
 		return priv;
+	}
 
 	priv = j1939_priv_create(ndev);
 	if (!priv)
@@ -207,7 +242,6 @@ struct j1939_priv *j1939_netdev_start(struct net *net, struct net_device *ndev)
 	spin_lock_init(&priv->j1939_socks_lock);
 	INIT_LIST_HEAD(&priv->j1939_socks);
 
-	/* add CAN handler */
 	spin_lock(&j1939_netdev_lock);
 	priv_new = j1939_priv_get_by_ndev_locked(ndev);
 	if (priv_new) {
@@ -217,13 +251,13 @@ struct j1939_priv *j1939_netdev_start(struct net *net, struct net_device *ndev)
 		spin_unlock(&j1939_netdev_lock);
 		dev_put(ndev);
 		kfree(priv);
+		kref_get(&priv_new->rx_kref);
 		return priv_new;
 	}
 	j1939_priv_set(ndev, priv);
 	spin_unlock(&j1939_netdev_lock);
 
-	ret = can_rx_register(net, ndev, J1939_CAN_ID, J1939_CAN_MASK,
-			      j1939_can_recv, priv, "j1939", NULL);
+	ret = j1939_can_rx_register(priv);
 	if (ret < 0)
 		goto out_priv_put;
 
@@ -243,6 +277,7 @@ void j1939_netdev_stop(struct net_device *ndev)
 
 	spin_lock(&j1939_netdev_lock);
 	priv = j1939_ndev_to_priv(ndev);
+	kref_put(&priv->rx_kref, __j1939_rx_release);
 	j1939_priv_put(priv);
 	spin_unlock(&j1939_netdev_lock);
 }

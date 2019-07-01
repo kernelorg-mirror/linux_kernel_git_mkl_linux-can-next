@@ -69,6 +69,24 @@ void j1939_sock_pending_del(struct sock *sk)
 		wake_up(&jsk->waitq);	/* no pending SKB's */
 }
 
+static void j1939_jsk_add(struct j1939_priv *priv, struct j1939_sock *jsk)
+{
+	jsk->state |= J1939_SOCK_BOUND;
+
+	spin_lock_bh(&priv->j1939_socks_lock);
+	list_add_tail(&jsk->list, &priv->j1939_socks);
+	spin_unlock_bh(&priv->j1939_socks_lock);
+}
+
+static void j1939_jsk_del(struct j1939_priv *priv, struct j1939_sock *jsk)
+{
+	spin_lock_bh(&priv->j1939_socks_lock);
+	list_del_init(&jsk->list);
+	spin_unlock_bh(&priv->j1939_socks_lock);
+
+	jsk->state &= ~J1939_SOCK_BOUND;
+}
+
 static bool j1939_sk_queue_session(struct j1939_session *session)
 {
 	struct j1939_sock *jsk = j1939_sk(session->sk);
@@ -422,13 +440,8 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 		goto out_dev_put;
 	}
 
-	if (!(jsk->state & J1939_SOCK_BOUND)) {
-		spin_lock_bh(&priv->j1939_socks_lock);
-		list_add_tail(&jsk->list, &priv->j1939_socks);
-		spin_unlock_bh(&priv->j1939_socks_lock);
-
-		jsk->state |= J1939_SOCK_BOUND;
-	}
+	if (!(jsk->state & J1939_SOCK_BOUND))
+		j1939_jsk_add(priv, jsk);
 
  out_dev_put: /* fallthrough */
 	dev_put(ndev);
@@ -545,9 +558,7 @@ static int j1939_sk_release(struct socket *sock)
 		ndev = dev_get_by_index(sock_net(sk), jsk->ifindex);
 		priv = j1939_priv_get_by_ndev(ndev);
 
-		spin_lock_bh(&priv->j1939_socks_lock);
-		list_del_init(&jsk->list);
-		spin_unlock_bh(&priv->j1939_socks_lock);
+		j1939_jsk_del(priv, jsk);
 
 		j1939_local_ecu_put(priv, jsk->addr.src_name,
 				    jsk->addr.sa);

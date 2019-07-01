@@ -417,7 +417,7 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 	ret = j1939_local_ecu_get(priv, jsk->addr.src_name, jsk->addr.sa);
 	if (ret) {
 		j1939_netdev_stop(ndev);
-		goto out_dev_put;
+		goto out_priv_put;
 	}
 
 	if (!(jsk->state & J1939_SOCK_BOUND)) {
@@ -427,9 +427,10 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 
 		jsk->state |= J1939_SOCK_BOUND;
 	}
-	j1939_priv_put(priv);
 
- out_dev_put:	/* fallthrough */
+ out_priv_put:	/* fallthrough */
+	j1939_priv_put(priv);
+ out_dev_put:
 	dev_put(ndev);
  out_release_sock:
 	release_sock(sock->sk);

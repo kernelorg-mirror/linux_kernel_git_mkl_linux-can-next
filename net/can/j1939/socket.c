@@ -254,7 +254,7 @@ static bool j1939_sk_match_filter(struct j1939_sock *jsk,
 static bool j1939_sk_recv_match_one(struct j1939_sock *jsk,
 				    const struct j1939_sk_buff_cb *skcb)
 {
-	if (!(jsk->state & (J1939_SOCK_BOUND | J1939_SOCK_CONNECTED)))
+	if (!(jsk->state & J1939_SOCK_BOUND))
 		return false;
 
 	if (skcb->insock == &jsk->sk && !(jsk->state & J1939_SOCK_RECV_OWN))

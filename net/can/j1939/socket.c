@@ -399,12 +399,14 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 			goto out_dev_put;
 		}
 
-		ret = j1939_netdev_start(net, ndev);
-		if (ret < 0)
+		priv = j1939_netdev_start(net, ndev);
+		if (IS_ERR(priv)) {
+			ret = PTR_ERR(priv);
 			goto out_dev_put;
+		}
 
 		jsk->ifindex = addr->can_ifindex;
-		priv = j1939_priv_get_by_ndev(ndev);
+		j1939_priv_get(priv);
 	}
 
 	/* set default transmit pgn */

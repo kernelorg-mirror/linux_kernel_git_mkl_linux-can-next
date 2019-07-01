@@ -190,18 +190,18 @@ struct j1939_priv *j1939_priv_get_by_ndev(struct net_device *ndev)
 	return priv;
 }
 
-int j1939_netdev_start(struct net *net, struct net_device *ndev)
+struct j1939_priv *j1939_netdev_start(struct net *net, struct net_device *ndev)
 {
-	struct j1939_priv *priv;
+	struct j1939_priv *priv, *priv_new;
 	int ret;
 
 	priv = j1939_priv_get_by_ndev(ndev);
 	if (priv)
-		return 0;
+		return priv;
 
 	priv = j1939_priv_create(ndev);
 	if (!priv)
-		return -ENOMEM;
+		return ERR_PTR(-ENOMEM);
 
 	j1939_tp_init(priv);
 	spin_lock_init(&priv->j1939_socks_lock);
@@ -214,26 +214,28 @@ int j1939_netdev_start(struct net *net, struct net_device *ndev)
 		goto out_dev_put;
 
 	spin_lock(&j1939_netdev_lock);
-	if (j1939_priv_get_by_ndev_locked(ndev)) {
+	priv_new = j1939_priv_get_by_ndev_locked(ndev);
+	if (priv_new) {
 		/* Someone was faster than us, use their priv and roll
 		 * back our's.
 		 */
 		spin_unlock(&j1939_netdev_lock);
-		goto out_rx_unregister;
+		can_rx_unregister(net, ndev, J1939_CAN_ID, J1939_CAN_MASK,
+				  j1939_can_recv, priv);
+		dev_put(ndev);
+		kfree(priv);
+		return priv_new;
 	}
 	j1939_priv_set(ndev, priv);
 	spin_unlock(&j1939_netdev_lock);
 
-	return 0;
+	return priv;
 
- out_rx_unregister:
-	can_rx_unregister(net, ndev, J1939_CAN_ID, J1939_CAN_MASK,
-			  j1939_can_recv, priv);
  out_dev_put:
 	dev_put(ndev);
 	kfree(priv);
 
-	return ret;
+	return ERR_PTR(ret);
 }
 
 void j1939_netdev_stop(struct net_device *ndev)

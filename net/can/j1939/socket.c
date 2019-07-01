@@ -393,6 +393,7 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 		/* drop old references */
 		priv = j1939_priv_get_by_ndev(ndev);
 		j1939_local_ecu_put(priv, jsk->addr.src_name, jsk->addr.sa);
+		j1939_priv_put(priv);
 	} else {
 		if (ndev->type != ARPHRD_CAN) {
 			ret = -ENODEV;
@@ -406,7 +407,6 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 		}
 
 		jsk->ifindex = addr->can_ifindex;
-		j1939_priv_get(priv);
 	}
 
 	/* set default transmit pgn */
@@ -419,7 +419,7 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 	ret = j1939_local_ecu_get(priv, jsk->addr.src_name, jsk->addr.sa);
 	if (ret) {
 		j1939_netdev_stop(ndev);
-		goto out_priv_put;
+		goto out_dev_put;
 	}
 
 	if (!(jsk->state & J1939_SOCK_BOUND)) {
@@ -430,9 +430,7 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 		jsk->state |= J1939_SOCK_BOUND;
 	}
 
- out_priv_put:	/* fallthrough */
-	j1939_priv_put(priv);
- out_dev_put:
+ out_dev_put: /* fallthrough */
 	dev_put(ndev);
  out_release_sock:
 	release_sock(sock->sk);

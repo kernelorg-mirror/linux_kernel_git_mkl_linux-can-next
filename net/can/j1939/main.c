@@ -271,15 +271,10 @@ struct j1939_priv *j1939_netdev_start(struct net *net, struct net_device *ndev)
 	return ERR_PTR(ret);
 }
 
-void j1939_netdev_stop(struct net_device *ndev)
+void j1939_netdev_stop(struct j1939_priv *priv)
 {
-	struct j1939_priv *priv;
-
-	spin_lock(&j1939_netdev_lock);
-	priv = j1939_ndev_to_priv(ndev);
 	kref_put(&priv->rx_kref, __j1939_rx_release);
 	j1939_priv_put(priv);
-	spin_unlock(&j1939_netdev_lock);
 }
 
 int j1939_send_one(struct j1939_priv *priv, struct sk_buff *skb)

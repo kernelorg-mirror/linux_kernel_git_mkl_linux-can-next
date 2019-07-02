@@ -193,7 +193,7 @@ void j1939_ecu_timer_cancel(struct j1939_ecu *ecu);
 void j1939_ecu_unmap_all(struct j1939_priv *priv);
 
 struct j1939_priv *j1939_netdev_start(struct net *net, struct net_device *ndev);
-void j1939_netdev_stop(struct net_device *ndev);
+void j1939_netdev_stop(struct j1939_priv *priv);
 
 struct j1939_priv *j1939_priv_get_by_ndev(struct net_device *ndev);
 void j1939_priv_put(struct j1939_priv *priv);

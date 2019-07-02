@@ -437,7 +437,7 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 	/* get new references */
 	ret = j1939_local_ecu_get(priv, jsk->addr.src_name, jsk->addr.sa);
 	if (ret) {
-		j1939_netdev_stop(ndev);
+		j1939_netdev_stop(priv);
 		goto out_dev_put;
 	}
 
@@ -564,7 +564,7 @@ static int j1939_sk_release(struct socket *sock)
 				    jsk->addr.sa);
 		j1939_priv_put(priv);
 
-		j1939_netdev_stop(ndev);
+		j1939_netdev_stop(priv);
 		dev_put(ndev);
 	}
 
@@ -1106,7 +1106,7 @@ void j1939_sk_netdev_event(struct net_device *ndev, int error_code)
 			j1939_local_ecu_put(priv, jsk->addr.src_name,
 					    jsk->addr.sa);
 
-			j1939_netdev_stop(ndev);
+			j1939_netdev_stop(priv);
 		}
 		/* do not remove filters here */
 	}

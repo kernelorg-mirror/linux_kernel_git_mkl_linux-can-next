@@ -208,11 +208,6 @@ struct j1939_priv *j1939_netdev_start(struct net *net, struct net_device *ndev)
 	INIT_LIST_HEAD(&priv->j1939_socks);
 
 	/* add CAN handler */
-	ret = can_rx_register(net, ndev, J1939_CAN_ID, J1939_CAN_MASK,
-			      j1939_can_recv, priv, "j1939", NULL);
-	if (ret < 0)
-		goto out_dev_put;
-
 	spin_lock(&j1939_netdev_lock);
 	priv_new = j1939_priv_get_by_ndev_locked(ndev);
 	if (priv_new) {
@@ -220,8 +215,6 @@ struct j1939_priv *j1939_netdev_start(struct net *net, struct net_device *ndev)
 		 * back our's.
 		 */
 		spin_unlock(&j1939_netdev_lock);
-		can_rx_unregister(net, ndev, J1939_CAN_ID, J1939_CAN_MASK,
-				  j1939_can_recv, priv);
 		dev_put(ndev);
 		kfree(priv);
 		return priv_new;
@@ -229,9 +222,15 @@ struct j1939_priv *j1939_netdev_start(struct net *net, struct net_device *ndev)
 	j1939_priv_set(ndev, priv);
 	spin_unlock(&j1939_netdev_lock);
 
+	ret = can_rx_register(net, ndev, J1939_CAN_ID, J1939_CAN_MASK,
+			      j1939_can_recv, priv, "j1939", NULL);
+	if (ret < 0)
+		goto out_priv_put;
+
 	return priv;
 
- out_dev_put:
+ out_priv_put:
+	j1939_priv_set(ndev, NULL);
 	dev_put(ndev);
 	kfree(priv);
 

@@ -9,7 +9,10 @@
 #include <linux/can/j1939.h>
 #include <net/sock.h>
 
-/* TODO: return ENETRESET on busoff. */
+/* Timeout to receive the abort signal over loop back. In case CAN
+ * bus is open, the timeout should be triggered.
+ */
+#define J1939_XTP_ABORT_TIMEOUT_MS 500
 
 struct j1939_session;
 enum j1939_sk_errqueue_type {

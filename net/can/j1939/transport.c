@@ -1354,6 +1354,9 @@ j1939_session *j1939_xtp_rx_rts_session_new(struct j1939_priv *priv,
 	pgn = j1939_xtp_ctl_to_pgn(dat);
 	skcb.addr.pgn = pgn;
 
+	if (!j1939_sk_recv_match(priv, &skcb))
+		return NULL;
+
 	if (skcb.addr.type == J1939_ETP) {
 		len = j1939_etp_ctl_to_size(dat);
 		if (len > J1939_MAX_ETP_PACKET_SIZE)
@@ -1374,9 +1377,6 @@ j1939_session *j1939_xtp_rx_rts_session_new(struct j1939_priv *priv,
 		j1939_xtp_tx_abort(priv, &skcb, true, abort, pgn);
 		return NULL;
 	}
-
-	if (!j1939_sk_recv_match(priv, &skcb))
-		return NULL;
 
 	session = j1939_session_fresh_new(priv, len, &skcb);
 	if (!session) {

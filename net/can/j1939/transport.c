@@ -1221,6 +1221,7 @@ j1939_xtp_rx_cts(struct j1939_session *session, struct sk_buff *skb)
 		if (j1939_tp_im_transmitter(&session->skcb)) {
 			if (session->pkt.tx_acked)
 				j1939_sk_errqueue(session, J1939_ERRQUEUE_SCHED);
+			j1939_session_txtimer_cancel(session);
 			j1939_tp_schedule_txtimer(session, 0);
 		}
 	} else {
@@ -1662,8 +1663,10 @@ static void j1939_tp_cmd_recv(struct j1939_priv *priv, struct sk_buff *skb)
 		j1939_tp_set_rxtimeout(session, 1250);
 
 		if (cmd != J1939_TP_CMD_BAM &&
-		    j1939_tp_im_receiver(&session->skcb))
+		    j1939_tp_im_receiver(&session->skcb)) {
+			j1939_session_txtimer_cancel(session);
 			j1939_tp_schedule_txtimer(session, 0);
+		}
 
 		j1939_session_put(session);
 		break;

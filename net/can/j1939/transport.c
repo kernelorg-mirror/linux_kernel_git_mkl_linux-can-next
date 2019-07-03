@@ -238,6 +238,8 @@ static void j1939_session_destroy(struct j1939_session *session)
 	else
 		j1939_sk_errqueue(session, J1939_ERRQUEUE_ACK);
 
+	netdev_dbg(session->priv->ndev, "j1939_session_destroy: 0x%p\n", session);
+
 	skb_queue_purge(&session->skb_queue);
 	__j1939_session_drop(session);
 	j1939_priv_put(session->priv);
@@ -1267,6 +1269,9 @@ static struct j1939_session *j1939_session_new(struct j1939_priv *priv,
 	hrtimer_init(&session->rxtimer, CLOCK_MONOTONIC,
 		     HRTIMER_MODE_REL_SOFT);
 	session->rxtimer.function = j1939_tp_rxtimer;
+
+	netdev_dbg(priv->ndev, "j1939_session_new: 0x%p: sa: %02x, da: %02x\n",
+		   session, skcb->addr.sa, skcb->addr.da);
 
 	return session;
 }

@@ -671,6 +671,7 @@ static int j1939_session_tx_rts(struct j1939_session *session)
 		j1939_tp_schedule_txtimer(session, 50);
 
 	j1939_tp_set_rxtimeout(session, 1250);
+	netdev_dbg(session->priv->ndev, "j1939_session_tx_rts: 0x%p\n", session);
 
 	return 0;
 }
@@ -698,6 +699,7 @@ static int j1939_session_tx_dpo(struct j1939_session *session)
 	session->last_txcmd = dat[0];
 	j1939_tp_set_rxtimeout(session, 1250);
 	session->pkt.tx = session->pkt.tx_acked;
+	netdev_dbg(session->priv->ndev, "j1939_session_tx_dpo: 0x%p\n", session);
 
 	return 0;
 }
@@ -843,6 +845,8 @@ static int j1939_session_tx_cts(struct j1939_session *session)
 		session->last_txcmd = dat[0];
 	j1939_tp_set_rxtimeout(session, 1250);
 
+	netdev_dbg(session->priv->ndev, "j1939_session_tx_cts: 0x%p\n", session);
+
 	return 0;
 }
 
@@ -882,6 +886,8 @@ static int j1939_session_tx_eoma(struct j1939_session *session)
 
 	/* wait for the EOMA packet to come in */
 	j1939_tp_set_rxtimeout(session, 1250);
+
+	netdev_dbg(session->priv->ndev, "j1939_session_tx_eoma: 0x%p\n", session);
 
 	return 0;
 }
@@ -1176,6 +1182,8 @@ j1939_xtp_rx_eoma_one(struct j1939_session *session, struct sk_buff *skb)
 	if (j1939_xtp_rx_cmd_bad_pgn(session, skb))
 		return;
 
+	netdev_dbg(session->priv->ndev, "j1939_xtp_rx_eoma_one: 0x%p\n",
+		   session);
 	session->pkt.tx_acked = session->pkt.total;
 	j1939_session_timers_cancel(session);
 	/* transmitted without problems */
@@ -1210,6 +1218,7 @@ j1939_xtp_rx_cts_one(struct j1939_session *session, struct sk_buff *skb)
 	if (j1939_xtp_rx_cmd_bad_pgn(session, skb))
 		return;
 
+	netdev_dbg(session->priv->ndev, "j1939_xtp_rx_cts_one: 0x%p\n", session);
 	j1939_session_lock(session);
 
 	if (session->last_cmd == dat[0]) {
@@ -1363,6 +1372,8 @@ int j1939_session_activate(struct j1939_session *session)
 			      &priv->active_session_list);
 		j1939_session_get(session);
 		session->state = J1939_SESSION_ACTIVE;
+		netdev_dbg(session->priv->ndev, "j1939_session_activate: 0x%p\n",
+			   session);
 	}
 	j1939_session_list_unlock(priv);
 
@@ -1379,6 +1390,8 @@ j1939_session *j1939_xtp_rx_rts_session_new(struct j1939_priv *priv,
 	const u8 *dat;
 	pgn_t pgn;
 	int len;
+
+	netdev_dbg(priv->ndev, "j1939_xtp_rx_rts_session_new\n");
 
 	dat = skb->data;
 	pgn = j1939_xtp_ctl_to_pgn(dat);
@@ -1476,6 +1489,7 @@ static int j1939_xtp_rx_rts_session_active(struct j1939_session *session,
 	 */
 	session->skcb.addr.sa = skcb->addr.sa;
 	session->skcb.addr.da = skcb->addr.da;
+	netdev_dbg(session->priv->ndev, "j1939_xtp_rx_rts_session_active: 0x%p\n", session);
 
 	return 0;
 }
@@ -1521,6 +1535,7 @@ static void j1939_xtp_rx_dpo_one(struct j1939_session *session, struct sk_buff *
 	if (j1939_xtp_rx_cmd_bad_pgn(session, skb))
 		return;
 
+	netdev_dbg(session->priv->ndev, "j1939_xtp_rx_dpo_one: 0x%p\n", session);
 	/* transmitted without problems */
 	session->pkt.dpo = j1939_etp_ctl_to_packet(skb->data);
 	session->last_cmd = dat[0];

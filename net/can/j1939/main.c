@@ -185,6 +185,7 @@ static void __j1939_rx_release(struct kref *kref)
 	j1939_can_rx_unregister(priv);
 	j1939_ecu_unmap_all(priv);
 	j1939_priv_set(priv->ndev, NULL);
+	spin_unlock(&j1939_netdev_lock);
 }
 
 /* get pointer to priv without increasing ref counter */
@@ -215,9 +216,9 @@ struct j1939_priv *j1939_priv_get_by_ndev(struct net_device *ndev)
 {
 	struct j1939_priv *priv;
 
-	spin_lock_bh(&j1939_netdev_lock);
+	spin_lock(&j1939_netdev_lock);
 	priv = j1939_priv_get_by_ndev_locked(ndev);
-	spin_unlock_bh(&j1939_netdev_lock);
+	spin_unlock(&j1939_netdev_lock);
 
 	return priv;
 }
@@ -272,7 +273,7 @@ struct j1939_priv *j1939_netdev_start(struct net *net, struct net_device *ndev)
 
 void j1939_netdev_stop(struct j1939_priv *priv)
 {
-	kref_put(&priv->rx_kref, __j1939_rx_release);
+	kref_put_lock(&priv->rx_kref, __j1939_rx_release, &j1939_netdev_lock);
 	j1939_priv_put(priv);
 }
 

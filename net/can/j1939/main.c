@@ -135,8 +135,6 @@ static void __j1939_priv_release(struct kref *kref)
 	struct j1939_priv *priv = container_of(kref, struct j1939_priv, kref);
 	struct net_device *ndev = priv->ndev;
 
-	/* unlink from netdev */
-	j1939_priv_set(ndev, NULL);
 	netdev_dbg(priv->ndev, "__j1939_priv_release: 0x%p\n", priv);
 
 	dev_put(ndev);
@@ -186,6 +184,7 @@ static void __j1939_rx_release(struct kref *kref)
 
 	j1939_can_rx_unregister(priv);
 	j1939_ecu_unmap_all(priv);
+	j1939_priv_set(priv->ndev, NULL);
 }
 
 /* get pointer to priv without increasing ref counter */

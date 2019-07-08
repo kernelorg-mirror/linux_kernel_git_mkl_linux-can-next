@@ -1511,6 +1511,20 @@ static void j1939_xtp_rx_rts(struct j1939_priv *priv, struct sk_buff *skb,
 			j1939_session_put(session);
 			return;
 		}
+	} else if (transmitter) {
+		/* If we're the transmitter and this function is called, we
+		 * received our own RTS. A session has already been created.
+		 *
+		 * For some reasons however it might have been destroyed
+		 * already. So don't create a new one here (using
+		 * "j1939_xtp_rx_rts_session_new()") as this will be a receiver
+		 * session.
+		 *
+		 * The reasons the session is already destroyed might be:
+		 * - user space closed socket was and the session was aborted
+		 * - session was aborted due to external abort message
+		 */
+		return;
 	} else {
 		session = j1939_xtp_rx_rts_session_new(priv, skb);
 		if (!session)

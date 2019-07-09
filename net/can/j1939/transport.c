@@ -1503,9 +1503,6 @@ static void j1939_xtp_rx_rts(struct j1939_priv *priv, struct sk_buff *skb,
 
 	session = j1939_session_get_by_addr(priv, &skcb->addr, false,
 					    transmitter);
-	/* TODO: abort RTS when a similar
-	 * TP is pending in the other direction
-	 */
 	if (session) {
 		if (j1939_xtp_rx_rts_session_active(session, skb)) {
 			j1939_session_put(session);

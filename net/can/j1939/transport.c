@@ -717,7 +717,7 @@ static int j1939_session_tx_dat(struct j1939_session *session)
 
 	se_skb = j1939_session_skb_find(session);
 	if (!se_skb)
-		return -EPIPE;
+		return -ENOBUFS;
 
 	skcb = j1939_skb_to_cb(se_skb);
 	tpdat = se_skb->data;

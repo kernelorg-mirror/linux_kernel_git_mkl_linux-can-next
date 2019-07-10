@@ -1113,7 +1113,7 @@ static bool j1939_xtp_rx_cmd_bad_pgn(struct j1939_session *session,
 	const struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
 	pgn_t pgn = j1939_xtp_ctl_to_pgn(skb->data);
 	struct j1939_priv *priv = session->priv;
-	enum j1939_xtp_abort abort;
+	enum j1939_xtp_abort abort = J1939_XTP_NO_ABORT;
 	u8 cmd = skb->data[0];
 
 	if (session->skcb.addr.pgn == pgn)

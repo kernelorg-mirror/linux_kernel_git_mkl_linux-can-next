@@ -347,9 +347,9 @@ void j1939_session_skb_queue(struct j1939_session *session,
 
 	if (j1939_address_is_unicast(skcb->addr.da) &&
 	    priv->ents[skcb->addr.da].nusers)
-		skcb->dst_flags |= J1939_ECU_LOCAL;
+		skcb->flags |= J1939_ECU_LOCAL_DST;
 
-	skcb->src_flags |= J1939_ECU_LOCAL;
+	skcb->flags |= J1939_ECU_LOCAL_SRC;
 
 	skb_queue_tail(&session->skb_queue, skb);
 }
@@ -389,13 +389,13 @@ static struct sk_buff *j1939_session_skb_find(struct j1939_session *session)
  */
 static inline int j1939_tp_im_receiver(const struct j1939_sk_buff_cb *skcb)
 {
-	return skcb->dst_flags & J1939_ECU_LOCAL;
+	return skcb->flags & J1939_ECU_LOCAL_DST;
 }
 
 /* see if we are sender */
 static inline int j1939_tp_im_transmitter(const struct j1939_sk_buff_cb *skcb)
 {
-	return skcb->src_flags & J1939_ECU_LOCAL;
+	return skcb->flags & J1939_ECU_LOCAL_SRC;
 }
 
 /* see if we are involved as either receiver or transmitter */
@@ -409,7 +409,7 @@ static int j1939_tp_im_involved(const struct j1939_sk_buff_cb *skcb, bool swap)
 
 static int j1939_tp_im_involved_anydir(struct j1939_sk_buff_cb *skcb)
 {
-	return (skcb->src_flags | skcb->dst_flags) & J1939_ECU_LOCAL;
+	return skcb->flags & (J1939_ECU_LOCAL_SRC | J1939_ECU_LOCAL_DST);
 }
 
 /* extract pgn from flow-ctl message */
@@ -523,9 +523,18 @@ j1939_session *j1939_session_get_by_addr(struct j1939_priv *priv,
 
 static void j1939_skbcb_swap(struct j1939_sk_buff_cb *skcb)
 {
+	u8 tmp = 0;
+
 	swap(skcb->addr.dst_name, skcb->addr.src_name);
 	swap(skcb->addr.da, skcb->addr.sa);
-	swap(skcb->dst_flags, skcb->src_flags);
+
+	/* swap SRC and DST flags, leave other untouched */
+	if (skcb->flags & J1939_ECU_LOCAL_SRC)
+		tmp |= J1939_ECU_LOCAL_DST;
+	if (skcb->flags & J1939_ECU_LOCAL_DST)
+		tmp |= J1939_ECU_LOCAL_SRC;
+	skcb->flags &= ~(J1939_ECU_LOCAL_SRC | J1939_ECU_LOCAL_DST);
+	skcb->flags |= tmp;
 }
 
 static struct
@@ -1763,13 +1772,13 @@ struct j1939_session *j1939_tp_send(struct j1939_priv *priv,
 	if (unlikely(ret))
 		return ERR_PTR(ret);
 
-	/* fix dst_flags, it may be used there soon */
+	/* fix DST flags, it may be used there soon */
 	if (j1939_address_is_unicast(skcb->addr.da) &&
 	    priv->ents[skcb->addr.da].nusers)
-		skcb->dst_flags |= J1939_ECU_LOCAL;
+		skcb->flags |= J1939_ECU_LOCAL_DST;
 
 	/* src is always local, I'm sending ... */
-	skcb->src_flags |= J1939_ECU_LOCAL;
+	skcb->flags |= J1939_ECU_LOCAL_SRC;
 
 	/* prepare new session */
 	session = j1939_session_new(priv, skb, size);

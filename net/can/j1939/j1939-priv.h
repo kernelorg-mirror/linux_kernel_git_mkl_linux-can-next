@@ -155,12 +155,12 @@ struct j1939_sk_buff_cb {
 
 	struct j1939_addr addr;
 
-	/* Flags for quick lookups during skb processing
-	 * These are set in the receive path only
+	/* Flags for quick lookups during skb processing.
+	 * These are set in the receive path only.
 	 */
-#define J1939_ECU_LOCAL	BIT(0)
-	u8 src_flags;
-	u8 dst_flags;
+#define J1939_ECU_LOCAL_SRC BIT(0)
+#define J1939_ECU_LOCAL_DST BIT(1)
+	u8 flags;
 
 	priority_t priority;
 };

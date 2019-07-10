@@ -168,7 +168,7 @@ static int j1939_can_rx_register(struct j1939_priv *priv)
 	return 0;
 }
 
-void j1939_can_rx_unregister(struct j1939_priv *priv)
+static void j1939_can_rx_unregister(struct j1939_priv *priv)
 {
 	struct net_device *ndev = priv->ndev;
 

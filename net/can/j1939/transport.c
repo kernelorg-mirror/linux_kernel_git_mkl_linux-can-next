@@ -165,46 +165,67 @@ static const char *j1939_xtp_abort_to_str(enum j1939_xtp_abort abort)
 static int j1939_xtp_abort_to_errno(struct j1939_priv *priv,
 				    enum j1939_xtp_abort abort)
 {
+	int err;
+
 	switch (abort) {
 	case J1939_XTP_NO_ABORT:
 		WARN_ON_ONCE(abort == J1939_XTP_NO_ABORT);
-		return 0;
+		err = 0;
+		break;
 	case J1939_XTP_ABORT_BUSY:
-		return EALREADY;
+		err = EALREADY;
+		break;
 	case J1939_XTP_ABORT_RESOURCE:
-		return EMSGSIZE;
+		err = EMSGSIZE;
+		break;
 	case J1939_XTP_ABORT_TIMEOUT:
-		return EHOSTUNREACH;
+		err = EHOSTUNREACH;
+		break;
 	case J1939_XTP_ABORT_GENERIC:
-		return EBADMSG;
+		err = EBADMSG;
+		break;
 	case J1939_XTP_ABORT_FAULT:
-		return ENOTRECOVERABLE;
+		err = ENOTRECOVERABLE;
+		break;
 	case J1939_XTP_ABORT_UNEXPECTED_DATA:
-		return ENOTCONN;
+		err = ENOTCONN;
+		break;
 	case J1939_XTP_ABORT_BAD_SEQ:
-		return EILSEQ;
+		err = EILSEQ;
+		break;
 	case J1939_XTP_ABORT_DUP_SEQ:
-		return EPROTO;
+		err = EPROTO;
+		break;
 	case J1939_XTP_ABORT_EDPO_UNEXPECTED:
-		return EPROTO;
+		err = EPROTO;
+		break;
 	case J1939_XTP_ABORT_BAD_EDPO_PGN:
-		return EPROTO;
+		err = EPROTO;
+		break;
 	case J1939_XTP_ABORT_EDPO_OUTOF_CTS:
-		return EPROTO;
+		err = EPROTO;
+		break;
 	case J1939_XTP_ABORT_BAD_EDPO_OFFSET:
-		return EPROTO;
+		err = EPROTO;
+		break;
 	case J1939_XTP_ABORT_OTHER_DEPRECATED:
-		return EPROTO;
+		err = EPROTO;
+		break;
 	case J1939_XTP_ABORT_ECTS_UNXPECTED_PGN:
-		return EPROTO;
+		err = EPROTO;
+		break;
 	case J1939_XTP_ABORT_ECTS_TOO_BIG:
-		return EPROTO;
+		err = EPROTO;
+		break;
 	case J1939_XTP_ABORT_OTHER:
-		return EPROTO;
+		err = EPROTO;
+		break;
+	default:
+		netdev_warn(priv->ndev, "Unknown abort code %i", abort);
+		err = EPROTO;
 	}
 
-	netdev_warn(priv->ndev, "Unknown abort code %i", abort);
-	return EPROTO;
+	return err;
 }
 
 static inline void j1939_session_list_lock(struct j1939_priv *priv)
@@ -238,7 +259,7 @@ static void j1939_session_destroy(struct j1939_session *session)
 	else
 		j1939_sk_errqueue(session, J1939_ERRQUEUE_ACK);
 
-	netdev_dbg(session->priv->ndev, "j1939_session_destroy: 0x%p\n", session);
+	netdev_dbg(session->priv->ndev, "%s: 0x%p\n", __func__, session);
 
 	skb_queue_purge(&session->skb_queue);
 	__j1939_session_drop(session);
@@ -508,10 +529,11 @@ static void j1939_skbcb_swap(struct j1939_sk_buff_cb *skcb)
 	swap(skcb->dst_flags, skcb->src_flags);
 }
 
-static struct sk_buff *j1939_tp_tx_dat_new(struct j1939_priv *priv,
-					   const struct j1939_sk_buff_cb *re_skcb,
-					   bool ctl,
-					   bool swap_src_dst)
+static struct
+sk_buff *j1939_tp_tx_dat_new(struct j1939_priv *priv,
+			     const struct j1939_sk_buff_cb *re_skcb,
+			     bool ctl,
+			     bool swap_src_dst)
 {
 	struct sk_buff *skb;
 	struct j1939_sk_buff_cb *skcb;
@@ -671,7 +693,8 @@ static int j1939_session_tx_rts(struct j1939_session *session)
 		j1939_tp_schedule_txtimer(session, 50);
 
 	j1939_tp_set_rxtimeout(session, 1250);
-	netdev_dbg(session->priv->ndev, "j1939_session_tx_rts: 0x%p\n", session);
+
+	netdev_dbg(session->priv->ndev, "%s: 0x%p\n", __func__, session);
 
 	return 0;
 }
@@ -699,7 +722,8 @@ static int j1939_session_tx_dpo(struct j1939_session *session)
 	session->last_txcmd = dat[0];
 	j1939_tp_set_rxtimeout(session, 1250);
 	session->pkt.tx = session->pkt.tx_acked;
-	netdev_dbg(session->priv->ndev, "j1939_session_tx_dpo: 0x%p\n", session);
+
+	netdev_dbg(session->priv->ndev, "%s: 0x%p\n", __func__, session);
 
 	return 0;
 }
@@ -799,7 +823,6 @@ static int j1939_xtp_txnext_transmiter(struct j1939_session *session)
 	default:
 		netdev_alert(priv->ndev, "%s: 0x%p: unexpected last_cmd: %x\n",
 			     __func__, session, session->last_cmd);
-
 	}
 
 	return ret;
@@ -845,7 +868,7 @@ static int j1939_session_tx_cts(struct j1939_session *session)
 		session->last_txcmd = dat[0];
 	j1939_tp_set_rxtimeout(session, 1250);
 
-	netdev_dbg(session->priv->ndev, "j1939_session_tx_cts: 0x%p\n", session);
+	netdev_dbg(session->priv->ndev, "%s: 0x%p\n", __func__, session);
 
 	return 0;
 }
@@ -887,7 +910,7 @@ static int j1939_session_tx_eoma(struct j1939_session *session)
 	/* wait for the EOMA packet to come in */
 	j1939_tp_set_rxtimeout(session, 1250);
 
-	netdev_dbg(session->priv->ndev, "j1939_session_tx_eoma: 0x%p\n", session);
+	netdev_dbg(session->priv->ndev, "%p: 0x%p\n", __func__, session);
 
 	return 0;
 }
@@ -1182,8 +1205,8 @@ j1939_xtp_rx_eoma_one(struct j1939_session *session, struct sk_buff *skb)
 	if (j1939_xtp_rx_cmd_bad_pgn(session, skb))
 		return;
 
-	netdev_dbg(session->priv->ndev, "j1939_xtp_rx_eoma_one: 0x%p\n",
-		   session);
+	netdev_dbg(session->priv->ndev, "%s: 0x%p\n", __func__, session);
+
 	session->pkt.tx_acked = session->pkt.total;
 	j1939_session_timers_cancel(session);
 	/* transmitted without problems */
@@ -1218,7 +1241,8 @@ j1939_xtp_rx_cts_one(struct j1939_session *session, struct sk_buff *skb)
 	if (j1939_xtp_rx_cmd_bad_pgn(session, skb))
 		return;
 
-	netdev_dbg(session->priv->ndev, "j1939_xtp_rx_cts_one: 0x%p\n", session);
+	netdev_dbg(session->priv->ndev, "%s: 0x%p\n", __func__, session);
+
 	j1939_session_lock(session);
 
 	if (session->last_cmd == dat[0]) {
@@ -1252,7 +1276,8 @@ j1939_xtp_rx_cts_one(struct j1939_session *session, struct sk_buff *skb)
 		j1939_tp_set_rxtimeout(session, 1250);
 		if (session->transmission) {
 			if (session->pkt.tx_acked)
-				j1939_sk_errqueue(session, J1939_ERRQUEUE_SCHED);
+				j1939_sk_errqueue(session,
+						  J1939_ERRQUEUE_SCHED);
 			j1939_session_txtimer_cancel(session);
 			j1939_tp_schedule_txtimer(session, 0);
 		}
@@ -1283,7 +1308,6 @@ j1939_xtp_rx_cts(struct j1939_priv *priv, struct sk_buff *skb, bool transmitter)
 	j1939_session_put(session);
 }
 
-
 static struct j1939_session *j1939_session_new(struct j1939_priv *priv,
 					       struct sk_buff *skb, size_t size)
 {
@@ -1293,6 +1317,7 @@ static struct j1939_session *j1939_session_new(struct j1939_priv *priv,
 	session = kzalloc(sizeof(*session), gfp_any());
 	if (!session)
 		return NULL;
+
 	INIT_LIST_HEAD(&session->active_session_list_entry);
 	INIT_LIST_HEAD(&session->sk_session_queue_entry);
 	spin_lock_init(&session->lock);
@@ -1316,8 +1341,8 @@ static struct j1939_session *j1939_session_new(struct j1939_priv *priv,
 		     HRTIMER_MODE_REL_SOFT);
 	session->rxtimer.function = j1939_tp_rxtimer;
 
-	netdev_dbg(priv->ndev, "j1939_session_new: 0x%p: sa: %02x, da: %02x\n",
-		   session, skcb->addr.sa, skcb->addr.da);
+	netdev_dbg(priv->ndev, "%s: 0x%p: sa: %02x, da: %02x\n",
+		   __func__, session, skcb->addr.sa, skcb->addr.da);
 
 	return session;
 }
@@ -1360,7 +1385,8 @@ int j1939_session_activate(struct j1939_session *session)
 	int ret = 0;
 
 	j1939_session_list_lock(priv);
-	active = j1939_session_get_by_addr_locked(priv, &priv->active_session_list,
+	active = j1939_session_get_by_addr_locked(priv,
+						  &priv->active_session_list,
 						  &session->skcb.addr, false,
 						  session->transmission);
 	if (active) {
@@ -1372,8 +1398,9 @@ int j1939_session_activate(struct j1939_session *session)
 			      &priv->active_session_list);
 		j1939_session_get(session);
 		session->state = J1939_SESSION_ACTIVE;
-		netdev_dbg(session->priv->ndev, "j1939_session_activate: 0x%p\n",
-			   session);
+
+		netdev_dbg(session->priv->ndev, "%s: 0x%p\n",
+			   __func__, session);
 	}
 	j1939_session_list_unlock(priv);
 
@@ -1391,7 +1418,7 @@ j1939_session *j1939_xtp_rx_rts_session_new(struct j1939_priv *priv,
 	pgn_t pgn;
 	int len;
 
-	netdev_dbg(priv->ndev, "j1939_xtp_rx_rts_session_new\n");
+	netdev_dbg(priv->ndev, "%s\n", __func__);
 
 	dat = skb->data;
 	pgn = j1939_xtp_ctl_to_pgn(dat);
@@ -1489,13 +1516,14 @@ static int j1939_xtp_rx_rts_session_active(struct j1939_session *session,
 	 */
 	session->skcb.addr.sa = skcb->addr.sa;
 	session->skcb.addr.da = skcb->addr.da;
-	netdev_dbg(session->priv->ndev, "j1939_xtp_rx_rts_session_active: 0x%p\n", session);
+
+	netdev_dbg(session->priv->ndev, "%s: 0x%p\n", __func__, session);
 
 	return 0;
 }
 
 static void j1939_xtp_rx_rts(struct j1939_priv *priv, struct sk_buff *skb,
-			    bool transmitter)
+			     bool transmitter)
 {
 	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
 	struct j1939_session *session;
@@ -1544,14 +1572,16 @@ static void j1939_xtp_rx_rts(struct j1939_priv *priv, struct sk_buff *skb,
 	j1939_session_put(session);
 }
 
-static void j1939_xtp_rx_dpo_one(struct j1939_session *session, struct sk_buff *skb)
+static void j1939_xtp_rx_dpo_one(struct j1939_session *session,
+				 struct sk_buff *skb)
 {
 	const u8 *dat = skb->data;
 
 	if (j1939_xtp_rx_cmd_bad_pgn(session, skb))
 		return;
 
-	netdev_dbg(session->priv->ndev, "j1939_xtp_rx_dpo_one: 0x%p\n", session);
+	netdev_dbg(session->priv->ndev, "%s: 0x%p\n", __func__, session);
+
 	/* transmitted without problems */
 	session->pkt.dpo = j1939_etp_ctl_to_packet(skb->data);
 	session->last_cmd = dat[0];
@@ -1571,12 +1601,13 @@ static void j1939_xtp_rx_dpo(struct j1939_priv *priv, struct sk_buff *skb,
 			    "%s: no connection found\n", __func__);
 		return;
 	}
+
 	j1939_xtp_rx_dpo_one(session, skb);
 	j1939_session_put(session);
 }
 
-
-static void j1939_xtp_rx_dat_one(struct j1939_session *session, struct sk_buff *skb)
+static void j1939_xtp_rx_dat_one(struct j1939_session *session,
+				 struct sk_buff *skb)
 {
 	struct j1939_priv *priv = session->priv;
 	struct j1939_sk_buff_cb *skcb;
@@ -1683,7 +1714,8 @@ static void j1939_xtp_rx_dat(struct j1939_priv *priv, struct sk_buff *skb)
 		session = j1939_session_get_by_addr(priv, &skcb->addr, false,
 						    true);
 		if (!session)
-			netdev_info(priv->ndev, "%s: no tx connection found\n", __func__);
+			netdev_info(priv->ndev, "%s: no tx connection found\n",
+				    __func__);
 		else
 			j1939_xtp_rx_dat_one(session, skb);
 	}
@@ -1692,7 +1724,8 @@ static void j1939_xtp_rx_dat(struct j1939_priv *priv, struct sk_buff *skb)
 		session = j1939_session_get_by_addr(priv, &skcb->addr, false,
 						    false);
 		if (!session)
-			netdev_info(priv->ndev, "%s: no rx connection found\n", __func__);
+			netdev_info(priv->ndev, "%s: no rx connection found\n",
+				    __func__);
 		else
 			j1939_xtp_rx_dat_one(session, skb);
 	}

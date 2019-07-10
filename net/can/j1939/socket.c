@@ -861,7 +861,8 @@ j1939_sk_get_timestamping_opt_stats(struct j1939_session *session)
 		return NULL;
 
 	nla_put_u32(stats, J1939_NLA_BYTES_ACKED,
-		    min(session->pkt.tx_acked * 7, session->total_message_size));
+		    min(session->pkt.tx_acked * 7,
+			session->total_message_size));
 
 	return stats;
 }

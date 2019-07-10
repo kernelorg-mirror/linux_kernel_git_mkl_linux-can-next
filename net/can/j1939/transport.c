@@ -377,9 +377,9 @@ static struct sk_buff *j1939_session_skb_find(struct j1939_session *session)
 	spin_unlock_irqrestore(&session->skb_queue.lock, flags);
 
 	if (!skb)
-		netdev_warn(priv->ndev, "%s: 0x%p: no skb found for start: %i, queue size: %i\n",
-			    __func__, session, offset_start,
-			    skb_queue_len(&session->skb_queue));
+		netdev_dbg(priv->ndev, "%s: 0x%p: no skb found for start: %i, queue size: %i\n",
+			   __func__, session, offset_start,
+			   skb_queue_len(&session->skb_queue));
 
 	return skb;
 }

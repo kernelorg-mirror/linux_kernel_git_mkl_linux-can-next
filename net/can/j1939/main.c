@@ -224,7 +224,7 @@ struct j1939_priv *j1939_priv_get_by_ndev(struct net_device *ndev)
 	return priv;
 }
 
-struct j1939_priv *j1939_netdev_start(struct net *net, struct net_device *ndev)
+struct j1939_priv *j1939_netdev_start(struct net_device *ndev)
 {
 	struct j1939_priv *priv, *priv_new;
 	int ret;

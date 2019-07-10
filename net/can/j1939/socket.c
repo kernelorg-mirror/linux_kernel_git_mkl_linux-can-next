@@ -419,7 +419,7 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 			goto out_dev_put;
 		}
 
-		priv = j1939_netdev_start(net, ndev);
+		priv = j1939_netdev_start(ndev);
 		if (IS_ERR(priv)) {
 			ret = PTR_ERR(priv);
 			goto out_dev_put;
@@ -926,8 +926,7 @@ void j1939_sk_errqueue(struct j1939_session *session,
 		kfree_skb(skb);
 };
 
-void j1939_sk_send_loop_abort(struct j1939_priv *priv, struct sock *sk,
-			      int err)
+void j1939_sk_send_loop_abort(struct sock *sk, int err)
 {
 	sk->sk_err = err;
 

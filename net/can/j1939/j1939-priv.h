@@ -175,8 +175,7 @@ static inline struct j1939_sk_buff_cb *j1939_skb_to_cb(const struct sk_buff *skb
 int j1939_send_one(struct j1939_priv *priv, struct sk_buff *skb);
 void j1939_sk_recv(struct j1939_priv *priv, struct sk_buff *skb);
 bool j1939_sk_recv_match(struct j1939_priv *priv, struct j1939_sk_buff_cb *skcb);
-void j1939_sk_send_loop_abort(struct j1939_priv *priv, struct sock *sk,
-			       int err);
+void j1939_sk_send_loop_abort(struct sock *sk, int err);
 void j1939_sk_errqueue(struct j1939_session *session,
 		       enum j1939_sk_errqueue_type type);
 void j1939_sk_queue_activate_next(struct j1939_session *session);
@@ -195,7 +194,7 @@ void j1939_ecu_timer_start(struct j1939_ecu *ecu);
 void j1939_ecu_timer_cancel(struct j1939_ecu *ecu);
 void j1939_ecu_unmap_all(struct j1939_priv *priv);
 
-struct j1939_priv *j1939_netdev_start(struct net *net, struct net_device *ndev);
+struct j1939_priv *j1939_netdev_start(struct net_device *ndev);
 void j1939_netdev_stop(struct j1939_priv *priv);
 
 struct j1939_priv *j1939_priv_get_by_ndev(struct net_device *ndev);

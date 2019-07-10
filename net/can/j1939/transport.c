@@ -359,7 +359,7 @@ static struct sk_buff *j1939_session_skb_find(struct j1939_session *session)
 	struct j1939_priv *priv = session->priv;
 	struct sk_buff *skb = NULL;
 	struct sk_buff *do_skb;
-	struct j1939_sk_buff_cb *skcb, *do_skcb;
+	struct j1939_sk_buff_cb *do_skcb;
 	unsigned int offset_start;
 	unsigned long flags;
 
@@ -372,7 +372,6 @@ static struct sk_buff *j1939_session_skb_find(struct j1939_session *session)
 		if (offset_start >= do_skcb->offset &&
 		    offset_start < (do_skcb->offset + do_skb->len)) {
 			skb = do_skb;
-			skcb = do_skcb;
 		}
 	}
 	spin_unlock_irqrestore(&session->skb_queue.lock, flags);

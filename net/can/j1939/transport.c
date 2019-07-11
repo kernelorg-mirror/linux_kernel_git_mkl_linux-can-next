@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0
 // Copyright (c) 2010-2011 EIA Electronics, Kurt Van Dijck <kurt.van.dijck@eia.be>
-// Copyright (c) 2017-2018 Pengutronix, Marc Kleine-Budde <kernel@pengutronix.de>
-// Copyright (c) 2017-2018 Pengutronix, Oleksij Rempel <kernel@pengutronix.de>
 // Copyright (c) 2018 Protonic, Robin van der Gracht <robin@protonic.nl>
+// Copyright (c) 2017-2019 Pengutronix, Marc Kleine-Budde <kernel@pengutronix.de>
+// Copyright (c) 2017-2019 Pengutronix, Oleksij Rempel <kernel@pengutronix.de>
 
 #include <linux/can/skb.h>
 

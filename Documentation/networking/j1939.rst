@@ -284,7 +284,7 @@ than recvfrom(2) can provide. For example package priority and timestamp. The
 destination address, name and packet priority (if applicable) are attached to
 the msghdr in the recvmsg(2) call. They can be extracted using cmsg(3) macros,
 with cmsg_level == SOL_J1939 && cmsg_type == SCM_J1939_DEST_ADDR,
-SCM_J1939_DEST_NAME or SCM_J1939_PRIORITY. The returned data is a uint8_t for
+SCM_J1939_DEST_NAME or SCM_J1939_PRIO. The returned data is a uint8_t for
 priority and dst_addr, and uint64_t for dst_name.
 
 .. code-block:: C

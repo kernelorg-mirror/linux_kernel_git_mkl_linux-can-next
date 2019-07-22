@@ -9,6 +9,7 @@
 
 #include <linux/can/can-ml.h>
 #include <linux/can/core.h>
+#include <linux/can/skb.h>
 #include <linux/if_arp.h>
 #include <linux/module.h>
 
@@ -33,7 +34,7 @@ static void j1939_can_recv(struct sk_buff *iskb, void *data)
 {
 	struct j1939_priv *priv = data;
 	struct sk_buff *skb;
-	struct j1939_sk_buff_cb *skcb;
+	struct j1939_sk_buff_cb *skcb, *iskcb;
 	struct can_frame *cf;
 
 	/* create a copy of the skb
@@ -44,6 +45,8 @@ static void j1939_can_recv(struct sk_buff *iskb, void *data)
 	skb = skb_clone(iskb, GFP_ATOMIC);
 	if (!skb)
 		return;
+
+	can_skb_set_owner(skb, iskb->sk);
 
 	/* get a pointer to the header of the skb
 	 * the skb payload (pointer) is moved, so that the next skb_data
@@ -59,8 +62,8 @@ static void j1939_can_recv(struct sk_buff *iskb, void *data)
 	skcb = j1939_skb_to_cb(skb);
 	memset(skcb, 0, sizeof(*skcb));
 
-	/* save incoming socket, without assigning the skb to it */
-	skcb->insock = iskb->sk;
+	iskcb = j1939_skb_to_cb(iskb);
+	skcb->tskey = iskcb->tskey;
 	skcb->priority = (cf->can_id >> 26) & 0x7;
 	skcb->addr.sa = cf->can_id;
 	skcb->addr.pgn = (cf->can_id >> 8) & J1939_PGN_MAX;
@@ -92,6 +95,8 @@ static void j1939_can_recv(struct sk_buff *iskb, void *data)
 	if (j1939_tp_recv(priv, skb))
 		/* this means the transport layer processed the message */
 		goto done;
+
+	j1939_simple_recv(priv, skb);
 	j1939_sk_recv(priv, skb);
  done:
 	kfree_skb(skb);

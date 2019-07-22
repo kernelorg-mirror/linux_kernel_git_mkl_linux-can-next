@@ -141,17 +141,12 @@ struct j1939_addr {
 
 /* control buffer of the sk_buff */
 struct j1939_sk_buff_cb {
-	/* j1939 clones incoming skb's.
-	 * insock saves the incoming skb->sk
-	 * to determine local generated packets
-	 */
-	struct sock *insock;
-
 	/* Offset in bytes withing one ETP session */
 	u32 offset;
 
 	/* for tx, MSG_SYN will be used to sync on sockets */
 	u32 msg_flags;
+	u32 tskey;
 
 	struct j1939_addr addr;
 
@@ -186,6 +181,7 @@ struct j1939_session *j1939_tp_send(struct j1939_priv *priv,
 int j1939_tp_recv(struct j1939_priv *priv, struct sk_buff *skb);
 int j1939_ac_fixup(struct j1939_priv *priv, struct sk_buff *skb);
 void j1939_ac_recv(struct j1939_priv *priv, struct sk_buff *skb);
+void j1939_simple_recv(struct j1939_priv *priv, struct sk_buff *skb);
 
 /* network management */
 struct j1939_ecu *j1939_ecu_create_locked(struct j1939_priv *priv, name_t name);

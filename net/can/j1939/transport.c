@@ -506,6 +506,27 @@ j1939_session *j1939_session_get_by_addr_locked(struct j1939_priv *priv,
 }
 
 static struct
+j1939_session *j1939_session_get_simple(struct j1939_priv *priv,
+					struct sk_buff *skb)
+{
+	struct j1939_sk_buff_cb *skcb = j1939_skb_to_cb(skb);
+	struct j1939_session *session;
+
+	lockdep_assert_held(&priv->active_session_list_lock);
+
+	list_for_each_entry(session, &priv->active_session_list,
+			    active_session_list_entry) {
+		j1939_session_get(session);
+		if (session->skcb.addr.type == J1939_SIMPLE &&
+		    session->tskey == skcb->tskey && session->sk == skb->sk)
+			return session;
+		j1939_session_put(session);
+	}
+
+	return NULL;
+}
+
+static struct
 j1939_session *j1939_session_get_by_addr(struct j1939_priv *priv,
 					 struct j1939_addr *addr,
 					 bool reverse, bool transmitter)
@@ -1024,9 +1045,17 @@ static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 
 			skb = skb_clone(se_skb, GFP_ATOMIC);
 			if (skb) {
+				can_skb_set_owner(skb, se_skb->sk);
+
+				j1939_tp_set_rxtimeout(session,
+						       J1939_XTP_ABORT_TIMEOUT_MS);
+
 				ret = j1939_send_one(priv, skb);
-				if (!ret)
-					j1939_session_deactivate_activate_next(session);
+				if (!ret) {
+					j1939_sk_errqueue(session,
+							  J1939_ERRQUEUE_SCHED);
+					j1939_sk_queue_activate_next(session);
+				}
 			} else {
 				ret = -ENOMEM;
 				session->err = ret;
@@ -1059,6 +1088,9 @@ static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 			j1939_tp_set_rxtimeout(session,
 					       J1939_XTP_ABORT_TIMEOUT_MS);
 			j1939_session_cancel(session, J1939_XTP_ABORT_OTHER);
+		} else {
+			j1939_session_rxtimer_cancel(session);
+			j1939_session_deactivate_activate_next(session);
 		}
 	} else {
 		session->tx_retry = 0;
@@ -1094,6 +1126,16 @@ static enum hrtimer_restart j1939_tp_rxtimer(struct hrtimer *hrtimer)
 			     __func__, session);
 
 		j1939_session_deactivate_activate_next(session);
+
+	} else if (session->skcb.addr.type == J1939_SIMPLE) {
+		netdev_alert(priv->ndev, "%s: 0x%p: Timeout. Failed to send simple message.\n",
+			     __func__, session);
+
+		/* The message is probably stuck in the CAN controller and can
+		 * be send as soon as CAN bus is in working state again.
+		 */
+		session->err = -ENETUNREACH;
+		j1939_session_deactivate(session);
 	} else {
 		netdev_alert(priv->ndev, "%s: 0x%p: rx timeout, send abort\n",
 			     __func__, session);
@@ -1388,14 +1430,15 @@ j1939_session *j1939_session_fresh_new(struct j1939_priv *priv,
 int j1939_session_activate(struct j1939_session *session)
 {
 	struct j1939_priv *priv = session->priv;
-	struct j1939_session *active;
+	struct j1939_session *active = NULL;
 	int ret = 0;
 
 	j1939_session_list_lock(priv);
-	active = j1939_session_get_by_addr_locked(priv,
-						  &priv->active_session_list,
-						  &session->skcb.addr, false,
-						  session->transmission);
+	if (session->skcb.addr.type != J1939_SIMPLE)
+		active = j1939_session_get_by_addr_locked(priv,
+							  &priv->active_session_list,
+							  &session->skcb.addr, false,
+						          session->transmission);
 	if (active) {
 		j1939_session_put(active);
 		ret = -EAGAIN;
@@ -1796,7 +1839,8 @@ struct j1939_session *j1939_tp_send(struct j1939_priv *priv,
 		/* set the end-packet for broadcast */
 		session->pkt.last = session->pkt.total;
 
-	session->tskey = session->sk->sk_tskey++;
+	skcb->tskey = session->sk->sk_tskey++;
+	session->tskey = skcb->tskey;
 
 	return session;
 }
@@ -1908,6 +1952,28 @@ int j1939_tp_recv(struct j1939_priv *priv, struct sk_buff *skb)
 		return 0; /* no problem */
 	}
 	return 1; /* "I processed the message" */
+}
+
+void j1939_simple_recv(struct j1939_priv *priv, struct sk_buff *skb)
+{
+	struct j1939_session *session;
+
+	if (!skb->sk)
+		return;
+
+	j1939_session_list_lock(priv);
+	session = j1939_session_get_simple(priv, skb);
+	j1939_session_list_unlock(priv);
+	if (!session) {
+		netdev_warn(priv->ndev, "%s: Received already invalidated message\n", __func__);
+		return;
+	}
+
+	j1939_session_timers_cancel(session);
+	j1939_session_deactivate(session);
+	j1939_session_put(session);
+
+	return;
 }
 
 int j1939_tp_rmdev_notifier(struct j1939_priv *priv)

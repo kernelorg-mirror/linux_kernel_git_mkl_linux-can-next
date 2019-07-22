@@ -275,10 +275,6 @@ static bool j1939_sk_recv_match_one(struct j1939_sock *jsk,
 	if (!(jsk->state & J1939_SOCK_BOUND))
 		return false;
 
-	if (skcb->insock == &jsk->sk)
-		/* own message */
-		return false;
-
 	if (!j1939_sk_match_dst(jsk, skcb))
 		return false;
 
@@ -294,6 +290,9 @@ static void j1939_sk_recv_one(struct j1939_sock *jsk, struct sk_buff *oskb)
 	struct j1939_sk_buff_cb *skcb;
 	struct sk_buff *skb;
 
+	if (oskb->sk == &jsk->sk)
+		return;
+
 	if (!j1939_sk_recv_match_one(jsk, oskcb))
 		return;
 
@@ -302,9 +301,11 @@ static void j1939_sk_recv_one(struct j1939_sock *jsk, struct sk_buff *oskb)
 		pr_warn("skb clone failed\n");
 		return;
 	}
+	can_skb_set_owner(skb, oskb->sk);
+
 	skcb = j1939_skb_to_cb(skb);
 	skcb->msg_flags &= ~(MSG_DONTROUTE);
-	if (skcb->insock)
+	if (skb->sk)
 		skcb->msg_flags |= MSG_DONTROUTE;
 
 	if (sock_queue_rcv_skb(&jsk->sk, skb) < 0)
@@ -847,14 +848,19 @@ static struct sk_buff *
 j1939_sk_get_timestamping_opt_stats(struct j1939_session *session)
 {
 	struct sk_buff *stats;
+	u32 size;
 
 	stats = alloc_skb(j1939_sk_opt_stats_get_size(), GFP_ATOMIC);
 	if (!stats)
 		return NULL;
 
-	nla_put_u32(stats, J1939_NLA_BYTES_ACKED,
-		    min(session->pkt.tx_acked * 7,
-			session->total_message_size));
+	if (session->skcb.addr.type == J1939_SIMPLE)
+		size = session->total_message_size;
+	else
+		size = min(session->pkt.tx_acked * 7,
+			   session->total_message_size);
+
+	nla_put_u32(stats, J1939_NLA_BYTES_ACKED, size);
 
 	return stats;
 }

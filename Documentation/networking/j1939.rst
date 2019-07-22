@@ -217,7 +217,6 @@ modified with setsockopt(2) & getsockopt(2).
 RX path related options:
 SO_J1939_FILTER - configure array of filters
 SO_J1939_PROMISC - disable filters set by bind(2) and connect(2)
-SO_J1939_RECV_OWN - receive packets that have been sent on this socket
 
 By default no broadcast packets can't be send or received. To enable sending
 or receiving broadcast packets use the socket option SO_BROADCAST:
@@ -236,11 +235,6 @@ The following diagram illustrates the RX path:
                     +--------------------+
                               |
                               V
-                    +--------------------+
-                    | SO_J1939_RECV_OWN? |
-                    +--------------------+
-                              |
-                              v
                     +--------------------+
                     | SO_J1939_PROMISC?  |
                     +--------------------+

@@ -282,8 +282,7 @@ struct j1939_sock {
 #define J1939_SOCK_BOUND BIT(0)
 #define J1939_SOCK_CONNECTED BIT(1)
 #define J1939_SOCK_PROMISC BIT(2)
-#define J1939_SOCK_RECV_OWN BIT(3)
-#define J1939_SOCK_ERRQUEUE BIT(4)
+#define J1939_SOCK_ERRQUEUE BIT(3)
 	int state;
 
 	int ifindex;

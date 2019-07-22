@@ -275,7 +275,7 @@ static bool j1939_sk_recv_match_one(struct j1939_sock *jsk,
 	if (!(jsk->state & J1939_SOCK_BOUND))
 		return false;
 
-	if (skcb->insock == &jsk->sk && !(jsk->state & J1939_SOCK_RECV_OWN))
+	if (skcb->insock == &jsk->sk)
 		/* own message */
 		return false;
 
@@ -303,11 +303,9 @@ static void j1939_sk_recv_one(struct j1939_sock *jsk, struct sk_buff *oskb)
 		return;
 	}
 	skcb = j1939_skb_to_cb(skb);
-	skcb->msg_flags &= ~(MSG_DONTROUTE | MSG_CONFIRM);
+	skcb->msg_flags &= ~(MSG_DONTROUTE);
 	if (skcb->insock)
 		skcb->msg_flags |= MSG_DONTROUTE;
-	if (skcb->insock == &jsk->sk)
-		skcb->msg_flags |= MSG_CONFIRM;
 
 	if (sock_queue_rcv_skb(&jsk->sk, skb) < 0)
 		kfree_skb(skb);
@@ -641,9 +639,6 @@ static int j1939_sk_setsockopt(struct socket *sock, int level, int optname,
 	case SO_J1939_PROMISC:
 		return j1939_sk_setsockopt_flag(jsk, optval, optlen,
 						J1939_SOCK_PROMISC);
-	case SO_J1939_RECV_OWN:
-		return j1939_sk_setsockopt_flag(jsk, optval, optlen,
-						J1939_SOCK_RECV_OWN);
 	case SO_J1939_ERRQUEUE:
 		ret = j1939_sk_setsockopt_flag(jsk, optval, optlen,
 					       J1939_SOCK_ERRQUEUE);
@@ -693,9 +688,6 @@ static int j1939_sk_getsockopt(struct socket *sock, int level, int optname,
 	switch (optname) {
 	case SO_J1939_PROMISC:
 		tmp = (jsk->state & J1939_SOCK_PROMISC) ? 1 : 0;
-		break;
-	case SO_J1939_RECV_OWN:
-		tmp = (jsk->state & J1939_SOCK_RECV_OWN) ? 1 : 0;
 		break;
 	case SO_J1939_ERRQUEUE:
 		tmp = (jsk->state & J1939_SOCK_ERRQUEUE) ? 1 : 0;

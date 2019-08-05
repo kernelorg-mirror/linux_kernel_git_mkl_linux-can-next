@@ -1046,6 +1046,7 @@ static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 			skb = skb_clone(se_skb, GFP_ATOMIC);
 			if (skb) {
 				can_skb_set_owner(skb, se_skb->sk);
+				skb_shinfo(skb)->tx_flags &= ~SKBTX_ANY_TSTAMP;
 
 				j1939_tp_set_rxtimeout(session,
 						       J1939_XTP_ABORT_TIMEOUT_MS);

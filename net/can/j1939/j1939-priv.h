@@ -146,7 +146,7 @@ struct j1939_addr {
 
 /* control buffer of the sk_buff */
 struct j1939_sk_buff_cb {
-	/* Offset in bytes withing one ETP session */
+	/* Offset in bytes within one ETP session */
 	u32 offset;
 
 	/* for tx, MSG_SYN will be used to sync on sockets */

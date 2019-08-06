@@ -1703,6 +1703,12 @@ static void j1939_xtp_rx_dat_one(struct j1939_session *session,
 		goto out_session_unlock;
 	}
 	se_skb = j1939_session_skb_find(session);
+	if (!se_skb) {
+		netdev_warn(priv->ndev, "%s: 0x%p: no skb found\n", __func__,
+			    session);
+		goto out_session_unlock;
+	}
+
 	skcb = j1939_skb_to_cb(se_skb);
 	offset = packet * 7 - skcb->offset;
 	nbytes = se_skb->len - offset;

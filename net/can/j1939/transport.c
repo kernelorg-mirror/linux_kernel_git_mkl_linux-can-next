@@ -1986,8 +1986,6 @@ void j1939_simple_recv(struct j1939_priv *priv, struct sk_buff *skb)
 	j1939_session_timers_cancel(session);
 	j1939_session_deactivate(session);
 	j1939_session_put(session);
-
-	return;
 }
 
 int j1939_tp_rmdev_notifier(struct j1939_priv *priv)

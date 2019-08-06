@@ -40,6 +40,7 @@ enum j1939_xtp_abort {
 	 * EALREADY:
 	 * Operation already in progress
 	 */
+
 	J1939_XTP_ABORT_RESOURCE = 2,
 	/* System resources were needed for another task so this
 	 * connection managed session was terminated.
@@ -1443,7 +1444,7 @@ int j1939_session_activate(struct j1939_session *session)
 		active = j1939_session_get_by_addr_locked(priv,
 							  &priv->active_session_list,
 							  &session->skcb.addr, false,
-						          session->transmission);
+							  session->transmission);
 	if (active) {
 		j1939_session_put(active);
 		ret = -EAGAIN;

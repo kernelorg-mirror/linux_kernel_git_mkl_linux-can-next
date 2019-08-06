@@ -129,7 +129,7 @@ static struct j1939_priv *j1939_priv_create(struct net_device *ndev)
 	kref_init(&priv->kref);
 	kref_init(&priv->rx_kref);
 	dev_hold(ndev);
-	
+
 	netdev_dbg(priv->ndev, "%s : 0x%p\n", __func__, priv);
 
 	return priv;

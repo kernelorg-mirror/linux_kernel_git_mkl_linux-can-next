@@ -42,6 +42,8 @@ static void j1939_can_recv(struct sk_buff *iskb, void *data)
 	 * j1939 may not touch the incoming skb in such way
 	 */
 	skb = skb_clone(iskb, GFP_ATOMIC);
+	if (!skb)
+		return;
 
 	/* get a pointer to the header of the skb
 	 * the skb payload (pointer) is moved, so that the next skb_data

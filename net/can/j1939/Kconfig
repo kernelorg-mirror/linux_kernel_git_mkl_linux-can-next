@@ -13,9 +13,3 @@ config CAN_J1939
 	  The relevant parts in kernel are
 	  SAE j1939-21 (datalink & transport protocol)
 	  & SAE j1939-81 (network management).
-
-config CAN_J1939_DEBUG
-	bool "debug SAE J1939"
-	depends on CAN_J1939
-	help
-	  Say Y to add extra debug code (via printk) in the j1939 stack

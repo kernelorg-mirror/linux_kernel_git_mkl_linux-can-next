@@ -1,7 +1,10 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-// Copyright (c) 2010-2011 EIA Electronics, Kurt Van Dijck <kurt.van.dijck@eia.be>
-// Copyright (c) 2017-2019 Pengutronix, Marc Kleine-Budde <kernel@pengutronix.de>
-// Copyright (c) 2017-2019 Pengutronix, Oleksij Rempel <kernel@pengutronix.de>
+// Copyright (c) 2010-2011 EIA Electronics,
+//                         Kurt Van Dijck <kurt.van.dijck@eia.be>
+// Copyright (c) 2017-2019 Pengutronix,
+//                         Marc Kleine-Budde <kernel@pengutronix.de>
+// Copyright (c) 2017-2019 Pengutronix,
+//                         Oleksij Rempel <kernel@pengutronix.de>
 
 #ifndef _J1939_PRIV_H_
 #define _J1939_PRIV_H_

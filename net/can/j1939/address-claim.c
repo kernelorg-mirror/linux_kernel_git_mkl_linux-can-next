@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2010-2011 EIA Electronics, Kurt Van Dijck <kurt.van.dijck@eia.be>
-// Copyright (c) 2010-2011 EIA Electronics, Pieter Beyens <pieter.beyens@eia.be>
-// Copyright (c) 2017-2019 Pengutronix, Marc Kleine-Budde <kernel@pengutronix.de>
-// Copyright (c) 2017-2019 Pengutronix, Oleksij Rempel <kernel@pengutronix.de>
+// Copyright (c) 2010-2011 EIA Electronics,
+//                         Kurt Van Dijck <kurt.van.dijck@eia.be>
+// Copyright (c) 2010-2011 EIA Electronics,
+//                         Pieter Beyens <pieter.beyens@eia.be>
+// Copyright (c) 2017-2019 Pengutronix,
+//                         Marc Kleine-Budde <kernel@pengutronix.de>
+// Copyright (c) 2017-2019 Pengutronix,
+//                         Oleksij Rempel <kernel@pengutronix.de>
 
 /* J1939 Address Claiming.
  * Address Claiming in the kernel

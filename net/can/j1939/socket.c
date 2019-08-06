@@ -556,7 +556,7 @@ static int j1939_sk_release(struct socket *sock)
 		struct net_device *ndev;
 
 		if (wait_event_interruptible(jsk->waitq,
-					     j1939_sock_pending_get(&jsk->sk) == 0))
+					     !j1939_sock_pending_get(&jsk->sk)))
 			j1939_sk_queue_drop_all(jsk);
 
 		ndev = dev_get_by_index(sock_net(sk), jsk->ifindex);

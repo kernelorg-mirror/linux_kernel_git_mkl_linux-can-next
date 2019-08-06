@@ -68,9 +68,11 @@ struct j1939_priv {
 
 	struct kref kref;
 
-	/* List of active sessions to prevent start of conflicting one.
+	/* List of active sessions to prevent start of conflicting
+	 * one.
 	 *
-	 * Do not start two sessions of same type, addresses and direction.
+	 * Do not start two sessions of same type, addresses and
+	 * direction.
 	 */
 	struct list_head active_session_list;
 
@@ -163,7 +165,8 @@ struct j1939_sk_buff_cb {
 	priority_t priority;
 };
 
-static inline struct j1939_sk_buff_cb *j1939_skb_to_cb(const struct sk_buff *skb)
+static inline
+struct j1939_sk_buff_cb *j1939_skb_to_cb(const struct sk_buff *skb)
 {
 	BUILD_BUG_ON(sizeof(struct j1939_sk_buff_cb) > sizeof(skb->cb));
 
@@ -172,7 +175,8 @@ static inline struct j1939_sk_buff_cb *j1939_skb_to_cb(const struct sk_buff *skb
 
 int j1939_send_one(struct j1939_priv *priv, struct sk_buff *skb);
 void j1939_sk_recv(struct j1939_priv *priv, struct sk_buff *skb);
-bool j1939_sk_recv_match(struct j1939_priv *priv, struct j1939_sk_buff_cb *skcb);
+bool j1939_sk_recv_match(struct j1939_priv *priv,
+			 struct j1939_sk_buff_cb *skcb);
 void j1939_sk_send_loop_abort(struct sock *sk, int err);
 void j1939_sk_errqueue(struct j1939_session *session,
 		       enum j1939_sk_errqueue_type type);
@@ -242,9 +246,10 @@ struct j1939_session {
 	u8 last_cmd, last_txcmd;
 	bool transmission;
 	bool extd;
-	unsigned int total_message_size; /* Total message size, number of bytes */
-	unsigned int total_queued_size; /* Total number of bytes queue from socket
-					   to the session */
+	/* Total message size, number of bytes */
+	unsigned int total_message_size;
+	/* Total number of bytes queue from socket to the session */
+	unsigned int total_queued_size;
 	unsigned int tx_retry;
 
 	int err;
@@ -252,16 +257,20 @@ struct j1939_session {
 	enum j1939_session_state state;
 
 	/* Packets counters for a (extended) transfer session. The packet is
-	 * maximal of 7 bytes. */
+	 * maximal of 7 bytes.
+	 */
 	struct {
 		/* total - total number of packets for this session */
 		unsigned int total;
-		/* last - last packet of a transfer block after which responder
-		 * should send ETP.CM_CTS and originator ETP.CM_DPO */
+		/* last - last packet of a transfer block after which
+		 * responder should send ETP.CM_CTS and originator
+		 * ETP.CM_DPO
+		 */
 		unsigned int last;
 		/* tx - number of packets send by originator node.
-		 * this counter can be set back if responder node didn't
-		 * received all packets send by originator. */
+		 * this counter can be set back if responder node
+		 * didn't received all packets send by originator.
+		 */
 		unsigned int tx;
 		unsigned int tx_acked;
 		/* rx - number of packets received */

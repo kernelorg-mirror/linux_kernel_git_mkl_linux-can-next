@@ -1976,7 +1976,9 @@ void j1939_simple_recv(struct j1939_priv *priv, struct sk_buff *skb)
 	session = j1939_session_get_simple(priv, skb);
 	j1939_session_list_unlock(priv);
 	if (!session) {
-		netdev_warn(priv->ndev, "%s: Received already invalidated message\n", __func__);
+		netdev_warn(priv->ndev,
+			    "%s: Received already invalidated message\n",
+			    __func__);
 		return;
 	}
 

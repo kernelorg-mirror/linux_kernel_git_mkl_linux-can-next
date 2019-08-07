@@ -1302,21 +1302,21 @@ j1939_xtp_rx_cts_one(struct j1939_session *session, struct sk_buff *skb)
 		pkt = j1939_etp_ctl_to_packet(dat);
 	else
 		pkt = dat[2];
-	if (!pkt) {
+
+	if (!pkt)
 		goto out_session_cancel;
-	} else if (dat[1] > session->pkt.block /* 0xff for etp */) {
+	else if (dat[1] > session->pkt.block /* 0xff for etp */)
 		goto out_session_cancel;
-	} else {
-		/* set packet counters only when not CTS(0) */
-		session->pkt.tx_acked = pkt - 1;
-		j1939_session_skb_drop_old(session);
-		session->pkt.last = session->pkt.tx_acked + dat[1];
-		if (session->pkt.last > session->pkt.total)
-			/* safety measure */
-			session->pkt.last = session->pkt.total;
-		/* TODO: do not set tx here, do it in txtimer */
-		session->pkt.tx = session->pkt.tx_acked;
-	}
+
+	/* set packet counters only when not CTS(0) */
+	session->pkt.tx_acked = pkt - 1;
+	j1939_session_skb_drop_old(session);
+	session->pkt.last = session->pkt.tx_acked + dat[1];
+	if (session->pkt.last > session->pkt.total)
+		/* safety measure */
+		session->pkt.last = session->pkt.total;
+	/* TODO: do not set tx here, do it in txtimer */
+	session->pkt.tx = session->pkt.tx_acked;
 
 	session->last_cmd = dat[0];
 	if (dat[1]) {

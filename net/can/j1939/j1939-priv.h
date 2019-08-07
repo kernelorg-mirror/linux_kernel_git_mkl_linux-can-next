@@ -81,8 +81,10 @@ struct j1939_priv {
 
 	unsigned int tp_max_packet_size;
 
-	struct list_head j1939_socks;
+	/* lock for j1939_socks list */
 	spinlock_t j1939_socks_lock;
+	struct list_head j1939_socks;
+
 	struct kref rx_kref;
 };
 
@@ -305,6 +307,7 @@ struct j1939_sock {
 	atomic_t skb_pending;
 	wait_queue_head_t waitq;
 
+	/* lock for the sk_session_queue list */
 	spinlock_t sk_session_queue_lock;
 	struct list_head sk_session_queue;
 };

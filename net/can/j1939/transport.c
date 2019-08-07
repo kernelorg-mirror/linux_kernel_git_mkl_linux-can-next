@@ -989,6 +989,36 @@ static int j1939_xtp_txnext_receiver(struct j1939_session *session)
 	return ret;
 }
 
+static int j1939_simple_txnext(struct j1939_session *session)
+{
+	struct j1939_priv *priv = session->priv;
+	struct sk_buff *se_skb = j1939_session_skb_find(session);
+	struct sk_buff *skb;
+	int ret;
+
+	if (!se_skb)
+		return 0;
+
+	skb = skb_clone(se_skb, GFP_ATOMIC);
+	if (!skb)
+		return -ENOMEM;
+
+	can_skb_set_owner(skb, se_skb->sk);
+	skb_shinfo(skb)->tx_flags &= ~SKBTX_ANY_TSTAMP;
+
+	j1939_tp_set_rxtimeout(session,
+			       J1939_XTP_ABORT_TIMEOUT_MS);
+
+	ret = j1939_send_one(priv, skb);
+	if (ret)
+		return ret;
+
+	j1939_sk_errqueue(session, J1939_ERRQUEUE_SCHED);
+	j1939_sk_queue_activate_next(session);
+
+	return 0;
+}
+
 bool j1939_session_deactivate(struct j1939_session *session)
 {
 	bool active = false;
@@ -1042,31 +1072,7 @@ static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 	int ret = 0;
 
 	if (session->skcb.addr.type == J1939_SIMPLE) {
-		struct j1939_priv *priv = session->priv;
-		struct sk_buff *se_skb = j1939_session_skb_find(session);
-
-		if (se_skb) {
-			struct sk_buff *skb;
-
-			skb = skb_clone(se_skb, GFP_ATOMIC);
-			if (skb) {
-				can_skb_set_owner(skb, se_skb->sk);
-				skb_shinfo(skb)->tx_flags &= ~SKBTX_ANY_TSTAMP;
-
-				j1939_tp_set_rxtimeout(session,
-						       J1939_XTP_ABORT_TIMEOUT_MS);
-
-				ret = j1939_send_one(priv, skb);
-				if (!ret) {
-					j1939_sk_errqueue(session,
-							  J1939_ERRQUEUE_SCHED);
-					j1939_sk_queue_activate_next(session);
-				}
-			} else {
-				ret = -ENOMEM;
-				session->err = ret;
-			}
-		}
+		ret = j1939_simple_txnext(session);
 	} else {
 		if (session->transmission)
 			ret = j1939_xtp_txnext_transmiter(session);

@@ -208,7 +208,7 @@ void j1939_priv_get(struct j1939_priv *priv);
 
 /* notify/alert all j1939 sockets bound to ifindex */
 void j1939_sk_netdev_event(struct net_device *ndev, int error_code);
-int j1939_tp_rmdev_notifier(struct j1939_priv *priv);
+int j1939_cancel_all_active_sessions(struct j1939_priv *priv);
 void j1939_tp_init(struct j1939_priv *priv);
 
 /* decrement pending skb for a j1939 socket */

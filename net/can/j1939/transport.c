@@ -1007,11 +1007,12 @@ static int j1939_simple_txnext(struct j1939_session *session)
 	return 0;
 }
 
-bool j1939_session_deactivate(struct j1939_session *session)
+bool j1939_session_deactivate_locked(struct j1939_session *session)
 {
 	bool active = false;
 
-	j1939_session_list_lock(session->priv);
+	lockdep_assert_held(&session->priv->active_session_list_lock);
+
 	if (session->state >= J1939_SESSION_ACTIVE &&
 	    session->state < J1939_SESSION_ACTIVE_MAX) {
 		active = true;
@@ -1020,6 +1021,16 @@ bool j1939_session_deactivate(struct j1939_session *session)
 		session->state = J1939_SESSION_DONE;
 		j1939_session_put(session);
 	}
+
+	return active;
+}
+
+bool j1939_session_deactivate(struct j1939_session *session)
+{
+	bool active;
+
+	j1939_session_list_lock(session->priv);
+	active = j1939_session_deactivate_locked(session);
 	j1939_session_list_unlock(session->priv);
 
 	return active;
@@ -1972,7 +1983,7 @@ void j1939_simple_recv(struct j1939_priv *priv, struct sk_buff *skb)
 	j1939_session_put(session);
 }
 
-int j1939_tp_rmdev_notifier(struct j1939_priv *priv)
+int j1939_cancel_all_active_sessions(struct j1939_priv *priv)
 {
 	struct j1939_session *session, *saved;
 
@@ -1981,7 +1992,8 @@ int j1939_tp_rmdev_notifier(struct j1939_priv *priv)
 				 &priv->active_session_list,
 				 active_session_list_entry) {
 		j1939_session_timers_cancel(session);
-		j1939_session_deactivate_activate_next(session);
+		session->err = ESHUTDOWN;
+		j1939_session_deactivate_locked(session);
 	}
 	j1939_session_list_unlock(priv);
 	return NOTIFY_DONE;

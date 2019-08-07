@@ -308,17 +308,6 @@ static inline bool j1939_cb_is_broadcast(const struct j1939_sk_buff_cb *skcb)
 	return (!skcb->addr.dst_name && (skcb->addr.da == 0xff));
 }
 
-/* transport status locking */
-static inline void j1939_session_lock(struct j1939_session *session)
-{
-	spin_lock_bh(&session->lock);
-}
-
-static inline void j1939_session_unlock(struct j1939_session *session)
-{
-	spin_unlock_bh(&session->lock);
-}
-
 static void j1939_session_skb_drop_old(struct j1939_session *session)
 {
 	struct sk_buff *do_skb;
@@ -1304,11 +1293,9 @@ j1939_xtp_rx_cts_one(struct j1939_session *session, struct sk_buff *skb)
 
 	netdev_dbg(session->priv->ndev, "%s: 0x%p\n", __func__, session);
 
-	j1939_session_lock(session);
-
 	if (session->last_cmd == dat[0]) {
 		err = J1939_XTP_ABORT_DUP_SEQ;
-		goto out_session_unlock;
+		goto out_session_cancel;
 	}
 
 	if (session->skcb.addr.type == J1939_ETP)
@@ -1316,9 +1303,9 @@ j1939_xtp_rx_cts_one(struct j1939_session *session, struct sk_buff *skb)
 	else
 		pkt = dat[2];
 	if (!pkt) {
-		goto out_session_unlock;
+		goto out_session_cancel;
 	} else if (dat[1] > session->pkt.block /* 0xff for etp */) {
-		goto out_session_unlock;
+		goto out_session_cancel;
 	} else {
 		/* set packet counters only when not CTS(0) */
 		session->pkt.tx_acked = pkt - 1;
@@ -1332,7 +1319,6 @@ j1939_xtp_rx_cts_one(struct j1939_session *session, struct sk_buff *skb)
 	}
 
 	session->last_cmd = dat[0];
-	j1939_session_unlock(session);
 	if (dat[1]) {
 		j1939_tp_set_rxtimeout(session, 1250);
 		if (session->transmission) {
@@ -1348,8 +1334,7 @@ j1939_xtp_rx_cts_one(struct j1939_session *session, struct sk_buff *skb)
 	}
 	return;
 
- out_session_unlock:
-	j1939_session_unlock(session);
+ out_session_cancel:
 	j1939_session_timers_cancel(session);
 	j1939_tp_set_rxtimeout(session, J1939_XTP_ABORT_TIMEOUT_MS);
 	j1939_session_cancel(session, err);
@@ -1381,7 +1366,6 @@ static struct j1939_session *j1939_session_new(struct j1939_priv *priv,
 
 	INIT_LIST_HEAD(&session->active_session_list_entry);
 	INIT_LIST_HEAD(&session->sk_session_queue_entry);
-	spin_lock_init(&session->lock);
 	kref_init(&session->kref);
 
 	j1939_priv_get(priv);
@@ -1688,8 +1672,6 @@ static void j1939_xtp_rx_dat_one(struct j1939_session *session,
 		/* makes no sense */
 		goto out_session_cancel;
 
-	j1939_session_lock(session);
-
 	switch (session->last_cmd) {
 	case 0xff:
 		break;
@@ -1703,7 +1685,7 @@ static void j1939_xtp_rx_dat_one(struct j1939_session *session,
 	default:
 		netdev_info(priv->ndev, "%s: 0x%p: last %02x\n", __func__,
 			    session, session->last_cmd);
-		goto out_session_unlock;
+		goto out_session_cancel;
 	}
 
 	packet = (dat[0] - 1 + session->pkt.dpo);
@@ -1711,13 +1693,13 @@ static void j1939_xtp_rx_dat_one(struct j1939_session *session,
 	    (session->pkt.rx + 1) > session->pkt.total) {
 		netdev_info(priv->ndev, "%s: 0x%p: should have been completed\n",
 			    __func__, session);
-		goto out_session_unlock;
+		goto out_session_cancel;
 	}
 	se_skb = j1939_session_skb_find(session);
 	if (!se_skb) {
 		netdev_warn(priv->ndev, "%s: 0x%p: no skb found\n", __func__,
 			    session);
-		goto out_session_unlock;
+		goto out_session_cancel;
 	}
 
 	skcb = j1939_skb_to_cb(se_skb);
@@ -1728,7 +1710,7 @@ static void j1939_xtp_rx_dat_one(struct j1939_session *session,
 	if (nbytes <= 0 || (nbytes + 1) > skb->len) {
 		netdev_info(priv->ndev, "%s: 0x%p: nbytes %i, len %i\n",
 			    __func__, session, nbytes, skb->len);
-		goto out_session_unlock;
+		goto out_session_cancel;
 	}
 
 	tpdat = se_skb->data;
@@ -1745,7 +1727,6 @@ static void j1939_xtp_rx_dat_one(struct j1939_session *session,
 		if (session->pkt.rx >= session->pkt.last)
 			do_cts_eoma = true;
 	}
-	j1939_session_unlock(session);
 
 	if (final) {
 		j1939_session_completed(session);
@@ -1761,9 +1742,6 @@ static void j1939_xtp_rx_dat_one(struct j1939_session *session,
 
 	return;
 
- out_session_unlock:
-	/* unlock session (spinlock) before trying to send */
-	j1939_session_unlock(session);
  out_session_cancel:
 	j1939_session_timers_cancel(session);
 	j1939_tp_set_rxtimeout(session, J1939_XTP_ABORT_TIMEOUT_MS);

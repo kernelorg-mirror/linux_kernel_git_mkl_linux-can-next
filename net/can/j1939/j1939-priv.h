@@ -226,7 +226,6 @@ struct j1939_session {
 	struct list_head active_session_list_entry;
 	struct list_head sk_session_queue_entry;
 	struct kref kref;
-	spinlock_t lock;
 	struct sock *sk;
 
 	/* ifindex, src, dst, pgn define the session block

@@ -1004,7 +1004,6 @@ static int j1939_simple_txnext(struct j1939_session *session)
 		return -ENOMEM;
 
 	can_skb_set_owner(skb, se_skb->sk);
-	skb_shinfo(skb)->tx_flags &= ~SKBTX_ANY_TSTAMP;
 
 	j1939_tp_set_rxtimeout(session,
 			       J1939_XTP_ABORT_TIMEOUT_MS);

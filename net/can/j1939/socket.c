@@ -135,8 +135,6 @@ static void j1939_sk_queue_drop_all(struct j1939_sock *jsk)
 	list_for_each_entry_safe_reverse(session, tmp, &jsk->sk_session_queue,
 					 sk_session_queue_entry) {
 		list_del_init(&session->sk_session_queue_entry);
-		j1939_session_timers_cancel(session);
-		j1939_session_deactivate(session);
 		j1939_session_put(session);
 	}
 	spin_unlock_bh(&jsk->sk_session_queue_lock);

@@ -203,7 +203,6 @@ void j1939_ecu_unmap_all(struct j1939_priv *priv);
 struct j1939_priv *j1939_netdev_start(struct net_device *ndev);
 void j1939_netdev_stop(struct j1939_priv *priv);
 
-struct j1939_priv *j1939_priv_get_by_ndev(struct net_device *ndev);
 void j1939_priv_put(struct j1939_priv *priv);
 void j1939_priv_get(struct j1939_priv *priv);
 
@@ -286,6 +285,7 @@ struct j1939_session {
 };
 
 struct j1939_sock {
+	struct j1939_priv *priv;
 	struct sock sk; /* must be first to skip with memset */
 	struct list_head list;
 

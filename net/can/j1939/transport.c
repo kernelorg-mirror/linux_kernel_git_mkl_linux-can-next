@@ -1146,7 +1146,7 @@ static enum hrtimer_restart j1939_tp_rxtimer(struct hrtimer *hrtimer)
 		/* The message is probably stuck in the CAN controller and can
 		 * be send as soon as CAN bus is in working state again.
 		 */
-		session->err = -ENETUNREACH;
+		session->err = -ETIME;
 		j1939_session_deactivate(session);
 	} else {
 		netdev_alert(priv->ndev, "%s: 0x%p: rx timeout, send abort\n",

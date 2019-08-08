@@ -16,6 +16,7 @@
  * bus is open, the timeout should be triggered.
  */
 #define J1939_XTP_ABORT_TIMEOUT_MS 500
+#define J1939_SIMPLE_ECHO_TIMEOUT_MS (10 * 1000)
 
 struct j1939_session;
 enum j1939_sk_errqueue_type {

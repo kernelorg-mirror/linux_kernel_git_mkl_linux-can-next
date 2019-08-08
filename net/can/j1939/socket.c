@@ -353,6 +353,12 @@ static int j1939_sk_init(struct sock *sk)
 {
 	struct j1939_sock *jsk = j1939_sk(sk);
 
+	/* Ensure that "sk" is first member in "struct j1939_sock", so that we
+	 * can skip it during memset().
+	 */
+	BUILD_BUG_ON(offsetof(struct j1939_sock, sk) != 0);
+	memset((void *)jsk + sizeof(jsk->sk), 0x0, sizeof(*jsk) - sizeof(jsk->sk));
+
 	INIT_LIST_HEAD(&jsk->list);
 	init_waitqueue_head(&jsk->waitq);
 	jsk->sk.sk_priority = j1939_to_sk_priority(6);

@@ -285,8 +285,8 @@ struct j1939_session {
 };
 
 struct j1939_sock {
-	struct j1939_priv *priv;
 	struct sock sk; /* must be first to skip with memset */
+	struct j1939_priv *priv;
 	struct list_head list;
 
 #define J1939_SOCK_BOUND BIT(0)

@@ -127,7 +127,7 @@ j1939_session *j1939_sk_get_incomplete_session(struct j1939_sock *jsk)
 	return session;
 }
 
-static void j1939_sk_queue_drop_all(struct j1939_sock *jsk)
+static void j1939_sk_queue_drop_all(struct j1939_sock *jsk, int err)
 {
 	struct j1939_session *session, *tmp;
 
@@ -135,6 +135,7 @@ static void j1939_sk_queue_drop_all(struct j1939_sock *jsk)
 	list_for_each_entry_safe(session, tmp, &jsk->sk_session_queue,
 				 sk_session_queue_entry) {
 		list_del_init(&session->sk_session_queue_entry);
+		session->err = err;
 		j1939_session_put(session);
 	}
 	spin_unlock_bh(&jsk->sk_session_queue_lock);
@@ -555,7 +556,7 @@ static int j1939_sk_release(struct socket *sock)
 
 		if (wait_event_interruptible(jsk->waitq,
 					     !j1939_sock_pending_get(&jsk->sk)))
-			j1939_sk_queue_drop_all(jsk);
+			j1939_sk_queue_drop_all(jsk, ESHUTDOWN);
 
 		ndev = dev_get_by_index(sock_net(sk), jsk->ifindex);
 		priv = j1939_priv_get_by_ndev(ndev);
@@ -995,7 +996,7 @@ static int j1939_sk_send_loop(struct j1939_priv *priv,  struct sock *sk,
 				} else {
 					ret = -EBUSY;
 					session->err = ret;
-					j1939_sk_queue_drop_all(jsk);
+					j1939_sk_queue_drop_all(jsk, EBUSY);
 					break;
 				}
 			}
@@ -1113,7 +1114,7 @@ void j1939_sk_netdev_event(struct net_device *ndev, int error_code)
 		if (!sock_flag(&jsk->sk, SOCK_DEAD))
 			jsk->sk.sk_error_report(&jsk->sk);
 
-		j1939_sk_queue_drop_all(jsk);
+		j1939_sk_queue_drop_all(jsk, error_code);
 
 		if (error_code == ENODEV) {
 			j1939_local_ecu_put(priv, jsk->addr.src_name,

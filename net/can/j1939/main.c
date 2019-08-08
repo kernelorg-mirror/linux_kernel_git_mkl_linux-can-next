@@ -357,8 +357,8 @@ static int j1939_netdev_notify(struct notifier_block *nb,
 		break;
 
 	case NETDEV_DOWN:
-		j1939_sk_netdev_event(ndev, ENETDOWN);
 		j1939_cancel_all_active_sessions(priv);
+		j1939_sk_netdev_event(ndev, ENETDOWN);
 		j1939_ecu_unmap_all(priv);
 		break;
 	}

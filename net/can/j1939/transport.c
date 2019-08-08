@@ -1983,18 +1983,20 @@ void j1939_simple_recv(struct j1939_priv *priv, struct sk_buff *skb)
 	j1939_session_put(session);
 }
 
-int j1939_cancel_all_active_sessions(struct j1939_priv *priv)
+int j1939_cancel_active_session(struct j1939_priv *priv, struct sock *sk)
 {
 	struct j1939_session *session, *saved;
 
-	netdev_dbg(priv->ndev, "%s\n", __func__);
+	netdev_dbg(priv->ndev, "%s, sk: %p\n", __func__, sk);
 	j1939_session_list_lock(priv);
 	list_for_each_entry_safe(session, saved,
 				 &priv->active_session_list,
 				 active_session_list_entry) {
-		j1939_session_timers_cancel(session);
-		session->err = ESHUTDOWN;
-		j1939_session_deactivate_locked(session);
+		if (!sk || sk == session->sk) {
+			j1939_session_timers_cancel(session);
+			session->err = ESHUTDOWN;
+			j1939_session_deactivate_locked(session);
+		}
 	}
 	j1939_session_list_unlock(priv);
 	return NOTIFY_DONE;

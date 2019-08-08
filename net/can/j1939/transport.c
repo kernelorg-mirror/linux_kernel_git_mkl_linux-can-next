@@ -1987,6 +1987,7 @@ int j1939_cancel_all_active_sessions(struct j1939_priv *priv)
 {
 	struct j1939_session *session, *saved;
 
+	netdev_dbg(priv->ndev, "%s\n", __func__);
 	j1939_session_list_lock(priv);
 	list_for_each_entry_safe(session, saved,
 				 &priv->active_session_list,

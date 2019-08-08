@@ -345,9 +345,6 @@ static int j1939_netdev_notify(struct notifier_block *nb,
 	if (!priv)
 		goto notify_done;
 
-	if (!net_eq(dev_net(ndev), &init_net))
-		goto notify_put;
-
 	if (ndev->type != ARPHRD_CAN)
 		goto notify_put;
 

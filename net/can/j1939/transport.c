@@ -1078,7 +1078,8 @@ static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 			ret = j1939_xtp_txnext_receiver(session);
 	}
 
-	if (ret == -ENOBUFS) {
+	switch (ret) {
+	case -ENOBUFS:
 		/* Retry limit is currently arbitrary chosen */
 		if (session->tx_retry < J1939_XTP_TX_RETRY_LIMIT) {
 			session->tx_retry++;
@@ -1091,7 +1092,19 @@ static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 			j1939_session_rxtimer_cancel(session);
 			j1939_session_deactivate_activate_next(session);
 		}
-	} else if (ret) {
+		break;
+	case -ENETDOWN:
+		/* In this case we should get a netdev_event(), all active
+		 * sessions will be cleared by
+		 * j1939_cancel_all_active_sessions(). So handle this as an
+		 * error, but let j1939_cancel_all_active_sessions() do the
+		 * cleanup including propagation of the error to user space.
+		 */
+		break;
+	case 0:
+		session->tx_retry = 0;
+		break;
+	default:
 		netdev_alert(priv->ndev, "%s: 0x%p: tx aborted with unknown reason: %i\n",
 			     __func__, session, ret);
 		if (session->skcb.addr.type != J1939_SIMPLE) {
@@ -1103,8 +1116,6 @@ static enum hrtimer_restart j1939_tp_txtimer(struct hrtimer *hrtimer)
 			j1939_session_rxtimer_cancel(session);
 			j1939_session_deactivate_activate_next(session);
 		}
-	} else {
-		session->tx_retry = 0;
 	}
 
 	j1939_session_put(session);

@@ -132,8 +132,8 @@ static void j1939_sk_queue_drop_all(struct j1939_sock *jsk)
 	struct j1939_session *session, *tmp;
 
 	spin_lock_bh(&jsk->sk_session_queue_lock);
-	list_for_each_entry_safe_reverse(session, tmp, &jsk->sk_session_queue,
-					 sk_session_queue_entry) {
+	list_for_each_entry_safe(session, tmp, &jsk->sk_session_queue,
+				 sk_session_queue_entry) {
 		list_del_init(&session->sk_session_queue_entry);
 		j1939_session_put(session);
 	}

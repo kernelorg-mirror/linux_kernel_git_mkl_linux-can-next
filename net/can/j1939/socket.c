@@ -560,8 +560,10 @@ static int j1939_sk_release(struct socket *sock)
 		priv = j1939_priv_get_by_ndev(ndev);
 
 		if (wait_event_interruptible(jsk->waitq,
-					     !j1939_sock_pending_get(&jsk->sk)))
+					     !j1939_sock_pending_get(&jsk->sk))) {
+			j1939_cancel_active_session(priv, sk);
 			j1939_sk_queue_drop_all(priv, jsk, ESHUTDOWN);
+		}
 
 		j1939_jsk_del(priv, jsk);
 

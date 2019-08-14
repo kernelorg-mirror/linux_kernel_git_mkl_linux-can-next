@@ -1117,6 +1117,13 @@ void j1939_sk_netdev_event(struct net_device *ndev, int error_code)
 	j1939_priv_put(priv);
 }
 
+static int j1939_sk_no_ioctlcmd(struct socket *sock, unsigned int cmd,
+				unsigned long arg)
+{
+	/* no ioctls for socket layer -> hand it down to NIC layer */
+	return -ENOIOCTLCMD;
+}
+
 static const struct proto_ops j1939_ops = {
 	.family = PF_CAN,
 	.release = j1939_sk_release,
@@ -1126,7 +1133,7 @@ static const struct proto_ops j1939_ops = {
 	.accept = sock_no_accept,
 	.getname = j1939_sk_getname,
 	.poll = datagram_poll,
-	.ioctl = can_ioctl,
+	.ioctl = j1939_sk_no_ioctlcmd,
 	.listen = sock_no_listen,
 	.shutdown = sock_no_shutdown,
 	.setsockopt = j1939_sk_setsockopt,

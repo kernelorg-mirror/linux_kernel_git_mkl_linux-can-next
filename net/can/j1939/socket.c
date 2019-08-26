@@ -357,7 +357,8 @@ static int j1939_sk_init(struct sock *sk)
 	 * can skip it during memset().
 	 */
 	BUILD_BUG_ON(offsetof(struct j1939_sock, sk) != 0);
-	memset((void *)jsk + sizeof(jsk->sk), 0x0, sizeof(*jsk) - sizeof(jsk->sk));
+	memset((void *)jsk + sizeof(jsk->sk), 0x0,
+	       sizeof(*jsk) - sizeof(jsk->sk));
 
 	INIT_LIST_HEAD(&jsk->list);
 	init_waitqueue_head(&jsk->waitq);
@@ -938,7 +939,8 @@ void j1939_sk_errqueue(struct j1939_session *session,
 	if (sk->sk_tsflags & SOF_TIMESTAMPING_OPT_ID)
 		serr->ee.ee_data = session->tskey;
 
-	netdev_dbg(session->priv->ndev, "%s: 0x%p tskey: %i, state: %s\n", __func__, session, session->tskey, state);
+	netdev_dbg(session->priv->ndev, "%s: 0x%p tskey: %i, state: %s\n",
+		   __func__, session, session->tskey, state);
 	err = sock_queue_err_skb(sk, skb);
 
 	if (err)
@@ -1003,7 +1005,8 @@ static int j1939_sk_send_loop(struct j1939_priv *priv,  struct sock *sk,
 				} else {
 					ret = -EBUSY;
 					session->err = ret;
-					j1939_sk_queue_drop_all(priv, jsk, EBUSY);
+					j1939_sk_queue_drop_all(priv, jsk,
+								EBUSY);
 					break;
 				}
 			}

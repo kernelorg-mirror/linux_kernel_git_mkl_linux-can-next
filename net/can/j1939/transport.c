@@ -835,7 +835,7 @@ static int j1939_xtp_txnext_transmiter(struct j1939_session *session)
 				return ret;
 		}
 
-		/* fallthrough */
+		/* fall through */
 	case J1939_TP_CMD_CTS:
 	case 0xff: /* did some data */
 	case J1939_ETP_CMD_DPO:
@@ -1197,12 +1197,12 @@ static bool j1939_xtp_rx_cmd_bad_pgn(struct j1939_session *session,
 		break;
 
 	case J1939_ETP_CMD_RTS:
-	case J1939_TP_CMD_RTS: /* falltrough */
+	case J1939_TP_CMD_RTS: /* fall through */
 		abort = J1939_XTP_ABORT_BUSY;
 		break;
 
 	case J1939_ETP_CMD_CTS:
-	case J1939_TP_CMD_CTS: /* falltrough */
+	case J1939_TP_CMD_CTS: /* fall through */
 		abort = J1939_XTP_ABORT_ECTS_UNXPECTED_PGN;
 		break;
 
@@ -1211,7 +1211,7 @@ static bool j1939_xtp_rx_cmd_bad_pgn(struct j1939_session *session,
 		break;
 
 	case J1939_ETP_CMD_EOMA:
-	case J1939_TP_CMD_EOMA: /* falltrough */
+	case J1939_TP_CMD_EOMA: /* fall through */
 		abort = J1939_XTP_ABORT_OTHER;
 		break;
 
@@ -1699,10 +1699,12 @@ static void j1939_xtp_rx_dat_one(struct j1939_session *session,
 	case J1939_ETP_CMD_DPO:
 		if (skcb->addr.type == J1939_ETP)
 			break;
-	case J1939_TP_CMD_BAM:
-	case J1939_TP_CMD_CTS:
+		/* fall through */
+	case J1939_TP_CMD_BAM: /* fall through */
+	case J1939_TP_CMD_CTS: /* fall through */
 		if (skcb->addr.type != J1939_ETP)
 			break;
+		/* fall through */
 	default:
 		netdev_info(priv->ndev, "%s: 0x%p: last %02x\n", __func__,
 			    session, session->last_cmd);
@@ -1871,8 +1873,9 @@ static void j1939_tp_cmd_recv(struct j1939_priv *priv, struct sk_buff *skb)
 	switch (cmd) {
 	case J1939_ETP_CMD_RTS:
 		extd = J1939_ETP;
-	case J1939_TP_CMD_BAM: /* falltrough */
-	case J1939_TP_CMD_RTS: /* falltrough */
+		/* fall through */
+	case J1939_TP_CMD_BAM: /* fall through */
+	case J1939_TP_CMD_RTS: /* fall through */
 		if (skcb->addr.type != extd)
 			return;
 
@@ -1892,7 +1895,8 @@ static void j1939_tp_cmd_recv(struct j1939_priv *priv, struct sk_buff *skb)
 
 	case J1939_ETP_CMD_CTS:
 		extd = J1939_ETP;
-	case J1939_TP_CMD_CTS: /* falltrough */
+		/* fall through */
+	case J1939_TP_CMD_CTS:
 		if (skcb->addr.type != extd)
 			return;
 
@@ -1918,7 +1922,8 @@ static void j1939_tp_cmd_recv(struct j1939_priv *priv, struct sk_buff *skb)
 
 	case J1939_ETP_CMD_EOMA:
 		extd = J1939_ETP;
-	case J1939_TP_CMD_EOMA: /* falltrough */
+		/* fall through */
+	case J1939_TP_CMD_EOMA:
 		if (skcb->addr.type != extd)
 			return;
 
@@ -1953,13 +1958,15 @@ int j1939_tp_recv(struct j1939_priv *priv, struct sk_buff *skb)
 	switch (skcb->addr.pgn) {
 	case J1939_ETP_PGN_DAT:
 		skcb->addr.type = J1939_ETP;
-	case J1939_TP_PGN_DAT: /* falltrough */
+		/* fall through */
+	case J1939_TP_PGN_DAT:
 		j1939_xtp_rx_dat(priv, skb);
 		break;
 
 	case J1939_ETP_PGN_CTL:
 		skcb->addr.type = J1939_ETP;
-	case J1939_TP_PGN_CTL: /* falltrough */
+		/* fall through */
+	case J1939_TP_PGN_CTL:
 		if (skb->len < 8)
 			return 0; /* Don't care. Nothing to extract here */
 

@@ -460,7 +460,7 @@ static int j1939_sk_bind(struct socket *sock, struct sockaddr *uaddr, int len)
 
 	j1939_jsk_add(priv, jsk);
 
- out_release_sock: /* fallthrough */
+ out_release_sock: /* fall through */
 	release_sock(sock->sk);
 
 	return ret;
@@ -507,8 +507,9 @@ static int j1939_sk_connect(struct socket *sock, struct sockaddr *uaddr,
 
 	jsk->state |= J1939_SOCK_CONNECTED;
 
- out_release_sock: /* fallthrough */
+ out_release_sock: /* fall through */
 	release_sock(sock->sk);
+
 	return ret;
 }
 

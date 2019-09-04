@@ -1006,7 +1006,7 @@ static int j1939_simple_txnext(struct j1939_session *session)
 	return 0;
 }
 
-bool j1939_session_deactivate_locked(struct j1939_session *session)
+static bool j1939_session_deactivate_locked(struct j1939_session *session)
 {
 	bool active = false;
 
@@ -1024,7 +1024,7 @@ bool j1939_session_deactivate_locked(struct j1939_session *session)
 	return active;
 }
 
-bool j1939_session_deactivate(struct j1939_session *session)
+static bool j1939_session_deactivate(struct j1939_session *session)
 {
 	bool active;
 

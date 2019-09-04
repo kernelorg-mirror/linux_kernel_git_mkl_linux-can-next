@@ -226,7 +226,7 @@ static struct j1939_priv *j1939_priv_get_by_ndev_locked(struct net_device *ndev)
 	return priv;
 }
 
-struct j1939_priv *j1939_priv_get_by_ndev(struct net_device *ndev)
+static struct j1939_priv *j1939_priv_get_by_ndev(struct net_device *ndev)
 {
 	struct j1939_priv *priv;
 

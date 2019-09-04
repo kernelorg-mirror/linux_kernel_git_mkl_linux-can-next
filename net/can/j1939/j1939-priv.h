@@ -323,7 +323,6 @@ void j1939_session_put(struct j1939_session *session);
 void j1939_session_skb_queue(struct j1939_session *session,
 			     struct sk_buff *skb);
 int j1939_session_activate(struct j1939_session *session);
-bool j1939_session_deactivate(struct j1939_session *session);
 void j1939_tp_schedule_txtimer(struct j1939_session *session, int msec);
 void j1939_session_timers_cancel(struct j1939_session *session);
 

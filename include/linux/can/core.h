@@ -45,7 +45,7 @@ struct can_proto {
  * macro to find the minimum size of a struct
  * that includes a requested member
  */
-#define REQUIRED_SIZE(struct_type, member) \
+#define CAN_REQUIRED_SIZE(struct_type, member) \
 	(offsetof(typeof(struct_type), member) + \
 	 sizeof(((typeof(struct_type) *)(NULL))->member))
 

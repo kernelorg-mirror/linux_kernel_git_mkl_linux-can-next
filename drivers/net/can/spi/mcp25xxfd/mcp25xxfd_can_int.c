@@ -97,6 +97,7 @@ static int mcp25xxfd_can_int_submit_frames(struct mcp25xxfd_can_priv *cpriv)
 	 * this is mostly to avoid unnecessary interrupts during a
 	 * disconnected CAN BUS
 	 */
+	// FIXME: This makes no sense, as if() always evaluates to false, due to the "|"
 	if (!(cpriv->status.intf | MCP25XXFD_CAN_INT_IVMIE)) {
 		cpriv->status.intf |= MCP25XXFD_CAN_INT_IVMIE;
 		ret = mcp25xxfd_cmd_write_mask(cpriv->priv->spi,
@@ -699,14 +700,15 @@ int mcp25xxfd_can_int_clear(struct mcp25xxfd_priv *priv)
 int mcp25xxfd_can_int_enable(struct mcp25xxfd_priv *priv, bool enable)
 {
 	struct mcp25xxfd_can_priv *cpriv = priv->cpriv;
-	const u32 mask = MCP25XXFD_CAN_INT_TEFIE |
-		MCP25XXFD_CAN_INT_RXIE |
+	const u32 mask = MCP25XXFD_CAN_INT_RXIE |
 		MCP25XXFD_CAN_INT_MODIE |
-		MCP25XXFD_CAN_INT_SERRIE |
-		MCP25XXFD_CAN_INT_IVMIE |
-		MCP25XXFD_CAN_INT_CERRIE |
+		MCP25XXFD_CAN_INT_TEFIE |
+		MCP25XXFD_CAN_INT_ECCIE |
 		MCP25XXFD_CAN_INT_RXOVIE |
-		MCP25XXFD_CAN_INT_ECCIE;
+		MCP25XXFD_CAN_INT_SERRIE |
+		MCP25XXFD_CAN_INT_CERRIE |
+		MCP25XXFD_CAN_INT_IVMIE;
+	// FIXME: MCP25XXFD_CAN_INT_TEFIE is not enabled
 	u32 value = cpriv ? cpriv->status.intf : 0;
 	int ret;
 

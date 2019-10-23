@@ -727,16 +727,5 @@ int mcp25xxfd_can_int_enable(struct mcp25xxfd_priv *priv, bool enable)
 
 	cpriv->status.intf = value;
 
-	/* enable/disable interrupt handler */
-	if (cpriv->irq.allocated) {
-		if (enable && !cpriv->irq.enabled)
-			enable_irq(cpriv->priv->spi->irq);
-		if (!enable && cpriv->irq.enabled)
-			disable_irq(cpriv->priv->spi->irq);
-		cpriv->irq.enabled = enable;
-	} else {
-		cpriv->irq.enabled = false;
-	}
-
 	return 0;
 }

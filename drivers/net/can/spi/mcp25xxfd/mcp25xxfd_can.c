@@ -490,17 +490,13 @@ static int mcp25xxfd_can_open(struct net_device *net)
 	/* request an IRQ but keep disabled for now */
 	ret = request_threaded_irq(spi->irq, NULL,
 				   mcp25xxfd_can_int,
-				   IRQF_ONESHOT | IRQF_TRIGGER_LOW,
+				   IRQF_ONESHOT /* | IRQF_TRIGGER_LOW */,
 				   cpriv->priv->device_name, cpriv);
 	if (ret) {
 		dev_err(&spi->dev, "failed to acquire irq %d - %i\n",
 			spi->irq, ret);
 		goto out_candev;
 	}
-	disable_irq(spi->irq);
-	cpriv->irq.allocated = true;
-	cpriv->irq.enabled = false;
-
 	/* enable power to the transceiver */
 	ret = mcp25xxfd_base_power_enable(cpriv->transceiver, 1);
 	if (ret)
@@ -548,8 +544,6 @@ out_transceiver:
 	mcp25xxfd_base_power_enable(cpriv->transceiver, 0);
 out_irq:
 	free_irq(spi->irq, cpriv);
-	cpriv->irq.allocated = false;
-	cpriv->irq.enabled = false;
 out_candev:
 	close_candev(net);
 	return ret;
@@ -589,8 +583,6 @@ static int mcp25xxfd_can_stop(struct net_device *net)
 
 	/* disable interrupt on host */
 	free_irq(spi->irq, cpriv);
-	cpriv->irq.allocated = false;
-	cpriv->irq.enabled = false;
 
 	/* close the can_decice */
 	close_candev(net);

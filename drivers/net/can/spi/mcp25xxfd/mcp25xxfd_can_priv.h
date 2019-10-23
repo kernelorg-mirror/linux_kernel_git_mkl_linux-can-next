@@ -55,12 +55,6 @@ struct mcp25xxfd_can_priv {
 	/* the can mode currently active */
 	int mode;
 
-	/* interrupt state */
-	struct {
-		int enabled;
-		int allocated;
-	} irq;
-
 	/* can config registers */
 	struct {
 		u32 con;

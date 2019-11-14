@@ -175,7 +175,7 @@ static int mcp25xxfd_can_int_handle_serrif(struct mcp25xxfd_can_priv *cpriv)
 	 *   the recived message shall be ignored
 	 * * TX MAB Underflow: when a TX Message is invalid
 	 *   due to ECC errors or TXMAB underflow
-	 *   in this situatioon the system will transition to
+	 *   in this situation the system will transition to
 	 *   Restricted or Listen Only mode
 	 */
 

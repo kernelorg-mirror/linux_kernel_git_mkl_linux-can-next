@@ -162,30 +162,14 @@ mcp25xxfd_cmd_prepare_write(struct mcp25xxfd_reg_write_buf *write_reg_buf,
 }
 
 static inline int
-mcp25xxfd_tef_obj_tail_get_rel_addr_from_chip(const struct mcp25xxfd_priv *priv,
-					      u16 *tef_obj_tail_rel_addr)
-{
-	int err;
-	u32 tef_ua;
-
-	err = regmap_read(priv->map, MCP25XXFD_CAN_TEFUA, &tef_ua);
-	if (err)
-		return err;
-
-	*tef_obj_tail_rel_addr = tef_ua;
-
-	return 0;
-}
-
-static inline int
 mcp25xxfd_tef_tail_get_from_chip(const struct mcp25xxfd_priv *priv,
 				 u8 *tef_tail)
 {
 	int err;
-	u16 tef_obj_tail_rel_addr;
+	u32 tef_obj_tail_rel_addr;
 
-	err = mcp25xxfd_tef_obj_tail_get_rel_addr_from_chip(priv,
-							    &tef_obj_tail_rel_addr);
+	err = regmap_read(priv->map, MCP25XXFD_CAN_TEFUA,
+			  &tef_obj_tail_rel_addr);
 	if (err)
 		return err;
 
@@ -195,30 +179,13 @@ mcp25xxfd_tef_tail_get_from_chip(const struct mcp25xxfd_priv *priv,
 }
 
 static inline int
-mcp25xxfd_rx_obj_tail_get_rel_addr_from_chip(const struct mcp25xxfd_priv *priv,
-					     u16 *rx_obj_tail_rel_addr)
-{
-	int err;
-	u32 fifo_ua;
-
-	err = regmap_read(priv->map, MCP25XXFD_CAN_FIFOUA(MCP25XXFD_RX_FIFO(0)),
-			  &fifo_ua);
-	if (err)
-		return err;
-
-	*rx_obj_tail_rel_addr = fifo_ua;
-
-	return 0;
-}
-
-static inline int
 mcp25xxfd_rx_tail_get_from_chip(const struct mcp25xxfd_priv *priv, u8 *rx_tail)
 {
 	int err;
-	u16 rx_obj_tail_rel_addr;
+	u32 rx_obj_tail_rel_addr;
 
-	err = mcp25xxfd_rx_obj_tail_get_rel_addr_from_chip(priv,
-							   &rx_obj_tail_rel_addr);
+	err = regmap_read(priv->map, MCP25XXFD_CAN_FIFOUA(MCP25XXFD_RX_FIFO(0)),
+			  &rx_obj_tail_rel_addr);
 	if (err)
 		return err;
 

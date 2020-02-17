@@ -2270,8 +2270,10 @@ static int mcp25xxfd_open(struct net_device *ndev)
 	int err;
 
 	err = pm_runtime_get_sync(ndev->dev.parent);
-	if (err < 0)
+	if (err < 0) {
+		pm_runtime_put_noidle(ndev->dev.parent);
 		return err;
+	}
 
 	err = open_candev(ndev);
 	if (err)

@@ -189,8 +189,7 @@ mcp25xxfd_rx_tail_get_from_chip(const struct mcp25xxfd_priv *priv, u8 *rx_tail)
 	if (err)
 		return err;
 
-	rx_obj_tail_rel_addr -= (sizeof(struct mcp25xxfd_hw_tef_obj) +
-				 priv->tx.obj_size) * priv->tx.obj_num;
+	rx_obj_tail_rel_addr -= priv->rx.base;
 	*rx_tail = rx_obj_tail_rel_addr / priv->rx.obj_size;
 
 	return 0;
@@ -241,6 +240,8 @@ static void mcp25xxfd_ring_init(struct mcp25xxfd_priv *priv)
 	priv->tx.tail = 0;
 	priv->rx.head = 0;
 	priv->rx.tail = 0;
+	priv->rx.base = (sizeof(struct mcp25xxfd_hw_tef_obj) +
+			 priv->tx.obj_size) * priv->tx.obj_num;
 }
 
 static inline int

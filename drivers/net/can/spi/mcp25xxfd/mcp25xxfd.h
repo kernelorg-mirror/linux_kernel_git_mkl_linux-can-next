@@ -290,7 +290,7 @@ static inline void __dump(const void *d, unsigned int len)
 
 #define MCP25XXFD_CAN_FIFOUA(x) (0x58 + 0xc * (x))
 
-#define MCP25XXFD_CAN_FLTCON(x) (0x1d0 + (x))
+#define MCP25XXFD_CAN_FLTCON(x) (0x1d0 + 0x4 * (x))
 #define MCP25XXFD_CAN_FLTCON_FLTEN3 BIT(31)
 #define MCP25XXFD_CAN_FLTCON_F3BP_MASK GENMASK(28, 24)
 #define MCP25XXFD_CAN_FLTCON_FLTEN2 BIT(23)

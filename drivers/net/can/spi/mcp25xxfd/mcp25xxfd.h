@@ -580,6 +580,8 @@ struct mcp25xxfd_rx_ring {
 	unsigned int tail;
 
 	u16 base;	/* relative to MCP25XXFD_RAM_START */
+	u8 nr;
+	u8 fifo_nr;
 	u8 obj_num;
 	u8 obj_size;
 

@@ -184,7 +184,7 @@ mcp25xxfd_rx_tail_get_from_chip(const struct mcp25xxfd_priv *priv, u8 *rx_tail)
 	int err;
 	u32 rx_obj_tail_rel_addr;
 
-	err = regmap_read(priv->map, MCP25XXFD_CAN_FIFOUA(MCP25XXFD_RX_FIFO(0)),
+	err = regmap_read(priv->map, MCP25XXFD_CAN_FIFOUA(priv->rx.fifo_nr),
 			  &rx_obj_tail_rel_addr);
 	if (err)
 		return err;
@@ -240,6 +240,8 @@ static void mcp25xxfd_ring_init(struct mcp25xxfd_priv *priv)
 	priv->tx.tail = 0;
 	priv->rx.head = 0;
 	priv->rx.tail = 0;
+	priv->rx.nr = 0;
+	priv->rx.fifo_nr = MCP25XXFD_RX_FIFO(0);
 	priv->rx.base = (sizeof(struct mcp25xxfd_hw_tef_obj) +
 			 priv->tx.obj_size) * priv->tx.obj_num;
 }
@@ -533,7 +535,6 @@ static int
 mcp25xxfd_chip_rx_fifo_init_one(const struct mcp25xxfd_priv *priv)
 {
 	u32 fifo_con;
-	const u8 fifo_nr = MCP25XXFD_RX_FIFO(0);
 
 	/* Enable RXOVIE on _all_ RX FIFOs, not just the last one.
 	 *
@@ -555,22 +556,20 @@ mcp25xxfd_chip_rx_fifo_init_one(const struct mcp25xxfd_priv *priv)
 				       MCP25XXFD_CAN_FIFOCON_PLSIZE_8);
 
 	return regmap_write(priv->map,
-			    MCP25XXFD_CAN_FIFOCON(fifo_nr), fifo_con);
+			    MCP25XXFD_CAN_FIFOCON(priv->rx.fifo_nr), fifo_con);
 }
 
 static int
 mcp25xxfd_chip_rx_filter_init_one(const struct mcp25xxfd_priv *priv)
 {
 	u32 fltcon;
-	const u8 nr = 0;
-	const u8 fifo_nr = MCP25XXFD_RX_FIFO(nr);
 
-	fltcon = MCP25XXFD_CAN_FLTCON_FLTEN(nr) |
-		MCP25XXFD_CAN_FLTCON_FBP(nr, fifo_nr);
+	fltcon = MCP25XXFD_CAN_FLTCON_FLTEN(priv->rx.nr) |
+		MCP25XXFD_CAN_FLTCON_FBP(priv->rx.nr, priv->rx.fifo_nr);
 
 	return regmap_update_bits(priv->map,
-				  MCP25XXFD_CAN_FLTCON(nr >> 2),
-				  MCP25XXFD_CAN_FLTCON_FLT_MASK(nr),
+				  MCP25XXFD_CAN_FLTCON(priv->rx.nr >> 2),
+				  MCP25XXFD_CAN_FLTCON_FLT_MASK(priv->rx.nr),
 				  fltcon);
 }
 
@@ -1054,7 +1053,7 @@ static int mcp25xxfd_rx_ring_update(struct mcp25xxfd_priv *priv)
 	int err;
 
 	err = regmap_read(priv->map,
-			  MCP25XXFD_CAN_FIFOSTA(MCP25XXFD_RX_FIFO(0)),
+			  MCP25XXFD_CAN_FIFOSTA(priv->rx.fifo_nr),
 			  &fifo_sta);
 	if (err)
 		return err;
@@ -1142,7 +1141,7 @@ mcp25xxfd_handle_rxif_one(struct mcp25xxfd_priv *priv,
 
 	/* finally increment the RX pointer */
 	return regmap_update_bits(priv->map,
-				  MCP25XXFD_CAN_FIFOCON(MCP25XXFD_RX_FIFO(0)),
+				  MCP25XXFD_CAN_FIFOCON(priv->rx.fifo_nr),
 				  GENMASK(15, 8),
 				  MCP25XXFD_CAN_FIFOCON_UINC);
 }
@@ -1227,9 +1226,7 @@ static int mcp25xxfd_handle_rxovif(struct mcp25xxfd_priv *priv)
 		return err;
 
 	for (i = 0; i < MCP25XXFD_RX_FIFO_NUM; i++) {
-		const u8 rx_fifo = MCP25XXFD_RX_FIFO(i);
-
-		if (!(rxovif & BIT(rx_fifo)))
+		if (!(rxovif & BIT(priv->rx.fifo_nr)))
 			continue;
 
 		/* If SERRIF is active, there was a RX MAB overflow. */
@@ -1237,18 +1234,18 @@ static int mcp25xxfd_handle_rxovif(struct mcp25xxfd_priv *priv)
 			if (mcp25xxfd_is_2517(priv))
 				netdev_dbg(priv->ndev,
 					   "RX-%d: MAB overflow detected.\n",
-					   i);
+					   priv->rx.nr);
 			else
 				netdev_info(priv->ndev,
 					    "RX-%d: MAB overflow detected.\n",
-					    i);
+					    priv->rx.nr);
 		} else {
 			netdev_info(priv->ndev,
-				    "RX-%d: FIFO overflow.\n", i);
+				    "RX-%d: FIFO overflow.\n", priv->rx.nr);
 		}
 
 		err = regmap_update_bits(priv->map,
-					 MCP25XXFD_CAN_FIFOSTA(rx_fifo),
+					 MCP25XXFD_CAN_FIFOSTA(priv->rx.nr),
 					 MCP25XXFD_CAN_FIFOSTA_RXOVIF,
 					 0x0);
 		if (err)

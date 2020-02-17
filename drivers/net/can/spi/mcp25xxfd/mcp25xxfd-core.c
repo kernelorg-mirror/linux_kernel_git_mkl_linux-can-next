@@ -528,6 +528,51 @@ static int mcp25xxfd_chip_fifo_compute(struct mcp25xxfd_priv *priv)
 	return 0;
 }
 
+static int
+mcp25xxfd_chip_rx_fifo_init_one(const struct mcp25xxfd_priv *priv)
+{
+	u32 fifo_con;
+	const u8 fifo_nr = MCP25XXFD_RX_FIFO(0);
+
+	/* Enable RXOVIE on _all_ RX FIFOs, not just the last one.
+	 *
+	 * FIFOs hit by a RX MAB overflow and RXOVIE enabled will
+	 * generate a RXOVIF, use this to properly detect RX MAB
+	 * overflows.
+	 */
+	fifo_con = FIELD_PREP(MCP25XXFD_CAN_FIFOCON_FSIZE_MASK,
+			      priv->rx.obj_num - 1) |
+		MCP25XXFD_CAN_FIFOCON_RXTSEN |
+		MCP25XXFD_CAN_FIFOCON_RXOVIE |
+		MCP25XXFD_CAN_FIFOCON_TFNRFNIE;
+
+	if (priv->can.ctrlmode & CAN_CTRLMODE_FD)
+		fifo_con |= FIELD_PREP(MCP25XXFD_CAN_FIFOCON_PLSIZE_MASK,
+				       MCP25XXFD_CAN_FIFOCON_PLSIZE_64);
+	else
+		fifo_con |= FIELD_PREP(MCP25XXFD_CAN_FIFOCON_PLSIZE_MASK,
+				       MCP25XXFD_CAN_FIFOCON_PLSIZE_8);
+
+	return regmap_write(priv->map,
+			    MCP25XXFD_CAN_FIFOCON(fifo_nr), fifo_con);
+}
+
+static int
+mcp25xxfd_chip_rx_filter_init_one(const struct mcp25xxfd_priv *priv)
+{
+	u32 fltcon;
+	const u8 nr = 0;
+	const u8 fifo_nr = MCP25XXFD_RX_FIFO(nr);
+
+	fltcon = MCP25XXFD_CAN_FLTCON_FLTEN(nr) |
+		MCP25XXFD_CAN_FLTCON_FBP(nr, fifo_nr);
+
+	return regmap_update_bits(priv->map,
+				  MCP25XXFD_CAN_FLTCON(nr >> 2),
+				  MCP25XXFD_CAN_FLTCON_FLT_MASK(nr),
+				  fltcon);
+}
+
 static int mcp25xxfd_chip_fifo_init(struct mcp25xxfd_priv *priv)
 {
 	u32 val;
@@ -575,36 +620,16 @@ static int mcp25xxfd_chip_fifo_init(struct mcp25xxfd_priv *priv)
 	if (err)
 		return err;
 
-	/* FIFO 2 - RX */
-	/* Enable RXOVIE on _all_ RX FIFOs, not just the last one.
-	 *
-	 * FIFOs hit by a RX MAB overflow and RXOVIE enabled will
-	 * generate a RXOVIF, use this to properly detect RX MAB
-	 * overflows.
-	 */
-	val = FIELD_PREP(MCP25XXFD_CAN_FIFOCON_FSIZE_MASK,
-			 priv->rx.obj_num - 1) |
-		MCP25XXFD_CAN_FIFOCON_RXTSEN |
-		MCP25XXFD_CAN_FIFOCON_RXOVIE |
-		MCP25XXFD_CAN_FIFOCON_TFNRFNIE;
-
-	if (priv->can.ctrlmode & CAN_CTRLMODE_FD)
-		val |= FIELD_PREP(MCP25XXFD_CAN_FIFOCON_PLSIZE_MASK,
-				  MCP25XXFD_CAN_FIFOCON_PLSIZE_64);
-	else
-		val |= FIELD_PREP(MCP25XXFD_CAN_FIFOCON_PLSIZE_MASK,
-				  MCP25XXFD_CAN_FIFOCON_PLSIZE_8);
-
-	err = regmap_write(priv->map,
-			   MCP25XXFD_CAN_FIFOCON(MCP25XXFD_RX_FIFO(0)), val);
+	/* RX FIFOs */
+	err = mcp25xxfd_chip_rx_fifo_init_one(priv);
 	if (err)
 		return err;
 
-	/* RX Filter */
-	val = MCP25XXFD_CAN_FLTCON_FLTEN0 |
-		FIELD_PREP(MCP25XXFD_CAN_FLTCON_F0BP_MASK,
-			   MCP25XXFD_RX_FIFO(0));
-	return regmap_write(priv->map, MCP25XXFD_CAN_FLTCON(0), val);
+	err = mcp25xxfd_chip_rx_filter_init_one(priv);
+	if (err)
+		return err;
+
+	return 0;
 }
 
 static int mcp25xxfd_chip_ecc_init(const struct mcp25xxfd_priv *priv)

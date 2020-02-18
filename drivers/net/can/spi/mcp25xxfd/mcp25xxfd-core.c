@@ -546,18 +546,6 @@ static int mcp25xxfd_chip_fifo_compute(struct mcp25xxfd_priv *priv)
 
 	ram_free -= rx_obj_num * rx_obj_size;
 
-	if ((priv->can.ctrlmode & CAN_CTRLMODE_FD &&
-	     rx_obj_num > MCP25XXFD_RX_OBJ_NUM_CANFD) ||
-	    (!(priv->can.ctrlmode & CAN_CTRLMODE_FD) &&
-	     rx_obj_num > MCP25XXFD_RX_OBJ_NUM_CAN)) {
-		netdev_err(priv->ndev,
-			   "Too many rx-objects (calculated=%d, max=%d).\n",
-			   rx_obj_num, priv->can.ctrlmode & CAN_CTRLMODE_FD ?
-			   MCP25XXFD_RX_OBJ_NUM_CANFD :
-			   MCP25XXFD_RX_OBJ_NUM_CAN);
-		return -ENOMEM;
-	}
-
 	priv->tx.obj_num = tx_obj_num;
 	priv->tx.obj_size = tx_obj_size;
 	priv->rx.obj_num = rx_obj_num;

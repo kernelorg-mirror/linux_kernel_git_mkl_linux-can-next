@@ -1491,6 +1491,8 @@ static int mcp25xxfd_handle_serrif(struct mcp25xxfd_priv *priv)
 	 */
 	if ((priv->intf & MCP25XXFD_CAN_INT_MODIF) &&
 	    (priv->intf & MCP25XXFD_CAN_INT_IVMIF)) {
+		netdev_dbg(priv->ndev, "TX MAB underflow detected.\n");
+
 		stats->tx_aborted_errors++;
 		stats->tx_errors++;
 
@@ -1503,6 +1505,8 @@ static int mcp25xxfd_handle_serrif(struct mcp25xxfd_priv *priv)
 	 * overflow is indicated by SERRIF.
 	 */
 	if (priv->intf & MCP25XXFD_CAN_INT_RXIF) {
+		netdev_dbg(priv->ndev, "RX MAB overflow detected.\n");
+
 		stats->rx_dropped++;
 		stats->rx_errors++;
 

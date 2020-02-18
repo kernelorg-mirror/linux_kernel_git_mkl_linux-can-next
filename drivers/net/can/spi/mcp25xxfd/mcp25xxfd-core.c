@@ -1639,7 +1639,7 @@ static irqreturn_t mcp25xxfd_irq(int irq, void *dev_id)
 		/* Some interrupts must be ACKed in the
 		 * MCP25XXFD_CAN_INT register.
 		 * - First ACK then handle, to avoid lost-IRQ race
-		 *   condition on fast re-occuring interrupts.
+		 *   condition on fast re-occurring interrupts.
 		 * - Write "0" to clear active IRQs, "1" to all other,
 		 *   to avoid r/m/w race condition on the
 		 *   MCP25XXFD_CAN_INT register.
@@ -2188,7 +2188,7 @@ static int mcp25xxfd_probe(struct spi_device *spi)
 	if (freq < MCP25XXFD_SYSCLOCK_HZ_MAX /
 	    MCP25XXFD_OSC_PLL_MULTIPLIER) {
 		dev_err(&spi->dev,
-			"Oscillator frequency is too low and PLL in not supported.\n");
+			"Oscillator frequency is too low and PLL is not supported.\n");
 		return -ERANGE;
 	}
 

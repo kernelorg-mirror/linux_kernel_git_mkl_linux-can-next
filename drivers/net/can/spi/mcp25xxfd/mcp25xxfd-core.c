@@ -2145,7 +2145,7 @@ static int mcp25xxfd_probe(struct spi_device *spi)
 	/* Sanity check */
 	if (freq < MCP25XXFD_SYSCLOCK_HZ_MIN ||
 	    freq > MCP25XXFD_SYSCLOCK_HZ_MAX) {
-		dev_err(&spi->dev, "Oscillator frequency is too low.\n");
+		dev_err(&spi->dev, "Oscillator frequency is too low or high.\n");
 		return -ERANGE;
 	}
 

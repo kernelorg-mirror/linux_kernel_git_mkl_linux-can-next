@@ -33,44 +33,6 @@
 #define MCP25XXFD_OSC_PLL_MULTIPLIER 10
 #define MCP25XXFD_OSC_DELAY_MS 3
 
-/* DS80000792B - MCP2517FD Errata
- *
- * Incorrect CRC for certain READ_CRC commands
- *
- * It is possible that there is a mismatch between the transmitted CRC
- * and the actual CRC for the transmitted data when data is updated at
- * a specific time during the SPI READ_CRC command. In these cases the
- * transmitted CRC is wrong. The data transmitted is correct.
- *
- * Fix/Work Around:
- *
- * If a CRC mismatch occurs, reissue the READ_CRC command. Only bits
- * 7/15/23/31 of the following registers can be affected:
- *
- * - CiTXIF		(*)
- * - CiRXIF		(*)
- * - CiCON
- * - CiTBC
- * - CiINT
- * - CiRXOVIF		(*)
- * - CiTXATIF		(*)
- * - CiTXREQ		(*)
- * - CiTREC
- * - CiBDIAG0
- * - CiBDIAG1
- * - CiTXQSTA
- * - CiFIFOSTAm
- *
- * The occurrence can be minimized by not using FIFOs 7/15/23/31. In
- * these cases, the registers CiTXIF, CiRXIF, CiRXOVIF, CiTXATIF and
- * CiTXREQ are not affected.
- *
- * Bit 31 of RAM reads with CRC could also be affected. This can be
- * avoided by reading from a received FIFO only after the message has
- * been loaded into the FIFO, indicated by the receive flags. This is
- * the recommended procedure independent of the issue described here.
- */
-
 static const struct can_bittiming_const mcp25xxfd_bittiming_const = {
 	.name = DEVICE_NAME,
 	.tseg1_min = 2,

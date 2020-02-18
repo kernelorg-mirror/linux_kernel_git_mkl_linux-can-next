@@ -522,10 +522,17 @@ static int mcp25xxfd_chip_fifo_compute(struct mcp25xxfd_priv *priv)
 	priv->rx.obj_size = rx_obj_size;
 
 	netdev_dbg(priv->ndev,
-		   "FIFO setup: tef: %d*%d bytes = %d bytes, tx: %d*%d bytes = %d, rx: %d*%d bytes = %d bytes, free: %d bytes.\n",
+		   "FIFO setup: TEF: %d*%d bytes = %d bytes, TX: %d*%d bytes = %d bytes\n",
 		   tx_obj_num, tef_obj_size, tef_obj_size * tx_obj_num,
-		   tx_obj_num, tx_obj_size, tx_obj_size * tx_obj_num,
-		   rx_obj_num, rx_obj_size, rx_obj_size * rx_obj_num,
+		   tx_obj_num, tx_obj_size, tx_obj_size * tx_obj_num);
+
+	netdev_dbg(priv->ndev,
+		   "FIFO setup: RX-%d: %d*%d bytes = %d bytes\n",
+		   0, priv->rx.obj_num, priv->rx.obj_size,
+		   priv->rx.obj_size * priv->rx.obj_num);
+
+	netdev_dbg(priv->ndev,
+		   "FIFO setup: free: %d bytes.\n",
 		   ram_free);
 
 	return 0;

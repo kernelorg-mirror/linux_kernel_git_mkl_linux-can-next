@@ -920,10 +920,10 @@ mcp25xxfd_handle_tefif_recover(const struct mcp25xxfd_priv *priv, const u32 seq)
 	}
 
 	netdev_info(priv->ndev,
-		   "Transmit Event FIFO buffer %s (seq=0x%08x, tef_tail=0x%08x, tef_head=0x%08x, tx_head=0x%08x)\n",
-		   tef_sta & MCP25XXFD_CAN_TEFSTA_TEFNEIF ?
-		   "empty." : "not empty anymore?",
-		   seq, priv->tef.tail, priv->tef.head, priv->tx.head);
+		    "Transmit Event FIFO buffer %s (seq=0x%08x, tef_tail=0x%08x, tef_head=0x%08x, tx_head=0x%08x)\n",
+		    tef_sta & MCP25XXFD_CAN_TEFSTA_TEFNEIF ?
+		    "empty." : "not empty anymore?",
+		    seq, priv->tef.tail, priv->tef.head, priv->tx.head);
 
 	return -EAGAIN;
 }
@@ -1450,8 +1450,8 @@ static int mcp25xxfd_handle_modif(const struct mcp25xxfd_priv *priv)
 	if (mode == MCP25XXFD_CAN_CON_MODE_RESTRICTED ||
 	    mode == MCP25XXFD_CAN_CON_MODE_LISTENONLY)
 		netdev_dbg(priv->ndev,
-			    "Controller changed into %s Mode (%u).\n",
-			    mcp25xxfd_get_mode_str(mode), mode);
+			   "Controller changed into %s Mode (%u).\n",
+			   mcp25xxfd_get_mode_str(mode), mode);
 	else
 		netdev_err(priv->ndev,
 			   "Controller changed into %s Mode (%u).\n",
@@ -1974,7 +1974,7 @@ static int mcp25xxfd_register_check_rx_int(struct mcp25xxfd_priv *priv)
 		return 0;
 
 	netdev_info(priv->ndev,
-		   "RX-INT active after softreset, disabling RX-INT support.");
+		    "RX-INT active after softreset, disabling RX-INT support.");
 	devm_gpiod_put(&priv->spi->dev, priv->rx_int);
 	priv->rx_int = NULL;
 

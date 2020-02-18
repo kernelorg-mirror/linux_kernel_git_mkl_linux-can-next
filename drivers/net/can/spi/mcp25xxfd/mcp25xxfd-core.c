@@ -577,7 +577,11 @@ static int mcp25xxfd_chip_fifo_compute(struct mcp25xxfd_priv *priv)
 
 	ram_free = MCP25XXFD_RAM_SIZE - tx_obj_num *
 		(tef_obj_size + tx_obj_size);
-	rx_obj_num = min(ram_free / rx_obj_size, 32);
+
+	rx_obj_num = ram_free / rx_obj_size;
+	rx_obj_num = 1 << (fls(rx_obj_num) - 1);
+	rx_obj_num = min(rx_obj_num, 32);
+
 	ram_free -= rx_obj_num * rx_obj_size;
 
 	if ((priv->can.ctrlmode & CAN_CTRLMODE_FD &&

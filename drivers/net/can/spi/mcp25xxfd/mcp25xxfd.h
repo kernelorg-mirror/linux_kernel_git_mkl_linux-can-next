@@ -413,7 +413,6 @@ static inline void __dump(const void *d, unsigned int len)
 #define MCP25XXFD_NAPI_WEIGHT 32
 #define MCP25XXFD_TX_FIFO 1
 #define MCP25XXFD_RX_FIFO(x) (MCP25XXFD_TX_FIFO + 1 + (x))
-#define MCP25XXFD_RX_FIFO_NUM (1)
 
 /* SPI commands */
 #define MCP25XXFD_INSTRUCTION_RESET 0x0000
@@ -610,7 +609,9 @@ struct mcp25xxfd_priv {
 
 	struct mcp25xxfd_tef_ring tef;
 	struct mcp25xxfd_tx_ring tx;
-	struct mcp25xxfd_rx_ring rx;
+	struct mcp25xxfd_rx_ring rx[1];
+
+	u8 rx_ring_num;
 
 	struct mcp25xxfd_regs_status regs_status;
 
@@ -695,15 +696,15 @@ mcp25xxfd_get_tx_obj_addr(const struct mcp25xxfd_priv *priv, u8 n)
 }
 
 static inline u16
-mcp25xxfd_get_rx_obj_rel_addr(const struct mcp25xxfd_priv *priv, u8 n)
+mcp25xxfd_get_rx_obj_rel_addr(const struct mcp25xxfd_rx_ring *ring, u8 n)
 {
-	return priv->rx.base + priv->rx.obj_size * n;
+	return ring->base + ring->obj_size * n;
 }
 
 static inline u16
-mcp25xxfd_get_rx_obj_addr(const struct mcp25xxfd_priv *priv, u8 n)
+mcp25xxfd_get_rx_obj_addr(const struct mcp25xxfd_rx_ring *ring, u8 n)
 {
-	return mcp25xxfd_get_rx_obj_rel_addr(priv, n) + MCP25XXFD_RAM_START;
+	return mcp25xxfd_get_rx_obj_rel_addr(ring, n) + MCP25XXFD_RAM_START;
 }
 
 static inline u8 mcp25xxfd_get_tef_head(const struct mcp25xxfd_priv *priv)
@@ -740,29 +741,35 @@ static inline u8 mcp25xxfd_get_tx_tail(const struct mcp25xxfd_priv *priv)
 	return priv->tx.tail & (priv->tx.obj_num - 1);
 }
 
-static inline u8 mcp25xxfd_get_rx_head(const struct mcp25xxfd_priv *priv)
+static inline u8 mcp25xxfd_get_rx_head(const struct mcp25xxfd_rx_ring *ring)
 {
-	return priv->rx.head & (priv->rx.obj_num - 1);
+	return ring->head & (ring->obj_num - 1);
 }
 
-static inline u8 mcp25xxfd_get_rx_tail(const struct mcp25xxfd_priv *priv)
+static inline u8 mcp25xxfd_get_rx_tail(const struct mcp25xxfd_rx_ring *ring)
 {
-	return priv->rx.tail & (priv->rx.obj_num - 1);
+	return ring->tail & (ring->obj_num - 1);
 }
 
-static inline u8 mcp25xxfd_get_rx_len(const struct mcp25xxfd_priv *priv)
+static inline u8 mcp25xxfd_get_rx_len(const struct mcp25xxfd_rx_ring *ring)
 {
-	return priv->rx.head - priv->rx.tail;
+	return ring->head - ring->tail;
 }
 
-static inline u8 mcp25xxfd_get_rx_linear_len(const struct mcp25xxfd_priv *priv)
+static inline u8
+mcp25xxfd_get_rx_linear_len(const struct mcp25xxfd_rx_ring *ring)
 {
 	u8 len;
 
-	len = mcp25xxfd_get_rx_len(priv);
+	len = mcp25xxfd_get_rx_len(ring);
 
-	return min_t(u8, len, priv->rx.obj_num - mcp25xxfd_get_rx_tail(priv));
+	return min_t(u8, len, ring->obj_num - mcp25xxfd_get_rx_tail(ring));
 }
+
+#define mcp25xxfd_for_each_rx_ring(priv, ring, n) \
+	for ((ring) = (priv)->rx, (n) = 0; \
+	     (ring) - (priv)->rx < (priv)->rx_ring_num; \
+	     ring++, (n)++)
 
 void mcp25xxfd_dump(struct mcp25xxfd_priv *priv);
 int mcp25xxfd_regmap_init(struct mcp25xxfd_priv *priv);

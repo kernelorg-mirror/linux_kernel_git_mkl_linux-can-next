@@ -39,6 +39,7 @@ static inline bool mcp25xxfd_update_bits_read_reg(unsigned int reg)
 	case MCP25XXFD_CAN_INT:
 	case MCP25XXFD_CAN_TEFCON:
 	case MCP25XXFD_CAN_FIFOCON(MCP25XXFD_RX_FIFO(0)):
+	case MCP25XXFD_CAN_FLTCON(0):
 	case MCP25XXFD_ECCSTAT:
 	case MCP25XXFD_CRC:
 		return false;

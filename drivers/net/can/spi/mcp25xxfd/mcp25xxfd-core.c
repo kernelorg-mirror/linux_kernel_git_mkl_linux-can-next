@@ -179,18 +179,20 @@ mcp25xxfd_tef_tail_get_from_chip(const struct mcp25xxfd_priv *priv,
 }
 
 static inline int
-mcp25xxfd_rx_tail_get_from_chip(const struct mcp25xxfd_priv *priv, u8 *rx_tail)
+mcp25xxfd_rx_tail_get_from_chip(const struct mcp25xxfd_priv *priv,
+				const struct mcp25xxfd_rx_ring *ring,
+				u8 *rx_tail)
 {
 	int err;
 	u32 rx_obj_tail_rel_addr;
 
-	err = regmap_read(priv->map, MCP25XXFD_CAN_FIFOUA(priv->rx.fifo_nr),
+	err = regmap_read(priv->map, MCP25XXFD_CAN_FIFOUA(ring->fifo_nr),
 			  &rx_obj_tail_rel_addr);
 	if (err)
 		return err;
 
-	rx_obj_tail_rel_addr -= priv->rx.base;
-	*rx_tail = rx_obj_tail_rel_addr / priv->rx.obj_size;
+	rx_obj_tail_rel_addr -= ring->base;
+	*rx_tail = rx_obj_tail_rel_addr / ring->obj_size;
 
 	return 0;
 }
@@ -226,6 +228,7 @@ mcp25xxfd_tx_ring_init_one(const struct mcp25xxfd_priv *priv,
 
 static void mcp25xxfd_ring_init(struct mcp25xxfd_priv *priv)
 {
+	struct mcp25xxfd_rx_ring *ring, *prev_ring = NULL;
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(priv->tx.obj); i++) {
@@ -238,12 +241,21 @@ static void mcp25xxfd_ring_init(struct mcp25xxfd_priv *priv)
 	priv->tef.tail = 0;
 	priv->tx.head = 0;
 	priv->tx.tail = 0;
-	priv->rx.head = 0;
-	priv->rx.tail = 0;
-	priv->rx.nr = 0;
-	priv->rx.fifo_nr = MCP25XXFD_RX_FIFO(0);
-	priv->rx.base = (sizeof(struct mcp25xxfd_hw_tef_obj) +
-			 priv->tx.obj_size) * priv->tx.obj_num;
+	mcp25xxfd_for_each_rx_ring(priv, ring, i) {
+		ring->head = 0;
+		ring->tail = 0;
+		ring->nr = i;
+		ring->fifo_nr = MCP25XXFD_RX_FIFO(i);
+
+		if (!prev_ring)
+			ring->base = (sizeof(struct mcp25xxfd_hw_tef_obj) +
+				      priv->tx.obj_size) * priv->tx.obj_num;
+		else
+			ring->base = prev_ring->base + prev_ring->obj_size *
+				prev_ring->obj_num;
+
+		prev_ring = ring;
+	}
 }
 
 static inline int
@@ -492,9 +504,10 @@ static int mcp25xxfd_chip_pinctrl_init(const struct mcp25xxfd_priv *priv)
 
 static int mcp25xxfd_chip_fifo_compute(struct mcp25xxfd_priv *priv)
 {
+	struct mcp25xxfd_rx_ring *ring;
 	int tef_obj_size, tx_obj_size, rx_obj_size;
-	int tx_obj_num, rx_obj_num;
-	int ram_free;
+	int tx_obj_num;
+	int ram_free, i;
 
 	tef_obj_size = sizeof(struct mcp25xxfd_hw_tef_obj);
 	if (priv->can.ctrlmode & CAN_CTRLMODE_FD) {
@@ -510,26 +523,34 @@ static int mcp25xxfd_chip_fifo_compute(struct mcp25xxfd_priv *priv)
 	ram_free = MCP25XXFD_RAM_SIZE - tx_obj_num *
 		(tef_obj_size + tx_obj_size);
 
-	rx_obj_num = ram_free / rx_obj_size;
-	rx_obj_num = 1 << (fls(rx_obj_num) - 1);
-	rx_obj_num = min(rx_obj_num, 32);
+	for (i = 0;
+	     i < ARRAY_SIZE(priv->rx) && ram_free >= rx_obj_size;
+	     i++) {
+		struct mcp25xxfd_rx_ring *ring = &priv->rx[i];
+		int rx_obj_num;
 
-	ram_free -= rx_obj_num * rx_obj_size;
+		ring->obj_size = rx_obj_size;
+		rx_obj_num = ram_free / rx_obj_size;
+		rx_obj_num = 1 << (fls(rx_obj_num) - 1);
+		ring->obj_num = min(rx_obj_num, 32);
+		ram_free -= ring->obj_num * rx_obj_size;
+	}
+	priv->rx_ring_num = i;
 
 	priv->tx.obj_num = tx_obj_num;
 	priv->tx.obj_size = tx_obj_size;
-	priv->rx.obj_num = rx_obj_num;
-	priv->rx.obj_size = rx_obj_size;
 
 	netdev_dbg(priv->ndev,
 		   "FIFO setup: TEF: %d*%d bytes = %d bytes, TX: %d*%d bytes = %d bytes\n",
 		   tx_obj_num, tef_obj_size, tef_obj_size * tx_obj_num,
 		   tx_obj_num, tx_obj_size, tx_obj_size * tx_obj_num);
 
-	netdev_dbg(priv->ndev,
-		   "FIFO setup: RX-%d: %d*%d bytes = %d bytes\n",
-		   0, priv->rx.obj_num, priv->rx.obj_size,
-		   priv->rx.obj_size * priv->rx.obj_num);
+	mcp25xxfd_for_each_rx_ring(priv, ring, i) {
+		netdev_dbg(priv->ndev,
+			   "FIFO setup: RX-%d: %d*%d bytes = %d bytes\n",
+			   i, ring->obj_num, ring->obj_size,
+			   ring->obj_size * ring->obj_num);
+	}
 
 	netdev_dbg(priv->ndev,
 		   "FIFO setup: free: %d bytes.\n",
@@ -539,7 +560,8 @@ static int mcp25xxfd_chip_fifo_compute(struct mcp25xxfd_priv *priv)
 }
 
 static int
-mcp25xxfd_chip_rx_fifo_init_one(const struct mcp25xxfd_priv *priv)
+mcp25xxfd_chip_rx_fifo_init_one(const struct mcp25xxfd_priv *priv,
+				const struct mcp25xxfd_rx_ring *ring)
 {
 	u32 fifo_con;
 
@@ -550,7 +572,7 @@ mcp25xxfd_chip_rx_fifo_init_one(const struct mcp25xxfd_priv *priv)
 	 * overflows.
 	 */
 	fifo_con = FIELD_PREP(MCP25XXFD_CAN_FIFOCON_FSIZE_MASK,
-			      priv->rx.obj_num - 1) |
+			      ring->obj_num - 1) |
 		MCP25XXFD_CAN_FIFOCON_RXTSEN |
 		MCP25XXFD_CAN_FIFOCON_RXOVIE |
 		MCP25XXFD_CAN_FIFOCON_TFNRFNIE;
@@ -563,27 +585,29 @@ mcp25xxfd_chip_rx_fifo_init_one(const struct mcp25xxfd_priv *priv)
 				       MCP25XXFD_CAN_FIFOCON_PLSIZE_8);
 
 	return regmap_write(priv->map,
-			    MCP25XXFD_CAN_FIFOCON(priv->rx.fifo_nr), fifo_con);
+			    MCP25XXFD_CAN_FIFOCON(ring->fifo_nr), fifo_con);
 }
 
 static int
-mcp25xxfd_chip_rx_filter_init_one(const struct mcp25xxfd_priv *priv)
+mcp25xxfd_chip_rx_filter_init_one(const struct mcp25xxfd_priv *priv,
+				  const struct mcp25xxfd_rx_ring *ring)
 {
 	u32 fltcon;
 
-	fltcon = MCP25XXFD_CAN_FLTCON_FLTEN(priv->rx.nr) |
-		MCP25XXFD_CAN_FLTCON_FBP(priv->rx.nr, priv->rx.fifo_nr);
+	fltcon = MCP25XXFD_CAN_FLTCON_FLTEN(ring->nr) |
+		MCP25XXFD_CAN_FLTCON_FBP(ring->nr, ring->fifo_nr);
 
 	return regmap_update_bits(priv->map,
-				  MCP25XXFD_CAN_FLTCON(priv->rx.nr >> 2),
-				  MCP25XXFD_CAN_FLTCON_FLT_MASK(priv->rx.nr),
+				  MCP25XXFD_CAN_FLTCON(ring->nr >> 2),
+				  MCP25XXFD_CAN_FLTCON_FLT_MASK(ring->nr),
 				  fltcon);
 }
 
 static int mcp25xxfd_chip_fifo_init(struct mcp25xxfd_priv *priv)
 {
+	struct mcp25xxfd_rx_ring *ring;
 	u32 val;
-	int err;
+	int err, n;
 
 	err = mcp25xxfd_chip_fifo_compute(priv);
 	if (err)
@@ -628,13 +652,15 @@ static int mcp25xxfd_chip_fifo_init(struct mcp25xxfd_priv *priv)
 		return err;
 
 	/* RX FIFOs */
-	err = mcp25xxfd_chip_rx_fifo_init_one(priv);
-	if (err)
-		return err;
+	mcp25xxfd_for_each_rx_ring(priv, ring, n) {
+		err = mcp25xxfd_chip_rx_fifo_init_one(priv, ring);
+		if (err)
+			return err;
 
-	err = mcp25xxfd_chip_rx_filter_init_one(priv);
-	if (err)
-		return err;
+		err = mcp25xxfd_chip_rx_filter_init_one(priv, ring);
+		if (err)
+			return err;
+	}
 
 	return 0;
 }
@@ -873,7 +899,9 @@ static int mcp25xxfd_check_tef_tail(struct mcp25xxfd_priv *priv)
 	return 0;
 }
 
-static int mcp25xxfd_check_rx_tail(const struct mcp25xxfd_priv *priv)
+static int
+mcp25xxfd_check_rx_tail(const struct mcp25xxfd_priv *priv,
+			const struct mcp25xxfd_rx_ring *ring)
 {
 	u8 rx_tail_chip, rx_tail;
 	int err;
@@ -881,11 +909,11 @@ static int mcp25xxfd_check_rx_tail(const struct mcp25xxfd_priv *priv)
 	if (!IS_ENABLED(CONFIG_CAN_MCP25XXFD_SANITY))
 		return 0;
 
-	err = mcp25xxfd_rx_tail_get_from_chip(priv, &rx_tail_chip);
+	err = mcp25xxfd_rx_tail_get_from_chip(priv, ring, &rx_tail_chip);
 	if (err)
 		return err;
 
-	rx_tail = mcp25xxfd_get_rx_tail(priv);
+	rx_tail = mcp25xxfd_get_rx_tail(ring);
 	if (rx_tail_chip != rx_tail) {
 		netdev_err(priv->ndev,
 			   "RX tail of chip (%d) and ours (%d) inconsistent.\n",
@@ -1053,27 +1081,29 @@ static int mcp25xxfd_handle_tefif(struct mcp25xxfd_priv *priv)
 	return 0;
 }
 
-static int mcp25xxfd_rx_ring_update(struct mcp25xxfd_priv *priv)
+static int
+mcp25xxfd_rx_ring_update(struct mcp25xxfd_priv *priv,
+			 struct mcp25xxfd_rx_ring *ring)
 {
 	u32 fifo_sta, new_head;
 	u8 rx_ci;
 	int err;
 
 	err = regmap_read(priv->map,
-			  MCP25XXFD_CAN_FIFOSTA(priv->rx.fifo_nr),
+			  MCP25XXFD_CAN_FIFOSTA(ring->fifo_nr),
 			  &fifo_sta);
 	if (err)
 		return err;
 
 	rx_ci = FIELD_GET(MCP25XXFD_CAN_FIFOSTA_FIFOCI_MASK, fifo_sta);
-	new_head = round_down(priv->rx.head, priv->rx.obj_num) + rx_ci;
+	new_head = round_down(ring->head, ring->obj_num) + rx_ci;
 
-	if (new_head <= priv->rx.head)
-		new_head += priv->rx.obj_num;
+	if (new_head <= ring->head)
+		new_head += ring->obj_num;
 
-	priv->rx.head = new_head;
+	ring->head = new_head;
 
-	return mcp25xxfd_check_rx_tail(priv);
+	return mcp25xxfd_check_rx_tail(priv, ring);
 }
 
 static void
@@ -1122,6 +1152,7 @@ mcp25xxfd_hw_rx_obj_to_skb(const struct mcp25xxfd_priv *priv,
 
 static int
 mcp25xxfd_handle_rxif_one(struct mcp25xxfd_priv *priv,
+			  struct mcp25xxfd_rx_ring *ring,
 			  const struct mcp25xxfd_hw_rx_obj_canfd *hw_rx_obj)
 {
 	struct net_device_stats *stats = &priv->ndev->stats;
@@ -1144,53 +1175,70 @@ mcp25xxfd_handle_rxif_one(struct mcp25xxfd_priv *priv,
 	if (err)
 		stats->rx_fifo_errors++;
 
-	priv->rx.tail++;
+	ring->tail++;
 
 	/* finally increment the RX pointer */
 	return regmap_update_bits(priv->map,
-				  MCP25XXFD_CAN_FIFOCON(priv->rx.fifo_nr),
+				  MCP25XXFD_CAN_FIFOCON(ring->fifo_nr),
 				  GENMASK(15, 8),
 				  MCP25XXFD_CAN_FIFOCON_UINC);
 }
 
 static inline int
 mcp25xxfd_rx_obj_read(const struct mcp25xxfd_priv *priv,
+		      const struct mcp25xxfd_rx_ring *ring,
 		      struct mcp25xxfd_hw_rx_obj_canfd *hw_rx_obj,
 		      const u8 offset, const u8 len)
 {
 	return regmap_bulk_read(priv->map,
-				mcp25xxfd_get_rx_obj_addr(priv, offset),
+				mcp25xxfd_get_rx_obj_addr(ring, offset),
 				hw_rx_obj,
-				len * priv->rx.obj_size / sizeof(u32));
+				len * ring->obj_size / sizeof(u32));
 }
 
-static int mcp25xxfd_handle_rxif(struct mcp25xxfd_priv *priv)
+static int
+mcp25xxfd_handle_rxif_ring(struct mcp25xxfd_priv *priv,
+			   struct mcp25xxfd_rx_ring *ring)
 {
-	struct mcp25xxfd_hw_rx_obj_canfd *hw_rx_obj = priv->rx.obj;
+	struct mcp25xxfd_hw_rx_obj_canfd *hw_rx_obj = ring->obj;
 	u8 rx_tail, len, l;
 	int err, i;
 
-	err = mcp25xxfd_rx_ring_update(priv);
+	err = mcp25xxfd_rx_ring_update(priv, ring);
 	if (err)
 		return err;
 
-	rx_tail = mcp25xxfd_get_rx_tail(priv);
-	len = mcp25xxfd_get_rx_len(priv);
-	l = mcp25xxfd_get_rx_linear_len(priv);
-	err = mcp25xxfd_rx_obj_read(priv, hw_rx_obj, rx_tail, l);
+	rx_tail = mcp25xxfd_get_rx_tail(ring);
+	len = mcp25xxfd_get_rx_len(ring);
+	l = mcp25xxfd_get_rx_linear_len(ring);
+	err = mcp25xxfd_rx_obj_read(priv, ring, hw_rx_obj, rx_tail, l);
 	if (err)
 		return err;
 
 	if (l < len) {
-		err = mcp25xxfd_rx_obj_read(priv, (void *)hw_rx_obj +
-					    l * priv->rx.obj_size, 0, len - l);
+		err = mcp25xxfd_rx_obj_read(priv, ring, (void *)hw_rx_obj +
+					    l * ring->obj_size, 0, len - l);
 		if (err)
 			return err;
 	}
 
 	for (i = 0; i < len; i++) {
-		err = mcp25xxfd_handle_rxif_one(priv, (void *)hw_rx_obj +
-						i * priv->rx.obj_size);
+		err = mcp25xxfd_handle_rxif_one(priv, ring, (void *)hw_rx_obj +
+						i * ring->obj_size);
+		if (err)
+			return err;
+	}
+
+	return 0;
+}
+
+static int mcp25xxfd_handle_rxif(struct mcp25xxfd_priv *priv)
+{
+	struct mcp25xxfd_rx_ring *ring;
+	int err, n;
+
+	mcp25xxfd_for_each_rx_ring(priv, ring, n) {
+		err = mcp25xxfd_handle_rxif_ring(priv, ring);
 		if (err)
 			return err;
 	}
@@ -1220,6 +1268,7 @@ mcp25xxfd_alloc_can_err_skb(const struct mcp25xxfd_priv *priv,
 static int mcp25xxfd_handle_rxovif(struct mcp25xxfd_priv *priv)
 {
 	struct net_device_stats *stats = &priv->ndev->stats;
+	struct mcp25xxfd_rx_ring *ring;
 	struct sk_buff *skb;
 	struct can_frame *cf;
 	u32 timestamp, rxovif;
@@ -1232,8 +1281,8 @@ static int mcp25xxfd_handle_rxovif(struct mcp25xxfd_priv *priv)
 	if (err)
 		return err;
 
-	for (i = 0; i < MCP25XXFD_RX_FIFO_NUM; i++) {
-		if (!(rxovif & BIT(priv->rx.fifo_nr)))
+	mcp25xxfd_for_each_rx_ring(priv, ring, i) {
+		if (!(rxovif & BIT(ring->fifo_nr)))
 			continue;
 
 		/* If SERRIF is active, there was a RX MAB overflow. */
@@ -1241,18 +1290,18 @@ static int mcp25xxfd_handle_rxovif(struct mcp25xxfd_priv *priv)
 			if (mcp25xxfd_is_2517(priv))
 				netdev_dbg(priv->ndev,
 					   "RX-%d: MAB overflow detected.\n",
-					   priv->rx.nr);
+					   ring->nr);
 			else
 				netdev_info(priv->ndev,
 					    "RX-%d: MAB overflow detected.\n",
-					    priv->rx.nr);
+					    ring->nr);
 		} else {
 			netdev_info(priv->ndev,
-				    "RX-%d: FIFO overflow.\n", priv->rx.nr);
+				    "RX-%d: FIFO overflow.\n", ring->nr);
 		}
 
 		err = regmap_update_bits(priv->map,
-					 MCP25XXFD_CAN_FIFOSTA(priv->rx.nr),
+					 MCP25XXFD_CAN_FIFOSTA(ring->fifo_nr),
 					 MCP25XXFD_CAN_FIFOSTA_RXOVIF,
 					 0x0);
 		if (err)

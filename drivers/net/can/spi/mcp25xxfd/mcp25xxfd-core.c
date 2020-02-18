@@ -1555,11 +1555,12 @@ static int mcp25xxfd_handle_spicrcif(struct mcp25xxfd_priv *priv)
 
 #define mcp25xxfd_handle(priv, irq, ...) \
 ({ \
+	struct mcp25xxfd_priv *_priv = (priv); \
 	int err; \
 \
-	err = mcp25xxfd_handle_##irq(priv, ## __VA_ARGS__); \
+	err = mcp25xxfd_handle_##irq(_priv, ## __VA_ARGS__); \
 	if (err) \
-		netdev_err(priv->ndev, \
+		netdev_err(_priv->ndev, \
 			"IRQ handler mcp25xxfd_handle_%s() returned %d.\n", \
 			__stringify(irq), err); \
 	err; \

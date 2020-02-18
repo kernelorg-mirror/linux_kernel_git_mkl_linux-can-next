@@ -612,7 +612,7 @@ struct mcp25xxfd_priv {
 	struct mcp25xxfd_tx_ring tx;
 	struct mcp25xxfd_rx_ring rx;
 
-	u32 intf;
+	struct mcp25xxfd_regs_status regs_status;
 
 	struct mcp25xxfd_reg_write_buf update_bits_buf;
 	struct mcp25xxfd_crc_buf crc_buf;

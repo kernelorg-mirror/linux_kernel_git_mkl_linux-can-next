@@ -1237,7 +1237,7 @@ static int mcp25xxfd_handle_rxovif(struct mcp25xxfd_priv *priv)
 			continue;
 
 		/* If SERRIF is active, there was a RX MAB overflow. */
-		if (priv->intf & MCP25XXFD_CAN_INT_SERRIF) {
+		if (priv->regs_status.intf & MCP25XXFD_CAN_INT_SERRIF) {
 			if (mcp25xxfd_is_2517(priv))
 				netdev_dbg(priv->ndev,
 					   "RX-%d: MAB overflow detected.\n",
@@ -1495,8 +1495,8 @@ static int mcp25xxfd_handle_serrif(struct mcp25xxfd_priv *priv)
 	 * are Bus Errors due to the aborted CAN frame, so a IVMIF
 	 * will be seen as well.
 	 */
-	if ((priv->intf & MCP25XXFD_CAN_INT_MODIF) &&
-	    (priv->intf & MCP25XXFD_CAN_INT_IVMIF)) {
+	if ((priv->regs_status.intf & MCP25XXFD_CAN_INT_MODIF) &&
+	    (priv->regs_status.intf & MCP25XXFD_CAN_INT_IVMIF)) {
 		if (mcp25xxfd_is_2517(priv))
 			netdev_dbg(priv->ndev, "TX MAB underflow detected.\n");
 		else
@@ -1517,7 +1517,7 @@ static int mcp25xxfd_handle_serrif(struct mcp25xxfd_priv *priv)
 	 * has the RXOVIE activated (and we have enabled RXOVIE on all
 	 * FIFOs).
 	 */
-	if (priv->intf & MCP25XXFD_CAN_INT_RXOVIF) {
+	if (priv->regs_status.intf & MCP25XXFD_CAN_INT_RXOVIF) {
 		stats->rx_dropped++;
 		handled = true;
 	}
@@ -1621,12 +1621,17 @@ static irqreturn_t mcp25xxfd_irq(int irq, void *dev_id)
 	do {
 		u32 intf_pending, intf_pending_clearable;
 
-		err = regmap_read(priv->map, MCP25XXFD_CAN_INT, &priv->intf);
+		err = regmap_bulk_read(priv->map, MCP25XXFD_CAN_INT,
+				       &priv->regs_status,
+				       sizeof(priv->regs_status) /
+				       sizeof(u32));
 		if (err)
 			goto out_fail;
 
-		intf_pending = FIELD_GET(MCP25XXFD_CAN_INT_IF_MASK, priv->intf) &
-			FIELD_GET(MCP25XXFD_CAN_INT_IE_MASK, priv->intf);
+		intf_pending = FIELD_GET(MCP25XXFD_CAN_INT_IF_MASK,
+					 priv->regs_status.intf) &
+			FIELD_GET(MCP25XXFD_CAN_INT_IE_MASK,
+				  priv->regs_status.intf);
 
 		if (!(intf_pending))
 			return handled;

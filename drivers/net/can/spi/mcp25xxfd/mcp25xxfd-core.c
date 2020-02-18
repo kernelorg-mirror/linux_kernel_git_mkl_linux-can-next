@@ -1793,7 +1793,7 @@ static netdev_tx_t mcp25xxfd_start_xmit(struct sk_buff *skb,
 	mcp25xxfd_log(priv, can_id);
 
 	if (priv->tx.head - priv->tx.tail >= priv->tx.obj_num) {
-		netdev_info(priv->ndev,
+		netdev_dbg(priv->ndev,
 			   "Stopping tx-queue (tx_head=0x%08x, tx_tail=0x%08x, len=%d).\n",
 			   priv->tx.head, priv->tx.tail,
 			   priv->tx.head - priv->tx.tail);

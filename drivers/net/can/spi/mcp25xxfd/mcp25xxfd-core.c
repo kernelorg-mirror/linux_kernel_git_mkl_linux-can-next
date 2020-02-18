@@ -1242,17 +1242,18 @@ static int mcp25xxfd_handle_rxovif(struct mcp25xxfd_priv *priv)
 	for (i = 0; i < MCP25XXFD_RX_FIFO_NUM; i++) {
 		const u8 rx_fifo = MCP25XXFD_RX_FIFO(i);
 
-		if (rxovif & BIT(rx_fifo)) {
-			netdev_warn(priv->ndev,
-				   "RX-FIFO overflow in FIFO %d.\n", rx_fifo);
+		if (!(rxovif & BIT(rx_fifo)))
+			continue;
 
-			err = regmap_update_bits(priv->map,
-						 MCP25XXFD_CAN_FIFOSTA(rx_fifo),
-						 MCP25XXFD_CAN_FIFOSTA_RXOVIF,
-						 0x0);
-			if (err)
-				return err;
-		}
+		netdev_warn(priv->ndev,
+			    "RX-FIFO overflow in FIFO %d.\n", rx_fifo);
+
+		err = regmap_update_bits(priv->map,
+					 MCP25XXFD_CAN_FIFOSTA(rx_fifo),
+					 MCP25XXFD_CAN_FIFOSTA_RXOVIF,
+					 0x0);
+		if (err)
+			return err;
 	}
 
 	skb = mcp25xxfd_alloc_can_err_skb(priv, &cf, &timestamp);

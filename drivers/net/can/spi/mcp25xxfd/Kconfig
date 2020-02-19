@@ -2,6 +2,7 @@
 
 config CAN_MCP25XXFD
 	tristate "Microchip MCP25xxFD SPI CAN controllers"
+	select REGMAP
 	help
 	  Driver for the Microchip MCP25XXFD SPI FD-CAN controller
 	  family.

@@ -2082,6 +2082,25 @@ static int mcp25xxfd_register_check_rx_int(struct mcp25xxfd_priv *priv)
 	return 0;
 }
 
+static void
+mcp25xxfd_register_check_controller(const struct mcp25xxfd_priv *priv)
+{
+	const struct spi_device *spi = priv->spi;
+	const struct spi_controller *ctlr = spi->controller;
+	unsigned int policy;
+
+	if (!ctlr->kworker_task)
+		return;
+
+	policy = ctlr->kworker_task->policy;
+	if (policy == SCHED_FIFO || policy == SCHED_RR)
+		return;
+
+	netdev_info(priv->ndev,
+		    "SPI thread not scheduled with RT priority, expect poor performance. Reconfigure with: 'chrt -f -p 1 %u'",
+		    ctlr->kworker_task->pid);
+}
+
 static int mcp25xxfd_register(struct mcp25xxfd_priv *priv)
 {
 	struct net_device *ndev = priv->ndev;
@@ -2117,6 +2136,8 @@ static int mcp25xxfd_register(struct mcp25xxfd_priv *priv)
 	err = register_candev(ndev);
 	if (err)
 		goto out_chip_set_mode_sleep;
+
+	mcp25xxfd_register_check_controller(priv);
 
 	if (priv->model == MCP25XXFD_MODEL_MCP2517FD) {
 		netdev_info(ndev, "MCP%xFD %ssuccessfully initialized.\n",

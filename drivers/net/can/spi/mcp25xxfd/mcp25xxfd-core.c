@@ -1314,18 +1314,24 @@ static int mcp25xxfd_handle_ivmif(struct mcp25xxfd_priv *priv)
 	/* RX errors */
 	if (bdiag1 & (MCP25XXFD_CAN_BDIAG1_DCRCERR |
 		      MCP25XXFD_CAN_BDIAG1_NCRCERR)) {
+		netdev_dbg(priv->ndev, "CRC error\n");
+
 		stats->rx_errors++;
 		if (cf)
 			cf->data[3] |= CAN_ERR_PROT_LOC_CRC_SEQ;
 	}
 	if (bdiag1 & (MCP25XXFD_CAN_BDIAG1_DSTUFERR |
 		      MCP25XXFD_CAN_BDIAG1_NSTUFERR)) {
+		netdev_dbg(priv->ndev, "Stuff error\n");
+
 		stats->rx_errors++;
 		if (cf)
 			cf->data[2] |= CAN_ERR_PROT_STUFF;
 	}
 	if (bdiag1 & (MCP25XXFD_CAN_BDIAG1_DFORMERR |
 		      MCP25XXFD_CAN_BDIAG1_NFORMERR)) {
+		netdev_dbg(priv->ndev, "Format error\n");
+
 		stats->rx_errors++;
 		if (cf)
 			cf->data[2] |= CAN_ERR_PROT_FORM;
@@ -1333,6 +1339,8 @@ static int mcp25xxfd_handle_ivmif(struct mcp25xxfd_priv *priv)
 
 	/* TX errors */
 	if (bdiag1 & MCP25XXFD_CAN_BDIAG1_NACKERR) {
+		netdev_dbg(priv->ndev, "NACK error\n");
+
 		stats->tx_errors++;
 		if (cf) {
 			cf->can_id |= CAN_ERR_ACK;
@@ -1341,12 +1349,16 @@ static int mcp25xxfd_handle_ivmif(struct mcp25xxfd_priv *priv)
 	}
 	if (bdiag1 & (MCP25XXFD_CAN_BDIAG1_DBIT1ERR |
 		      MCP25XXFD_CAN_BDIAG1_NBIT1ERR)) {
+		netdev_dbg(priv->ndev, "Bit1 error\n");
+
 		stats->tx_errors++;
 		if (cf)
 			cf->data[2] |= CAN_ERR_PROT_TX | CAN_ERR_PROT_BIT1;
 	}
 	if (bdiag1 & (MCP25XXFD_CAN_BDIAG1_DBIT0ERR |
 		      MCP25XXFD_CAN_BDIAG1_NBIT0ERR)) {
+		netdev_dbg(priv->ndev, "Bit0 error\n");
+
 		stats->tx_errors++;
 		if (cf)
 			cf->data[2] |= CAN_ERR_PROT_TX | CAN_ERR_PROT_BIT0;

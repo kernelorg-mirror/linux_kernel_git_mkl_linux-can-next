@@ -671,40 +671,23 @@ static inline __be16 mcp25xxfd_cmd_write(u16 addr)
 }
 
 static inline u16
-mcp25xxfd_get_tef_obj_rel_addr(const struct mcp25xxfd_priv *priv, u8 n)
-{
-	return sizeof(struct mcp25xxfd_hw_tef_obj) * n;
-}
-
-static inline u16
 mcp25xxfd_get_tef_obj_addr(const struct mcp25xxfd_priv *priv, u8 n)
 {
-	return mcp25xxfd_get_tef_obj_rel_addr(priv, n) + MCP25XXFD_RAM_START;
-}
-
-static inline u16
-mcp25xxfd_get_tx_obj_rel_addr(const struct mcp25xxfd_priv *priv, u8 n)
-{
-	return mcp25xxfd_get_tef_obj_rel_addr(priv, priv->tx.obj_num) +
-		priv->tx.obj_size * n;
+	return MCP25XXFD_RAM_START +
+		sizeof(struct mcp25xxfd_hw_tef_obj) * n;
 }
 
 static inline u16
 mcp25xxfd_get_tx_obj_addr(const struct mcp25xxfd_priv *priv, u8 n)
 {
-	return mcp25xxfd_get_tx_obj_rel_addr(priv, n) + MCP25XXFD_RAM_START;
-}
-
-static inline u16
-mcp25xxfd_get_rx_obj_rel_addr(const struct mcp25xxfd_rx_ring *ring, u8 n)
-{
-	return ring->base + ring->obj_size * n;
+	return mcp25xxfd_get_tef_obj_addr(priv, priv->tx.obj_num) +
+		priv->tx.obj_size * n;
 }
 
 static inline u16
 mcp25xxfd_get_rx_obj_addr(const struct mcp25xxfd_rx_ring *ring, u8 n)
 {
-	return mcp25xxfd_get_rx_obj_rel_addr(ring, n) + MCP25XXFD_RAM_START;
+	return MCP25XXFD_RAM_START + ring->base + ring->obj_size * n;
 }
 
 static inline u8 mcp25xxfd_get_tef_head(const struct mcp25xxfd_priv *priv)

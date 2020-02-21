@@ -621,6 +621,12 @@ static int mcp25xxfd_chip_fifo_init(struct mcp25xxfd_priv *priv)
 		return err;
 
 	/* FIFO 2 - RX */
+	/* Enable RXOVIE on _all_ RX FIFOs, not just the last one.
+	 *
+	 * FIFOs hit by a RX MAB overflow and RXOVIE enabled will
+	 * generate a RXOVIF, use this to properly detect RX MAB
+	 * overflows.
+	 */
 	val = FIELD_PREP(MCP25XXFD_CAN_FIFOCON_FSIZE_MASK,
 			 priv->rx.obj_num - 1) |
 		MCP25XXFD_CAN_FIFOCON_RXTSEN |
@@ -1245,8 +1251,13 @@ static int mcp25xxfd_handle_rxovif(struct mcp25xxfd_priv *priv)
 		if (!(rxovif & BIT(rx_fifo)))
 			continue;
 
-		netdev_warn(priv->ndev,
-			    "RX-FIFO overflow in FIFO %d.\n", rx_fifo);
+		/* If SERRIF is active, there was a RX MAB overflow. */
+		if (priv->intf & MCP25XXFD_CAN_INT_SERRIF)
+			netdev_dbg(priv->ndev,
+				   "RX-%d: MAB overflow detected.\n", i);
+		else
+			netdev_info(priv->ndev,
+				    "RX-%d: FIFO overflow.\n", i);
 
 		err = regmap_update_bits(priv->map,
 					 MCP25XXFD_CAN_FIFOSTA(rx_fifo),
@@ -1450,8 +1461,8 @@ static int mcp25xxfd_handle_modif(const struct mcp25xxfd_priv *priv)
 	if (mode == mode_reference)
 		return 0;
 
-	/* According to MCP2517FD errata DS80000792B, during a TX MAB
-	 * underflow, the controller will transition to Restricted
+	/* According to MCP2517FD errata DS80000792B 1., during a TX
+	 * MAB underflow, the controller will transition to Restricted
 	 * Operation Mode or Listen Only Mode (depending on SERR2LOM).
 	 *
 	 * However this is not always the case. When SERR2LOM is
@@ -1480,14 +1491,16 @@ static int mcp25xxfd_handle_modif(const struct mcp25xxfd_priv *priv)
 static int mcp25xxfd_handle_serrif(struct mcp25xxfd_priv *priv)
 {
 	struct net_device_stats *stats = &priv->ndev->stats;
+	bool handled = false;
 
 	/* TX MAB underflow
 	 *
-	 * According to the MCP2517FD Errata DS80000792B a TX MAB
+	 * According to MCP2517FD Errata DS80000792B 1. a TX MAB
 	 * underflow is indicated by SERRIF and MODIF.
 	 *
-	 * Due to the corresponding Bus Errors, a IVMIF can be seen as
-	 * well.
+	 * In addition to the effects mentioned in the Errata, there
+	 * are Bus Errors due to the aborted CAN frame, so a IVMIF
+	 * will be seen as well.
 	 */
 	if ((priv->intf & MCP25XXFD_CAN_INT_MODIF) &&
 	    (priv->intf & MCP25XXFD_CAN_INT_IVMIF)) {
@@ -1495,22 +1508,28 @@ static int mcp25xxfd_handle_serrif(struct mcp25xxfd_priv *priv)
 
 		stats->tx_aborted_errors++;
 		stats->tx_errors++;
-
-		return 0;
+		handled = true;
 	}
 
 	/* RX MAB overflow
 	 *
-	 * According to the MCP2517FD Errata DS80000792B a RX MAB
+	 * According to MCP2517FD Errata DS80000792B 1. a RX MAB
 	 * overflow is indicated by SERRIF.
+	 *
+	 * In addition to the effects mentioned in the Errata, a
+	 * RXOVIF is raised if the FIFO that is being received into
+	 * has the RXOVIE activated (and we have enabled RXOVIE on all
+	 * FIFOs).
 	 */
-	if (priv->intf & MCP25XXFD_CAN_INT_RXIF) {
-		netdev_dbg(priv->ndev, "RX MAB overflow detected.\n");
-
+	if (priv->intf & MCP25XXFD_CAN_INT_RXOVIF) {
 		stats->rx_dropped++;
-		stats->rx_errors++;
+		handled = true;
+	}
 
-		return 0;
+	if (!handled) {
+		netdev_err(priv->ndev,
+			   "Unhandled System Error Interrupt!\n");
+		return -EINVAL;
 	}
 
 	return 0;

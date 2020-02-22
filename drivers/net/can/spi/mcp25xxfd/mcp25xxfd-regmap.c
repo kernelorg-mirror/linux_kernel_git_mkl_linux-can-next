@@ -226,9 +226,21 @@ static const struct regmap_range mcp25xxfd_reg_table_yes_range[] = {
 	regmap_reg_range(0xe00, 0xe14),	/* MCP2517/18FD SFR */
 };
 
+/* At least on the mcp2517fd the CRC on the TBC fails */
+static const struct regmap_range mcp25xxfd_reg_table_no_range_crc[] = {
+	regmap_reg_range(0x010, 0x010),	/* TBC */
+};
+
 static const struct regmap_access_table mcp25xxfd_reg_table = {
 	.yes_ranges = mcp25xxfd_reg_table_yes_range,
 	.n_yes_ranges = ARRAY_SIZE(mcp25xxfd_reg_table_yes_range),
+};
+
+static const struct regmap_access_table mcp25xxfd_reg_table_crc = {
+	.yes_ranges = mcp25xxfd_reg_table_yes_range,
+	.n_yes_ranges = ARRAY_SIZE(mcp25xxfd_reg_table_yes_range),
+	.no_ranges = mcp25xxfd_reg_table_no_range_crc,
+	.n_no_ranges = ARRAY_SIZE(mcp25xxfd_reg_table_no_range_crc),
 };
 
 static const struct regmap_config mcp25xxfd_regmap = {
@@ -262,8 +274,8 @@ static const struct regmap_config mcp25xxfd_regmap_crc = {
 	.pad_bits = 16,		/* keep data bits aligned */
 	.val_bits = 32,
 	.max_register = 0xffc,
-	.wr_table = &mcp25xxfd_reg_table,
-	.rd_table = &mcp25xxfd_reg_table,
+	.wr_table = &mcp25xxfd_reg_table_crc,
+	.rd_table = &mcp25xxfd_reg_table_crc,
 	.cache_type = REGCACHE_NONE,
 	.read_flag_mask = (__force unsigned long)
 		cpu_to_be16(MCP25XXFD_INSTRUCTION_READ_CRC),

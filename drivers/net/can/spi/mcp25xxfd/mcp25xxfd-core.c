@@ -1252,12 +1252,19 @@ static int mcp25xxfd_handle_rxovif(struct mcp25xxfd_priv *priv)
 			continue;
 
 		/* If SERRIF is active, there was a RX MAB overflow. */
-		if (priv->intf & MCP25XXFD_CAN_INT_SERRIF)
-			netdev_dbg(priv->ndev,
-				   "RX-%d: MAB overflow detected.\n", i);
-		else
+		if (priv->intf & MCP25XXFD_CAN_INT_SERRIF) {
+			if (mcp25xxfd_is_2517(priv))
+				netdev_dbg(priv->ndev,
+					   "RX-%d: MAB overflow detected.\n",
+					   i);
+			else
+				netdev_info(priv->ndev,
+					    "RX-%d: MAB overflow detected.\n",
+					    i);
+		} else {
 			netdev_info(priv->ndev,
 				    "RX-%d: FIFO overflow.\n", i);
+		}
 
 		err = regmap_update_bits(priv->map,
 					 MCP25XXFD_CAN_FIFOSTA(rx_fifo),
@@ -1471,8 +1478,9 @@ static int mcp25xxfd_handle_modif(const struct mcp25xxfd_priv *priv)
 	 * first. When polling this bit we see that it will transition
 	 * to Restricted Operation Mode shortly after.
 	 */
-	if (mode == MCP25XXFD_CAN_CON_MODE_RESTRICTED ||
-	    mode == MCP25XXFD_CAN_CON_MODE_LISTENONLY)
+	if (mcp25xxfd_is_2517(priv) &&
+	    (mode == MCP25XXFD_CAN_CON_MODE_RESTRICTED ||
+	     mode == MCP25XXFD_CAN_CON_MODE_LISTENONLY))
 		netdev_dbg(priv->ndev,
 			   "Controller changed into %s Mode (%u).\n",
 			   mcp25xxfd_get_mode_str(mode), mode);
@@ -1504,7 +1512,10 @@ static int mcp25xxfd_handle_serrif(struct mcp25xxfd_priv *priv)
 	 */
 	if ((priv->intf & MCP25XXFD_CAN_INT_MODIF) &&
 	    (priv->intf & MCP25XXFD_CAN_INT_IVMIF)) {
-		netdev_dbg(priv->ndev, "TX MAB underflow detected.\n");
+		if (mcp25xxfd_is_2517(priv))
+			netdev_dbg(priv->ndev, "TX MAB underflow detected.\n");
+		else
+			netdev_info(priv->ndev, "TX MAB underflow detected.\n");
 
 		stats->tx_aborted_errors++;
 		stats->tx_errors++;

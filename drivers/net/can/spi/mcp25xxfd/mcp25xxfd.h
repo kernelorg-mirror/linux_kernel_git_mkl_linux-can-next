@@ -599,6 +599,7 @@ struct mcp25xxfd_priv {
 
 	struct regmap *map;
 	struct regmap *map_crc;
+	struct regmap *map_rx;
 	struct spi_device *spi;
 
 	struct mcp25xxfd_tef_ring tef;
@@ -623,6 +624,15 @@ struct mcp25xxfd_priv {
 	struct mcp25xxfd_log log[64];
 #endif
 };
+
+#define MCP25XXFD_IS(_model) \
+static inline bool \
+mcp25xxfd_is_##_model(const struct mcp25xxfd_priv *priv) \
+{ \
+	return priv->model == MCP25XXFD_MODEL_MCP##_model##FD; \
+}
+
+MCP25XXFD_IS(2517);
 
 static inline u8 mcp25xxfd_first_byte_set(u32 mask)
 {

@@ -1940,11 +1940,11 @@ static int mcp25xxfd_register_chip_detect(struct mcp25xxfd_priv *priv)
 		return err;
 
 	if (osc & MCP25XXFD_OSC_LPMEN)
-		model = CAN_MCP2518FD;
+		model = MCP25XXFD_MODEL_MCP2518FD;
 	else
-		model = CAN_MCP2517FD;
+		model = MCP25XXFD_MODEL_MCP2517FD;
 
-	if (priv->model != CAN_MCP25XXFD &&
+	if (priv->model != MCP25XXFD_MODEL_MCP25XXFD &&
 	    priv->model != model) {
 		netdev_info(ndev,
 			    "Detected MCP%xFD, but firmware specifies a MCP%xFD. Fixing up.",
@@ -2015,7 +2015,7 @@ static int mcp25xxfd_register(struct mcp25xxfd_priv *priv)
 	if (err)
 		goto out_chip_set_mode_sleep;
 
-	if (priv->model == CAN_MCP2517FD) {
+	if (priv->model == MCP25XXFD_MODEL_MCP2517FD) {
 		netdev_info(ndev, "MCP%xFD %ssuccessfully initialized.\n",
 			    priv->model, priv->rx_int ? "(+RX-INT) " : "");
 	} else {
@@ -2071,13 +2071,13 @@ static inline void mcp25xxfd_unregister(struct mcp25xxfd_priv *priv)
 static const struct of_device_id mcp25xxfd_of_match[] = {
 	{
 		.compatible = "microchip,mcp2517fd",
-		.data = (void *)CAN_MCP2517FD,
+		.data = (void *)MCP25XXFD_MODEL_MCP2517FD,
 	}, {
 		.compatible = "microchip,mcp2518fd",
-		.data = (void *)CAN_MCP2518FD,
+		.data = (void *)MCP25XXFD_MODEL_MCP2518FD,
 	}, {
 		.compatible = "microchip,mcp25xxfd",
-		.data = (void *)CAN_MCP25XXFD,
+		.data = (void *)MCP25XXFD_MODEL_MCP25XXFD,
 	}, {
 		/* sentinel */
 	},
@@ -2087,13 +2087,13 @@ MODULE_DEVICE_TABLE(of, mcp25xxfd_of_match);
 static const struct spi_device_id mcp25xxfd_id_table[] = {
 	{
 		.name = "mcp2517fd",
-		.driver_data = (kernel_ulong_t)CAN_MCP2517FD,
+		.driver_data = (kernel_ulong_t)MCP25XXFD_MODEL_MCP2517FD,
 	}, {
 		.name = "mcp2518fd",
-		.driver_data = (kernel_ulong_t)CAN_MCP2518FD,
+		.driver_data = (kernel_ulong_t)MCP25XXFD_MODEL_MCP2518FD,
 	}, {
 		.name = "mcp25xxfd",
-		.driver_data = (kernel_ulong_t)CAN_MCP25XXFD,
+		.driver_data = (kernel_ulong_t)MCP25XXFD_MODEL_MCP25XXFD,
 	}, {
 		/* sentinel */
 	},

@@ -587,9 +587,9 @@ struct mcp25xxfd_regs_status {
 };
 
 enum mcp25xxfd_model {
-	CAN_MCP2517FD = 0x2517,
-	CAN_MCP2518FD = 0x2518,
-	CAN_MCP25XXFD = 0xffff,		/* autodetect model */
+	MCP25XXFD_MODEL_MCP2517FD = 0x2517,
+	MCP25XXFD_MODEL_MCP2518FD = 0x2518,
+	MCP25XXFD_MODEL_MCP25XXFD = 0xffff,	/* autodetect model */
 };
 
 struct mcp25xxfd_priv {

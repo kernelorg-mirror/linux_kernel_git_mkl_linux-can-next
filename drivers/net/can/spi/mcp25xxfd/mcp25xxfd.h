@@ -421,6 +421,7 @@ static inline void __dump(const void *d, unsigned int len)
 #define MCP25XXFD_INSTRUCTION_WRITE_CRC 0xa000
 #define MCP25XXFD_INSTRUCTION_READ_CRC 0xb000
 #define MCP25XXFD_INSTRUCTION_WRITE_SAVE 0xc000
+#define MCP25XXFD_SPI_ADDRESS_MASK GENMASK(11, 0)
 
 struct mcp25xxfd_dump_regs_fifo {
 	u32 con;
@@ -534,11 +535,13 @@ struct __packed mcp25xxfd_reg_write_buf {
 	u8 data[4];
 } ____cacheline_aligned;
 
+struct __packed mcp25xxfd_crc_buf_addr {
+	__be16 cmd;
+	u8 len;
+};
+
 struct mcp25xxfd_crc_buf {
-	struct __packed {
-		__be16 cmd;
-		u8 len;
-	} addr;
+	struct mcp25xxfd_crc_buf_addr addr;
 	__be16 crc;
 } ____cacheline_aligned;
 

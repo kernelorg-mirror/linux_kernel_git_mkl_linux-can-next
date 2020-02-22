@@ -111,6 +111,30 @@ static int mcp25xxfd_regmap_read(void *context,
 	return spi_sync_transfer(spi, xfer, ARRAY_SIZE(xfer));
 }
 
+static inline bool mcp25xxfd_regmap_reg_in_ram(unsigned int reg)
+{
+	static const struct regmap_range range =
+		regmap_reg_range(MCP25XXFD_RAM_START,
+				 MCP25XXFD_RAM_START + MCP25XXFD_RAM_SIZE - 4);
+
+	return regmap_reg_in_range(reg, &range);
+}
+
+static void
+mcp25xxfd_regmap_fill_crc_addr(struct mcp25xxfd_crc_buf_addr *addr,
+			       __be16 *reg_be16, size_t val_len)
+{
+	u16 reg = be16_to_cpup(reg_be16) & MCP25XXFD_SPI_ADDRESS_MASK;
+
+	addr->cmd = *reg_be16;
+
+	/* Number of u32 for RAM access, number of u8 otherwise. */
+	if (mcp25xxfd_regmap_reg_in_ram(reg))
+		addr->len = val_len >> 2;
+	else
+		addr->len = val_len;
+}
+
 static int mcp25xxfd_regmap_crc_gather_write(void *context,
 					     const void *reg, size_t reg_len,
 					     const void *val, size_t val_len)
@@ -131,8 +155,8 @@ static int mcp25xxfd_regmap_crc_gather_write(void *context,
 	};
 	u16 crc;
 
-	priv->crc_buf.addr.cmd = *(__be16 *)reg;
-	priv->crc_buf.addr.len = val_len;
+	mcp25xxfd_regmap_fill_crc_addr(&priv->crc_buf.addr,
+				       (__be16 *)reg, val_len);
 
 	crc = mcp25xxfd_crc16_compute(xfer[0].tx_buf, xfer[0].len,
 				      xfer[1].rx_buf, xfer[1].len);
@@ -173,8 +197,8 @@ static int mcp25xxfd_regmap_crc_read(void *context,
 	u16 crc_received, crc_calculated;
 	int err;
 
-	priv->crc_buf.addr.cmd = *(__be16 *)reg;
-	priv->crc_buf.addr.len = val_len;
+	mcp25xxfd_regmap_fill_crc_addr(&priv->crc_buf.addr,
+				       (__be16 *)reg, val_len);
 
 	err = spi_sync_transfer(spi, xfer, ARRAY_SIZE(xfer));
 	if (err)
@@ -184,10 +208,12 @@ static int mcp25xxfd_regmap_crc_read(void *context,
 	crc_calculated = mcp25xxfd_crc16_compute(xfer[0].tx_buf, xfer[0].len,
 						 xfer[1].rx_buf, xfer[1].len);
 	if (crc_received != crc_calculated) {
-		__dump(xfer[0].tx_buf, xfer[0].len);
-		__dump(xfer[1].rx_buf, xfer[1].len);
-		__dump(&crc_received, sizeof(crc_received));
-		__dump(&crc_calculated, sizeof(crc_calculated));
+		netdev_info(priv->ndev,
+			    "CRC read error: reg=0x%04lx len=%d\n",
+			    be16_to_cpup((__be16 *)reg) &
+			    MCP25XXFD_SPI_ADDRESS_MASK,
+			    val_len);
+
 		return -EBADMSG;
 	}
 

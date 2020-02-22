@@ -1190,10 +1190,18 @@ mcp25xxfd_rx_obj_read(const struct mcp25xxfd_priv *priv,
 		      struct mcp25xxfd_hw_rx_obj_canfd *hw_rx_obj,
 		      const u8 offset, const u8 len)
 {
-	return regmap_bulk_read(priv->map,
-				mcp25xxfd_get_rx_obj_addr(ring, offset),
-				hw_rx_obj,
-				len * ring->obj_size / sizeof(u32));
+	int err;
+
+ retry:
+	err = regmap_bulk_read(priv->map_rx,
+			       mcp25xxfd_get_rx_obj_addr(ring, offset),
+			       hw_rx_obj,
+			       len * ring->obj_size / sizeof(u32));
+
+	if (err == -EBADMSG)
+		goto retry;
+
+	return err;
 }
 
 static int
@@ -2042,6 +2050,12 @@ static int mcp25xxfd_register_chip_detect(struct mcp25xxfd_priv *priv)
 	return 0;
 }
 
+static void mcp25xxfd_register_quirks(struct mcp25xxfd_priv *priv)
+{
+	if (mcp25xxfd_is_2517(priv))
+		priv->map_rx = priv->map_crc;
+}
+
 static int mcp25xxfd_register_check_rx_int(struct mcp25xxfd_priv *priv)
 {
 	int err, rx_pending;
@@ -2093,6 +2107,8 @@ static int mcp25xxfd_register(struct mcp25xxfd_priv *priv)
 	err = mcp25xxfd_register_chip_detect(priv);
 	if (err)
 		goto out_chip_set_mode_sleep;
+
+	mcp25xxfd_register_quirks(priv);
 
 	err = mcp25xxfd_register_check_rx_int(priv);
 	if (err)

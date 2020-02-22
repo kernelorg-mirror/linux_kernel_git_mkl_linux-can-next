@@ -300,6 +300,9 @@ int mcp25xxfd_regmap_init(struct mcp25xxfd_priv *priv)
 	if (IS_ERR(priv->map))
 		return PTR_ERR(priv->map);
 
+	/* Use normal regmap by default. */
+	priv->map_rx = priv->map;
+
 	priv->map_crc = devm_regmap_init(&priv->spi->dev, &mcp25xxfd_bus_crc,
 					 priv->spi, &mcp25xxfd_regmap_crc);
 	return PTR_ERR_OR_ZERO(priv->map_crc);

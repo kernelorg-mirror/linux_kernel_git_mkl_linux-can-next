@@ -403,13 +403,6 @@ static inline void __dump(const void *d, unsigned int len)
 #define MCP25XXFD_TX_OBJ_NUM_MAX MCP25XXFD_TX_OBJ_NUM_CANFD
 #endif
 
-/* The actual number of RX objects is calculated in
- * mcp25xxfd_chip_fifo_compute(), but we allocate memory
- * beforehand.
- */
-#define MCP25XXFD_RX_OBJ_NUM_CAN 32
-#define MCP25XXFD_RX_OBJ_NUM_CANFD 22
-
 #define MCP25XXFD_NAPI_WEIGHT 32
 #define MCP25XXFD_TX_FIFO 1
 #define MCP25XXFD_RX_FIFO(x) (MCP25XXFD_TX_FIFO + 1 + (x))
@@ -587,7 +580,7 @@ struct mcp25xxfd_rx_ring {
 	u8 obj_num;
 	u8 obj_size;
 
-	struct mcp25xxfd_hw_rx_obj_canfd obj[MCP25XXFD_RX_OBJ_NUM_CANFD];
+	struct mcp25xxfd_hw_rx_obj_canfd obj[];
 };
 
 struct mcp25xxfd_regs_status {
@@ -612,7 +605,7 @@ struct mcp25xxfd_priv {
 
 	struct mcp25xxfd_tef_ring tef;
 	struct mcp25xxfd_tx_ring tx;
-	struct mcp25xxfd_rx_ring rx[1];
+	struct mcp25xxfd_rx_ring *rx[1];
 
 	u8 rx_ring_num;
 
@@ -806,10 +799,15 @@ mcp25xxfd_get_rx_linear_len(const struct mcp25xxfd_rx_ring *ring)
 	return min_t(u8, len, ring->obj_num - mcp25xxfd_get_rx_tail(ring));
 }
 
+#define mcp25xxfd_for_each_tx_obj(ring, _obj, n) \
+	for ((n) = 0, (_obj) = &(ring)->obj[(n)]; \
+	     (n) < (ring)->obj_num; \
+	     (n)++, (_obj) = &(ring)->obj[(n)])
+
 #define mcp25xxfd_for_each_rx_ring(priv, ring, n) \
-	for ((ring) = (priv)->rx, (n) = 0; \
-	     (ring) - (priv)->rx < (priv)->rx_ring_num; \
-	     ring++, (n)++)
+	for ((n) = 0, (ring) = *((priv)->rx + (n)); \
+	     (n) < (priv)->rx_ring_num; \
+	     (n)++, (ring) = *((priv)->rx + (n)))
 
 void mcp25xxfd_dump(struct mcp25xxfd_priv *priv);
 int mcp25xxfd_regmap_init(struct mcp25xxfd_priv *priv);

@@ -651,7 +651,7 @@ static void mcp25xxfd_dump_ram(const struct mcp25xxfd_priv *priv, const struct m
 	netdev_info(priv->ndev, "----------------------- RAM dump ----------------------\n");
 	mcp25xxfd_dump_ram_tef_obj(priv, regs, ram);
 	mcp25xxfd_dump_ram_tx_obj(priv, regs, ram);
-	mcp25xxfd_dump_ram_rx_obj(priv, regs, ram, &priv->rx[0]);
+	mcp25xxfd_dump_ram_rx_obj(priv, regs, ram, priv->rx[0]);
 	netdev_info(priv->ndev, "------------------------- end -------------------------\n");
 }
 

@@ -263,6 +263,12 @@ static void mcp25xxfd_ring_init(struct mcp25xxfd_priv *priv)
 
 static void mcp25xxfd_ring_free(struct mcp25xxfd_priv *priv)
 {
+	int i;
+
+	for (i = ARRAY_SIZE(priv->rx) - 1; i > 0; i--) {
+		kfree(priv->rx[i]);
+		priv->rx[i] = NULL;
+	}
 }
 
 static int mcp25xxfd_ring_alloc(struct mcp25xxfd_priv *priv)
@@ -291,11 +297,19 @@ static int mcp25xxfd_ring_alloc(struct mcp25xxfd_priv *priv)
 	     i++) {
 		int rx_obj_num;
 
-		rx_ring = &priv->rx[i];
-		rx_ring->obj_size = rx_obj_size;
 		rx_obj_num = ram_free / rx_obj_size;
-		rx_obj_num = 1 << (fls(rx_obj_num) - 1);
-		rx_ring->obj_num = min(rx_obj_num, 32);
+		rx_obj_num = min(1 << (fls(rx_obj_num) - 1), 32);
+
+		rx_ring = kzalloc(sizeof(*rx_ring) + rx_obj_size * rx_obj_num,
+				  GFP_KERNEL);
+		if (!rx_ring) {
+			mcp25xxfd_ring_free(priv);
+			return -ENOMEM;
+		}
+		rx_ring->obj_num = rx_obj_num;
+		rx_ring->obj_size = rx_obj_size;
+		priv->rx[i] = rx_ring;
+
 		ram_free -= rx_ring->obj_num * rx_ring->obj_size;
 	}
 	priv->rx_ring_num = i;

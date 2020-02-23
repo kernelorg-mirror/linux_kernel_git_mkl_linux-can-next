@@ -261,6 +261,67 @@ static void mcp25xxfd_ring_init(struct mcp25xxfd_priv *priv)
 	}
 }
 
+static void mcp25xxfd_ring_free(struct mcp25xxfd_priv *priv)
+{
+}
+
+static int mcp25xxfd_ring_alloc(struct mcp25xxfd_priv *priv)
+{
+	struct mcp25xxfd_rx_ring *ring;
+	int tef_obj_size, tx_obj_size, rx_obj_size;
+	int tx_obj_num;
+	int ram_free, i;
+
+	tef_obj_size = sizeof(struct mcp25xxfd_hw_tef_obj);
+	if (priv->can.ctrlmode & CAN_CTRLMODE_FD) {
+		tx_obj_num = MCP25XXFD_TX_OBJ_NUM_CANFD;
+		tx_obj_size = sizeof(struct mcp25xxfd_hw_tx_obj_canfd);
+		rx_obj_size = sizeof(struct mcp25xxfd_hw_rx_obj_canfd);
+	} else {
+		tx_obj_num = MCP25XXFD_TX_OBJ_NUM_CAN;
+		tx_obj_size = sizeof(struct mcp25xxfd_hw_tx_obj_can);
+		rx_obj_size = sizeof(struct mcp25xxfd_hw_rx_obj_can);
+	}
+
+	ram_free = MCP25XXFD_RAM_SIZE - tx_obj_num *
+		(tef_obj_size + tx_obj_size);
+
+	for (i = 0;
+	     i < ARRAY_SIZE(priv->rx) && ram_free >= rx_obj_size;
+	     i++) {
+		struct mcp25xxfd_rx_ring *ring = &priv->rx[i];
+		int rx_obj_num;
+
+		ring->obj_size = rx_obj_size;
+		rx_obj_num = ram_free / rx_obj_size;
+		rx_obj_num = 1 << (fls(rx_obj_num) - 1);
+		ring->obj_num = min(rx_obj_num, 32);
+		ram_free -= ring->obj_num * rx_obj_size;
+	}
+	priv->rx_ring_num = i;
+
+	priv->tx.obj_num = tx_obj_num;
+	priv->tx.obj_size = tx_obj_size;
+
+	netdev_dbg(priv->ndev,
+		   "FIFO setup: TEF: %d*%d bytes = %d bytes, TX: %d*%d bytes = %d bytes\n",
+		   tx_obj_num, tef_obj_size, tef_obj_size * tx_obj_num,
+		   tx_obj_num, tx_obj_size, tx_obj_size * tx_obj_num);
+
+	mcp25xxfd_for_each_rx_ring(priv, ring, i) {
+		netdev_dbg(priv->ndev,
+			   "FIFO setup: RX-%d: %d*%d bytes = %d bytes\n",
+			   i, ring->obj_num, ring->obj_size,
+			   ring->obj_size * ring->obj_num);
+	}
+
+	netdev_dbg(priv->ndev,
+		   "FIFO setup: free: %d bytes.\n",
+		   ram_free);
+
+	return 0;
+}
+
 static inline int
 mcp25xxfd_chip_get_mode(const struct mcp25xxfd_priv *priv, u8 *mode)
 {
@@ -511,63 +572,6 @@ static int mcp25xxfd_chip_pinctrl_init(const struct mcp25xxfd_priv *priv)
 	return regmap_write(priv->map, MCP25XXFD_IOCON, val);
 }
 
-static int mcp25xxfd_chip_fifo_compute(struct mcp25xxfd_priv *priv)
-{
-	struct mcp25xxfd_rx_ring *ring;
-	int tef_obj_size, tx_obj_size, rx_obj_size;
-	int tx_obj_num;
-	int ram_free, i;
-
-	tef_obj_size = sizeof(struct mcp25xxfd_hw_tef_obj);
-	if (priv->can.ctrlmode & CAN_CTRLMODE_FD) {
-		tx_obj_num = MCP25XXFD_TX_OBJ_NUM_CANFD;
-		tx_obj_size = sizeof(struct mcp25xxfd_hw_tx_obj_canfd);
-		rx_obj_size = sizeof(struct mcp25xxfd_hw_rx_obj_canfd);
-	} else {
-		tx_obj_num = MCP25XXFD_TX_OBJ_NUM_CAN;
-		tx_obj_size = sizeof(struct mcp25xxfd_hw_tx_obj_can);
-		rx_obj_size = sizeof(struct mcp25xxfd_hw_rx_obj_can);
-	}
-
-	ram_free = MCP25XXFD_RAM_SIZE - tx_obj_num *
-		(tef_obj_size + tx_obj_size);
-
-	for (i = 0;
-	     i < ARRAY_SIZE(priv->rx) && ram_free >= rx_obj_size;
-	     i++) {
-		struct mcp25xxfd_rx_ring *ring = &priv->rx[i];
-		int rx_obj_num;
-
-		ring->obj_size = rx_obj_size;
-		rx_obj_num = ram_free / rx_obj_size;
-		rx_obj_num = 1 << (fls(rx_obj_num) - 1);
-		ring->obj_num = min(rx_obj_num, 32);
-		ram_free -= ring->obj_num * rx_obj_size;
-	}
-	priv->rx_ring_num = i;
-
-	priv->tx.obj_num = tx_obj_num;
-	priv->tx.obj_size = tx_obj_size;
-
-	netdev_dbg(priv->ndev,
-		   "FIFO setup: TEF: %d*%d bytes = %d bytes, TX: %d*%d bytes = %d bytes\n",
-		   tx_obj_num, tef_obj_size, tef_obj_size * tx_obj_num,
-		   tx_obj_num, tx_obj_size, tx_obj_size * tx_obj_num);
-
-	mcp25xxfd_for_each_rx_ring(priv, ring, i) {
-		netdev_dbg(priv->ndev,
-			   "FIFO setup: RX-%d: %d*%d bytes = %d bytes\n",
-			   i, ring->obj_num, ring->obj_size,
-			   ring->obj_size * ring->obj_num);
-	}
-
-	netdev_dbg(priv->ndev,
-		   "FIFO setup: free: %d bytes.\n",
-		   ram_free);
-
-	return 0;
-}
-
 static int
 mcp25xxfd_chip_rx_fifo_init_one(const struct mcp25xxfd_priv *priv,
 				const struct mcp25xxfd_rx_ring *ring)
@@ -612,17 +616,11 @@ mcp25xxfd_chip_rx_filter_init_one(const struct mcp25xxfd_priv *priv,
 				  fltcon);
 }
 
-static int mcp25xxfd_chip_fifo_init(struct mcp25xxfd_priv *priv)
+static int mcp25xxfd_chip_fifo_init(const struct mcp25xxfd_priv *priv)
 {
 	const struct mcp25xxfd_rx_ring *rx_ring;
 	u32 val;
 	int err, n;
-
-	err = mcp25xxfd_chip_fifo_compute(priv);
-	if (err)
-		return err;
-
-	mcp25xxfd_ring_init(priv);
 
 	/* TEF */
 	val = FIELD_PREP(MCP25XXFD_CAN_TEFCON_FSIZE_MASK,
@@ -793,6 +791,8 @@ static int mcp25xxfd_chip_start(struct mcp25xxfd_priv *priv)
 	err = mcp25xxfd_chip_pinctrl_init(priv);
 	if (err)
 		goto out_chip_set_mode_sleep;
+
+	mcp25xxfd_ring_init(priv);
 
 	err = mcp25xxfd_chip_fifo_init(priv);
 	if (err)
@@ -1951,11 +1951,15 @@ static int mcp25xxfd_open(struct net_device *ndev)
 	if (err)
 		goto out_pm_runtime_put;
 
+	err = mcp25xxfd_ring_alloc(priv);
+	if (err)
+		goto out_close_candev;
+
 	err = request_threaded_irq(spi->irq, NULL, mcp25xxfd_irq,
 				   IRQF_ONESHOT, dev_name(&spi->dev),
 				   priv);
 	if (err)
-		goto out_close;
+		goto out_mcp25xxfd_ring_free;
 
 	err = mcp25xxfd_transceiver_enable(priv);
 	if (err)
@@ -1976,7 +1980,9 @@ static int mcp25xxfd_open(struct net_device *ndev)
 	mcp25xxfd_transceiver_disable(priv);
  out_free_irq:
 	free_irq(spi->irq, priv);
- out_close:
+ out_mcp25xxfd_ring_free:
+	mcp25xxfd_ring_free(priv);
+ out_close_candev:
 	close_candev(ndev);
  out_pm_runtime_put:
 	mcp25xxfd_chip_stop(priv, CAN_STATE_STOPPED);
@@ -1994,6 +2000,7 @@ static int mcp25xxfd_stop(struct net_device *ndev)
 	can_rx_offload_disable(&priv->offload);
 	mcp25xxfd_transceiver_disable(priv);
 	free_irq(ndev->irq, priv);
+	mcp25xxfd_ring_free(priv);
 	close_candev(ndev);
 
 	pm_runtime_put(ndev->dev.parent);

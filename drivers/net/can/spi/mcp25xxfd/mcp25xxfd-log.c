@@ -22,8 +22,8 @@ struct mcp25xxfd_log *___mcp25xxfd_log(struct mcp25xxfd_priv *priv, const char *
 	log->can_id = can_id;
 	log->tef_head = priv->tef.head;
 	log->tef_tail = priv->tef.tail;
-	log->tx_head = priv->tx.head;
-	log->tx_tail = priv->tx.tail;
+	log->tx_head = priv->tx->head;
+	log->tx_tail = priv->tx->tail;
 	log->flags = 0;
 
 	return log;
@@ -41,7 +41,7 @@ static void mcp25xxfd_log_dump_one(const struct mcp25xxfd_priv *priv, const stru
 		pr_cont(" ---   ");
 
 	if (last_log->tef_head != log->tef_head)
-		pr_cont("tef_h=%08x/%02x ", log->tef_head, log->tef_head & (priv->tx.obj_num - 1));
+		pr_cont("tef_h=%08x/%02x ", log->tef_head, log->tef_head & (priv->tx->obj_num - 1));
 	else
 		pr_cont("    ---           ");
 
@@ -52,7 +52,7 @@ static void mcp25xxfd_log_dump_one(const struct mcp25xxfd_priv *priv, const stru
 		pr_cont("       ---  ");
 
 	if (last_log->tef_tail != log->tef_tail)
-		pr_cont("tef_t=%08x/%02x ", log->tef_tail, log->tef_tail & (priv->tx.obj_num - 1));
+		pr_cont("tef_t=%08x/%02x ", log->tef_tail, log->tef_tail & (priv->tx->obj_num - 1));
 	else
 		pr_cont("    ---           ");
 
@@ -63,12 +63,12 @@ static void mcp25xxfd_log_dump_one(const struct mcp25xxfd_priv *priv, const stru
 		pr_cont("       ---  ");
 
 	if (last_log->tx_head != log->tx_head)
-		pr_cont("tx_h=%08x/%02x ", log->tx_head, log->tx_head & (priv->tx.obj_num - 1));
+		pr_cont("tx_h=%08x/%02x ", log->tx_head, log->tx_head & (priv->tx->obj_num - 1));
 	else
 		pr_cont("   ---           ");
 
 	if (last_log->tx_tail != log->tx_tail)
-		pr_cont("tx_t=%08x/%02x ", log->tx_tail, log->tx_tail & (priv->tx.obj_num - 1));
+		pr_cont("tx_t=%08x/%02x ", log->tx_tail, log->tx_tail & (priv->tx->obj_num - 1));
 	else
 		pr_cont("   ---           ");
 

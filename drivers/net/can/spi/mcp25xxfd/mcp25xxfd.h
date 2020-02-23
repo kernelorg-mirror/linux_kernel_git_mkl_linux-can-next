@@ -604,7 +604,7 @@ struct mcp25xxfd_priv {
 	struct spi_device *spi;
 
 	struct mcp25xxfd_tef_ring tef;
-	struct mcp25xxfd_tx_ring tx;
+	struct mcp25xxfd_tx_ring tx[1];
 	struct mcp25xxfd_rx_ring *rx[1];
 
 	u8 rx_ring_num;
@@ -721,17 +721,17 @@ mcp25xxfd_spi_cmd_write_crc(struct mcp25xxfd_crc_buf_cmd *cmd,
 }
 
 static inline u16
-mcp25xxfd_get_tef_obj_addr(const struct mcp25xxfd_priv *priv, u8 n)
+mcp25xxfd_get_tef_obj_addr(u8 n)
 {
 	return MCP25XXFD_RAM_START +
 		sizeof(struct mcp25xxfd_hw_tef_obj) * n;
 }
 
 static inline u16
-mcp25xxfd_get_tx_obj_addr(const struct mcp25xxfd_priv *priv, u8 n)
+mcp25xxfd_get_tx_obj_addr(const struct mcp25xxfd_tx_ring *ring, u8 n)
 {
-	return mcp25xxfd_get_tef_obj_addr(priv, priv->tx.obj_num) +
-		priv->tx.obj_size * n;
+	return mcp25xxfd_get_tef_obj_addr(ring->obj_num) +
+		ring->obj_size * n;
 }
 
 static inline u16
@@ -742,12 +742,12 @@ mcp25xxfd_get_rx_obj_addr(const struct mcp25xxfd_rx_ring *ring, u8 n)
 
 static inline u8 mcp25xxfd_get_tef_head(const struct mcp25xxfd_priv *priv)
 {
-	return priv->tef.head & (priv->tx.obj_num - 1);
+	return priv->tef.head & (priv->tx->obj_num - 1);
 }
 
 static inline u8 mcp25xxfd_get_tef_tail(const struct mcp25xxfd_priv *priv)
 {
-	return priv->tef.tail & (priv->tx.obj_num - 1);
+	return priv->tef.tail & (priv->tx->obj_num - 1);
 }
 
 static inline u8 mcp25xxfd_get_tef_len(const struct mcp25xxfd_priv *priv)
@@ -761,17 +761,17 @@ static inline u8 mcp25xxfd_get_tef_linear_len(const struct mcp25xxfd_priv *priv)
 
 	len = mcp25xxfd_get_tef_len(priv);
 
-	return min_t(u8, len, priv->tx.obj_num - mcp25xxfd_get_tef_tail(priv));
+	return min_t(u8, len, priv->tx->obj_num - mcp25xxfd_get_tef_tail(priv));
 }
 
-static inline u8 mcp25xxfd_get_tx_head(const struct mcp25xxfd_priv *priv)
+static inline u8 mcp25xxfd_get_tx_head(const struct mcp25xxfd_tx_ring *ring)
 {
-	return priv->tx.head & (priv->tx.obj_num - 1);
+	return ring->head & (ring->obj_num - 1);
 }
 
-static inline u8 mcp25xxfd_get_tx_tail(const struct mcp25xxfd_priv *priv)
+static inline u8 mcp25xxfd_get_tx_tail(const struct mcp25xxfd_tx_ring *ring)
 {
-	return priv->tx.tail & (priv->tx.obj_num - 1);
+	return ring->tail & (ring->obj_num - 1);
 }
 
 static inline u8 mcp25xxfd_get_rx_head(const struct mcp25xxfd_rx_ring *ring)

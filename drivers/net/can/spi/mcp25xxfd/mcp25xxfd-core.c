@@ -199,6 +199,7 @@ mcp25xxfd_rx_tail_get_from_chip(const struct mcp25xxfd_priv *priv,
 
 static void
 mcp25xxfd_tx_ring_init_tx_obj(const struct mcp25xxfd_priv *priv,
+			      const struct mcp25xxfd_tx_ring *ring,
 			      struct mcp25xxfd_tx_obj *tx_obj, const u8 n)
 {
 	u32 val;
@@ -206,7 +207,7 @@ mcp25xxfd_tx_ring_init_tx_obj(const struct mcp25xxfd_priv *priv,
 	u8 len;
 
 	/* FIFO load */
-	addr = mcp25xxfd_get_tx_obj_addr(priv, n);
+	addr = mcp25xxfd_get_tx_obj_addr(ring, n);
 	tx_obj->load.buf.cmd = mcp25xxfd_cmd_write(addr);
 	/* len is calculated on the fly */
 
@@ -229,19 +230,23 @@ mcp25xxfd_tx_ring_init_tx_obj(const struct mcp25xxfd_priv *priv,
 
 static void mcp25xxfd_ring_init(struct mcp25xxfd_priv *priv)
 {
+	struct mcp25xxfd_tx_ring *tx_ring;
 	struct mcp25xxfd_rx_ring *rx_ring, *prev_rx_ring = NULL;
+	struct mcp25xxfd_tx_obj *tx_obj;
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(priv->tx.obj); i++) {
-		struct mcp25xxfd_tx_obj *tx_obj = &priv->tx.obj[i];
-
-		mcp25xxfd_tx_ring_init_tx_obj(priv, tx_obj, i);
-	}
-
+	/* TEF */
 	priv->tef.head = 0;
 	priv->tef.tail = 0;
-	priv->tx.head = 0;
-	priv->tx.tail = 0;
+
+	/* TX */
+	tx_ring = priv->tx;
+	tx_ring->head = 0;
+	tx_ring->tail = 0;
+	mcp25xxfd_for_each_tx_obj(tx_ring, tx_obj, i)
+		mcp25xxfd_tx_ring_init_tx_obj(priv, tx_ring, tx_obj, i);
+
+	/* RX */
 	mcp25xxfd_for_each_rx_ring(priv, rx_ring, i) {
 		rx_ring->head = 0;
 		rx_ring->tail = 0;
@@ -251,7 +256,7 @@ static void mcp25xxfd_ring_init(struct mcp25xxfd_priv *priv)
 		if (!prev_rx_ring)
 			rx_ring->base = MCP25XXFD_RAM_START +
 				(sizeof(struct mcp25xxfd_hw_tef_obj) +
-				 priv->tx.obj_size) * priv->tx.obj_num;
+				 tx_ring->obj_size) * tx_ring->obj_num;
 		else
 			rx_ring->base = prev_rx_ring->base +
 				prev_rx_ring->obj_size *
@@ -273,6 +278,7 @@ static void mcp25xxfd_ring_free(struct mcp25xxfd_priv *priv)
 
 static int mcp25xxfd_ring_alloc(struct mcp25xxfd_priv *priv)
 {
+	struct mcp25xxfd_tx_ring *tx_ring;
 	struct mcp25xxfd_rx_ring *rx_ring;
 	int tef_obj_size, tx_obj_size, rx_obj_size;
 	int tx_obj_num;
@@ -288,6 +294,10 @@ static int mcp25xxfd_ring_alloc(struct mcp25xxfd_priv *priv)
 		tx_obj_size = sizeof(struct mcp25xxfd_hw_tx_obj_can);
 		rx_obj_size = sizeof(struct mcp25xxfd_hw_rx_obj_can);
 	}
+
+	tx_ring = priv->tx;
+	tx_ring->obj_num = tx_obj_num;
+	tx_ring->obj_size = tx_obj_size;
 
 	ram_free = MCP25XXFD_RAM_SIZE - tx_obj_num *
 		(tef_obj_size + tx_obj_size);
@@ -313,9 +323,6 @@ static int mcp25xxfd_ring_alloc(struct mcp25xxfd_priv *priv)
 		ram_free -= rx_ring->obj_num * rx_ring->obj_size;
 	}
 	priv->rx_ring_num = i;
-
-	priv->tx.obj_num = tx_obj_num;
-	priv->tx.obj_size = tx_obj_size;
 
 	netdev_dbg(priv->ndev,
 		   "FIFO setup: TEF: %d*%d bytes = %d bytes, TX: %d*%d bytes = %d bytes\n",
@@ -632,13 +639,14 @@ mcp25xxfd_chip_rx_filter_init_one(const struct mcp25xxfd_priv *priv,
 
 static int mcp25xxfd_chip_fifo_init(const struct mcp25xxfd_priv *priv)
 {
+	const struct mcp25xxfd_tx_ring *tx_ring = priv->tx;
 	const struct mcp25xxfd_rx_ring *rx_ring;
 	u32 val;
 	int err, n;
 
 	/* TEF */
 	val = FIELD_PREP(MCP25XXFD_CAN_TEFCON_FSIZE_MASK,
-			 priv->tx.obj_num - 1) |
+			 tx_ring->obj_num - 1) |
 		MCP25XXFD_CAN_TEFCON_TEFTSEN |
 		MCP25XXFD_CAN_TEFCON_TEFOVIE |
 		MCP25XXFD_CAN_TEFCON_TEFNEIE;
@@ -649,7 +657,7 @@ static int mcp25xxfd_chip_fifo_init(const struct mcp25xxfd_priv *priv)
 
 	/* FIFO 1 - TX */
 	val = FIELD_PREP(MCP25XXFD_CAN_FIFOCON_FSIZE_MASK,
-			 priv->tx.obj_num - 1) |
+			 tx_ring->obj_num - 1) |
 		MCP25XXFD_CAN_FIFOCON_TXEN |
 		MCP25XXFD_CAN_FIFOCON_TXATIE;
 
@@ -950,6 +958,7 @@ mcp25xxfd_check_rx_tail(const struct mcp25xxfd_priv *priv,
 static int
 mcp25xxfd_handle_tefif_recover(const struct mcp25xxfd_priv *priv, const u32 seq)
 {
+	const struct mcp25xxfd_tx_ring *tx_ring = priv->tx;
 	u32 tef_sta;
 	int err;
 
@@ -967,7 +976,7 @@ mcp25xxfd_handle_tefif_recover(const struct mcp25xxfd_priv *priv, const u32 seq)
 		    "Transmit Event FIFO buffer %s (seq=0x%08x, tef_tail=0x%08x, tef_head=0x%08x, tx_head=0x%08x)\n",
 		    tef_sta & MCP25XXFD_CAN_TEFSTA_TEFNEIF ?
 		    "empty." : "not empty anymore?",
-		    seq, priv->tef.tail, priv->tef.head, priv->tx.head);
+		    seq, priv->tef.tail, priv->tef.head, tx_ring->head);
 
 	return -EAGAIN;
 }
@@ -976,6 +985,7 @@ static int
 mcp25xxfd_handle_tefif_one(struct mcp25xxfd_priv *priv,
 			   const struct mcp25xxfd_hw_tef_obj *hw_tef_obj)
 {
+	struct mcp25xxfd_tx_ring *tx_ring = priv->tx;
 	struct net_device_stats *stats = &priv->ndev->stats;
 	u32 seq, seq_masked, tef_tail_masked;
 	int err;
@@ -1009,14 +1019,15 @@ mcp25xxfd_handle_tefif_one(struct mcp25xxfd_priv *priv,
 	if (err)
 		return err;
 
-	priv->tx.tail++;
 	priv->tef.tail++;
+	tx_ring->tail++;
 
 	return mcp25xxfd_check_tef_tail(priv);
 }
 
 static int mcp25xxfd_tef_ring_update(struct mcp25xxfd_priv *priv)
 {
+	const struct mcp25xxfd_tx_ring *tx_ring = priv->tx;
 	u32 fifo_sta, new_head;
 	u8 tx_ci;
 	int err;
@@ -1028,12 +1039,12 @@ static int mcp25xxfd_tef_ring_update(struct mcp25xxfd_priv *priv)
 		return err;
 
 	tx_ci = FIELD_GET(MCP25XXFD_CAN_FIFOSTA_FIFOCI_MASK, fifo_sta);
-	new_head = round_down(priv->tef.head, priv->tx.obj_num) + tx_ci;
+	new_head = round_down(priv->tef.head, tx_ring->obj_num) + tx_ci;
 
 	if (new_head <= priv->tef.head)
-		new_head += priv->tx.obj_num;
+		new_head += tx_ring->obj_num;
 
-	priv->tef.head = min(new_head, priv->tx.head);
+	priv->tef.head = min(new_head, tx_ring->head);
 
 	mcp25xxfd_log_hw_tx_ci(priv, tx_ci);
 
@@ -1045,18 +1056,20 @@ mcp25xxfd_tef_obj_read(const struct mcp25xxfd_priv *priv,
 		       struct mcp25xxfd_hw_tef_obj *hw_tef_obj,
 		       const u8 offset, const u8 len)
 {
+	const struct mcp25xxfd_tx_ring *tx_ring = priv->tx;
+
 	if (IS_ENABLED(CONFIG_CAN_MCP25XXFD_SANITY) &&
-	    (offset > priv->tx.obj_num ||
-	     len > priv->tx.obj_num ||
-	     offset + len > priv->tx.obj_num)) {
+	    (offset > tx_ring->obj_num ||
+	     len > tx_ring->obj_num ||
+	     offset + len > tx_ring->obj_num)) {
 		netdev_err(priv->ndev,
 			   "Trying to read to many TEF objects (max=%d, offset=%d, len=%d).\n",
-			   priv->tx.obj_num, offset, len);
+			   tx_ring->obj_num, offset, len);
 		return -ERANGE;
 	}
 
 	return regmap_bulk_read(priv->map,
-				mcp25xxfd_get_tef_obj_addr(priv, offset),
+				mcp25xxfd_get_tef_obj_addr(offset),
 				hw_tef_obj,
 				sizeof(*hw_tef_obj) / sizeof(u32) * len);
 }
@@ -1812,17 +1825,18 @@ static irqreturn_t mcp25xxfd_irq(int irq, void *dev_id)
 }
 
 static inline struct
-mcp25xxfd_tx_obj *mcp25xxfd_get_tx_obj_next(struct mcp25xxfd_priv *priv)
+mcp25xxfd_tx_obj *mcp25xxfd_get_tx_obj_next(struct mcp25xxfd_tx_ring *ring)
 {
 	u8 tx_head;
 
-	tx_head = mcp25xxfd_get_tx_head(priv);
+	tx_head = mcp25xxfd_get_tx_head(ring);
 
-	return &priv->tx.obj[tx_head];
+	return &ring->obj[tx_head];
 }
 
 static void
 mcp25xxfd_tx_obj_from_skb(const struct mcp25xxfd_priv *priv,
+			  struct mcp25xxfd_tx_ring *ring,
 			  struct mcp25xxfd_tx_obj *tx_obj,
 			  const struct sk_buff *skb)
 {
@@ -1850,7 +1864,7 @@ mcp25xxfd_tx_obj_from_skb(const struct mcp25xxfd_priv *priv,
 	 * TEF object.
 	 */
 	flags |= FIELD_PREP(MCP25XXFD_OBJ_FLAGS_SEQ_MCP2518FD_MASK,
-			    priv->tx.head) |
+			    ring->head) |
 		FIELD_PREP(MCP25XXFD_OBJ_FLAGS_DLC, can_len2dlc(cfd->len));
 
 	if (cfd->can_id & CAN_RTR_FLAG)
@@ -1898,6 +1912,7 @@ static netdev_tx_t mcp25xxfd_start_xmit(struct sk_buff *skb,
 					struct net_device *ndev)
 {
 	struct mcp25xxfd_priv *priv = netdev_priv(ndev);
+	struct mcp25xxfd_tx_ring *ring = priv->tx;
 	struct mcp25xxfd_tx_obj *tx_obj;
 	const canid_t can_id = ((struct canfd_frame *)skb->data)->can_id;
 	u8 tx_head;
@@ -1908,11 +1923,11 @@ static netdev_tx_t mcp25xxfd_start_xmit(struct sk_buff *skb,
 
 	mcp25xxfd_log(priv, can_id);
 
-	if (priv->tx.head - priv->tx.tail >= priv->tx.obj_num) {
+	if (ring->head - ring->tail >= ring->obj_num) {
 		netdev_dbg(priv->ndev,
 			   "Stopping tx-queue (tx_head=0x%08x, tx_tail=0x%08x, len=%d).\n",
-			   priv->tx.head, priv->tx.tail,
-			   priv->tx.head - priv->tx.tail);
+			   ring->head, ring->tail,
+			   ring->head - ring->tail);
 
 		mcp25xxfd_log_busy(priv, can_id);
 		netif_stop_queue(ndev);
@@ -1920,17 +1935,17 @@ static netdev_tx_t mcp25xxfd_start_xmit(struct sk_buff *skb,
 		return NETDEV_TX_BUSY;
 	}
 
-	tx_obj = mcp25xxfd_get_tx_obj_next(priv);
-	mcp25xxfd_tx_obj_from_skb(priv, tx_obj, skb);
+	tx_obj = mcp25xxfd_get_tx_obj_next(ring);
+	mcp25xxfd_tx_obj_from_skb(priv, ring, tx_obj, skb);
 
 	// FIXME:
 	// if (!netdev_xmit_more() ||
 	//	netif_xmit_stopped(netdev_get_tx_queue(netdev, 0)))
 
 	/* Stop queue if we occupy the complete TX FIFO */
-	tx_head = mcp25xxfd_get_tx_head(priv);
-	priv->tx.head++;
-	if (priv->tx.head - priv->tx.tail >= priv->tx.obj_num) {
+	tx_head = mcp25xxfd_get_tx_head(ring);
+	ring->head++;
+	if (ring->head - ring->tail >= ring->obj_num) {
 		mcp25xxfd_log_stop(priv, can_id);
 		netif_stop_queue(ndev);
 	}

@@ -554,21 +554,21 @@ static void mcp25xxfd_dump_ram_tef_obj(const struct mcp25xxfd_priv *priv, const 
 
 /* dump TX */
 
-static void mcp25xxfd_dump_ram_tx_obj_one(const struct mcp25xxfd_priv *priv, const struct mcp25xxfd_dump_regs *regs, const struct mcp25xxfd_hw_tx_obj_canfd *hw_tx_obj, u8 n)
+static void mcp25xxfd_dump_ram_tx_obj_one(const struct mcp25xxfd_priv *priv, const struct mcp25xxfd_dump_regs *regs, const struct mcp25xxfd_tx_ring *ring, const struct mcp25xxfd_hw_tx_obj_canfd *hw_tx_obj, u8 n)
 {
 	pr_info("TX Object: 0x%02x (0x%03x)%s%s%s%s%s%s\n",
 		n, mcp25xxfd_dump_get_tx_obj_addr(priv, regs, n),
 		mcp25xxfd_dump_get_tx_head(priv, regs) == n ? "  chip-HEAD" : "",
-		mcp25xxfd_get_tx_head(priv) == n ? "  priv-HEAD" : "",
+		mcp25xxfd_get_tx_head(ring) == n ? "  priv-HEAD" : "",
 		mcp25xxfd_dump_get_tx_tail(priv, regs) == n ? "  chip-TAIL" : "",
-		mcp25xxfd_get_tx_tail(priv) == n ? "  priv-TAIL" : "",
+		mcp25xxfd_get_tx_tail(ring) == n ? "  priv-TAIL" : "",
 		mcp25xxfd_dump_get_tx_tail(priv, regs) == n ?
 		(!(regs->tx_fifo.sta & MCP25XXFD_CAN_FIFOSTA_TFNRFNIF) ? "  chip-FIFO-full" :
 		 (regs->tx_fifo.sta & MCP25XXFD_CAN_FIFOSTA_TFERFFIF) ? "  chip-FIFO-empty" : "") :
 		(""),
-		(mcp25xxfd_get_tx_head(priv) == mcp25xxfd_get_tx_tail(priv) &&
-		 mcp25xxfd_get_tx_tail(priv) == n ?
-		 (priv->tx.head == priv->tx.tail ? "  priv-FIFO-empty" : "  priv-FIFO-full") :
+		(mcp25xxfd_get_tx_head(ring) == mcp25xxfd_get_tx_tail(ring) &&
+		 mcp25xxfd_get_tx_tail(ring) == n ?
+		 (ring->head == ring->tail ? "  priv-FIFO-empty" : "  priv-FIFO-full") :
 		 ("")));
 	pr_info("%16s = 0x%08x\n", "id", hw_tx_obj->id);
 	pr_info("%16s = 0x%08x\n", "flags", hw_tx_obj->flags);
@@ -578,13 +578,13 @@ static void mcp25xxfd_dump_ram_tx_obj_one(const struct mcp25xxfd_priv *priv, con
 	pr_info("\n");
 }
 
-static void mcp25xxfd_dump_ram_tx_obj(const struct mcp25xxfd_priv *priv, const struct mcp25xxfd_dump_regs *regs, const struct mcp25xxfd_dump_ram *ram)
+static void mcp25xxfd_dump_ram_tx_obj(const struct mcp25xxfd_priv *priv, const struct mcp25xxfd_dump_regs *regs, const struct mcp25xxfd_dump_ram *ram, const struct mcp25xxfd_tx_ring *ring)
 {
 	int i;
 
 	pr_info("\nTX Overview:\n");
-	pr_info("%16s = 0x%02x    0x%02x    0x%08x\n", "head (c/p)", mcp25xxfd_dump_get_tx_head(priv, regs), mcp25xxfd_get_tx_head(priv), priv->tx.head);
-	pr_info("%16s = 0x%02x    0x%02x    0x%08x\n", "tail (c/p)", mcp25xxfd_dump_get_tx_tail(priv, regs), mcp25xxfd_get_tx_tail(priv), priv->tx.tail);
+	pr_info("%16s = 0x%02x    0x%02x    0x%08x\n", "head (c/p)", mcp25xxfd_dump_get_tx_head(priv, regs), mcp25xxfd_get_tx_head(ring), ring->head);
+	pr_info("%16s = 0x%02x    0x%02x    0x%08x\n", "tail (c/p)", mcp25xxfd_dump_get_tx_tail(priv, regs), mcp25xxfd_get_tx_tail(ring), ring->tail);
 	pr_info("\n");
 
 	for (i = 0; i < mcp25xxfd_dump_get_tx_obj_num(priv, regs); i++) {
@@ -594,7 +594,7 @@ static void mcp25xxfd_dump_ram_tx_obj(const struct mcp25xxfd_priv *priv, const s
 		hw_tx_obj_rel_addr = mcp25xxfd_dump_get_tx_obj_rel_addr(priv, regs, i);
 		hw_tx_obj = (const struct mcp25xxfd_hw_tx_obj_canfd *)&ram->ram[hw_tx_obj_rel_addr];
 
-		mcp25xxfd_dump_ram_tx_obj_one(priv, regs, hw_tx_obj, i);
+		mcp25xxfd_dump_ram_tx_obj_one(priv, regs, ring, hw_tx_obj, i);
 	}
 }
 
@@ -650,7 +650,7 @@ static void mcp25xxfd_dump_ram(const struct mcp25xxfd_priv *priv, const struct m
 {
 	netdev_info(priv->ndev, "----------------------- RAM dump ----------------------\n");
 	mcp25xxfd_dump_ram_tef_obj(priv, regs, ram);
-	mcp25xxfd_dump_ram_tx_obj(priv, regs, ram);
+	mcp25xxfd_dump_ram_tx_obj(priv, regs, ram, priv->tx);
 	mcp25xxfd_dump_ram_rx_obj(priv, regs, ram, priv->rx[0]);
 	netdev_info(priv->ndev, "------------------------- end -------------------------\n");
 }

@@ -313,8 +313,8 @@ static inline void __dump(const void *d, unsigned int len)
 #define MCP25XXFD_CAN_MASK_MSID_MASK GENMASK(10, 0)
 
 /* RAM */
-#define MCP25XXFD_RAM_SIZE 2048
 #define MCP25XXFD_RAM_START 0x400
+#define MCP25XXFD_RAM_SIZE SZ_4K
 
 /* Message Object */
 #define MCP25XXFD_OBJ_ID_SID11 BIT(29)

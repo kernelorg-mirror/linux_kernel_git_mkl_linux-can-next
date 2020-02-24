@@ -607,7 +607,7 @@ mcp25xxfd_chip_rx_filter_init_one(const struct mcp25xxfd_priv *priv,
 
 static int mcp25xxfd_chip_fifo_init(struct mcp25xxfd_priv *priv)
 {
-	struct mcp25xxfd_rx_ring *rx_ring;
+	const struct mcp25xxfd_rx_ring *rx_ring;
 	u32 val;
 	int err, n;
 

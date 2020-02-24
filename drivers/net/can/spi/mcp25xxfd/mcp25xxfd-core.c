@@ -198,8 +198,8 @@ mcp25xxfd_rx_tail_get_from_chip(const struct mcp25xxfd_priv *priv,
 }
 
 static void
-mcp25xxfd_tx_ring_init_one(const struct mcp25xxfd_priv *priv,
-			   struct mcp25xxfd_tx_obj *tx_obj, const u8 n)
+mcp25xxfd_tx_ring_init_tx_obj(const struct mcp25xxfd_priv *priv,
+			      struct mcp25xxfd_tx_obj *tx_obj, const u8 n)
 {
 	u32 val;
 	u16 addr;
@@ -235,7 +235,7 @@ static void mcp25xxfd_ring_init(struct mcp25xxfd_priv *priv)
 	for (i = 0; i < ARRAY_SIZE(priv->tx.obj); i++) {
 		struct mcp25xxfd_tx_obj *tx_obj = &priv->tx.obj[i];
 
-		mcp25xxfd_tx_ring_init_one(priv, tx_obj, i);
+		mcp25xxfd_tx_ring_init_tx_obj(priv, tx_obj, i);
 	}
 
 	priv->tef.head = 0;

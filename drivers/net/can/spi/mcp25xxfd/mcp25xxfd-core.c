@@ -229,7 +229,7 @@ mcp25xxfd_tx_ring_init_tx_obj(const struct mcp25xxfd_priv *priv,
 
 static void mcp25xxfd_ring_init(struct mcp25xxfd_priv *priv)
 {
-	struct mcp25xxfd_rx_ring *ring, *prev_ring = NULL;
+	struct mcp25xxfd_rx_ring *rx_ring, *prev_rx_ring = NULL;
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(priv->tx.obj); i++) {
@@ -242,20 +242,21 @@ static void mcp25xxfd_ring_init(struct mcp25xxfd_priv *priv)
 	priv->tef.tail = 0;
 	priv->tx.head = 0;
 	priv->tx.tail = 0;
-	mcp25xxfd_for_each_rx_ring(priv, ring, i) {
-		ring->head = 0;
-		ring->tail = 0;
-		ring->nr = i;
-		ring->fifo_nr = MCP25XXFD_RX_FIFO(i);
+	mcp25xxfd_for_each_rx_ring(priv, rx_ring, i) {
+		rx_ring->head = 0;
+		rx_ring->tail = 0;
+		rx_ring->nr = i;
+		rx_ring->fifo_nr = MCP25XXFD_RX_FIFO(i);
 
-		if (!prev_ring)
-			ring->base = (sizeof(struct mcp25xxfd_hw_tef_obj) +
-				      priv->tx.obj_size) * priv->tx.obj_num;
+		if (!prev_rx_ring)
+			rx_ring->base = (sizeof(struct mcp25xxfd_hw_tef_obj) +
+					 priv->tx.obj_size) * priv->tx.obj_num;
 		else
-			ring->base = prev_ring->base + prev_ring->obj_size *
-				prev_ring->obj_num;
+			rx_ring->base = prev_rx_ring->base +
+				prev_rx_ring->obj_size *
+				prev_rx_ring->obj_num;
 
-		prev_ring = ring;
+		prev_rx_ring = rx_ring;
 	}
 }
 
@@ -606,7 +607,7 @@ mcp25xxfd_chip_rx_filter_init_one(const struct mcp25xxfd_priv *priv,
 
 static int mcp25xxfd_chip_fifo_init(struct mcp25xxfd_priv *priv)
 {
-	struct mcp25xxfd_rx_ring *ring;
+	struct mcp25xxfd_rx_ring *rx_ring;
 	u32 val;
 	int err, n;
 
@@ -653,12 +654,12 @@ static int mcp25xxfd_chip_fifo_init(struct mcp25xxfd_priv *priv)
 		return err;
 
 	/* RX FIFOs */
-	mcp25xxfd_for_each_rx_ring(priv, ring, n) {
-		err = mcp25xxfd_chip_rx_fifo_init_one(priv, ring);
+	mcp25xxfd_for_each_rx_ring(priv, rx_ring, n) {
+		err = mcp25xxfd_chip_rx_fifo_init_one(priv, rx_ring);
 		if (err)
 			return err;
 
-		err = mcp25xxfd_chip_rx_filter_init_one(priv, ring);
+		err = mcp25xxfd_chip_rx_filter_init_one(priv, rx_ring);
 		if (err)
 			return err;
 	}

@@ -61,7 +61,7 @@ static int mcp25xxfd_regmap_update_bits(void *context, unsigned int reg,
 {
 	struct spi_device *spi = context;
 	struct mcp25xxfd_priv *priv = spi_get_drvdata(spi);
-	struct mcp25xxfd_reg_write_buf *buf = &priv->update_bits_buf;
+	struct mcp25xxfd_write_reg_buf *buf = &priv->update_bits_buf;
 	__be16 cmd;
 	__le32 orig_le32 = 0, mask_le32, val_le32, tmp_le32;
 	u8 first_byte, last_byte, len;

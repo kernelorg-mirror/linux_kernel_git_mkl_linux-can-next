@@ -530,7 +530,7 @@ struct __packed mcp25xxfd_tx_obj_load_buf {
 	struct mcp25xxfd_hw_tx_obj_raw hw_tx_obj;
 } ____cacheline_aligned;
 
-struct __packed mcp25xxfd_reg_write_buf {
+struct __packed mcp25xxfd_write_reg_buf {
 	__be16 cmd;
 	u8 data[4];
 } ____cacheline_aligned;
@@ -563,7 +563,7 @@ struct mcp25xxfd_tx_obj {
 	struct {
 		struct spi_message msg;
 		struct spi_transfer xfer;
-		struct mcp25xxfd_reg_write_buf buf;
+		struct mcp25xxfd_write_reg_buf buf;
 	} trigger;
 };
 
@@ -618,7 +618,7 @@ struct mcp25xxfd_priv {
 
 	struct mcp25xxfd_regs_status regs_status;
 
-	struct mcp25xxfd_reg_write_buf update_bits_buf;
+	struct mcp25xxfd_write_reg_buf update_bits_buf;
 	struct mcp25xxfd_crc_buf crc_buf;
 
 	struct gpio_desc *rx_int;

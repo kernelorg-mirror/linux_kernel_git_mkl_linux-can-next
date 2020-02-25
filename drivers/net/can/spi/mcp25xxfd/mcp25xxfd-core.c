@@ -144,8 +144,8 @@ static int mcp25xxfd_clks_and_vdd_disable(const struct mcp25xxfd_priv *priv)
 }
 
 static inline int
-mcp25xxfd_cmd_prepare_write(struct mcp25xxfd_reg_write_buf *write_reg_buf,
-			    const u16 reg, const u32 mask, const u32 val)
+mcp25xxfd_cmd_prepare_write_reg(struct mcp25xxfd_write_reg_buf *write_reg_buf,
+				const u16 reg, const u32 mask, const u32 val)
 {
 	u8 first_byte, last_byte, len;
 	__le32 val_le32;
@@ -218,7 +218,8 @@ mcp25xxfd_tx_ring_init_one(const struct mcp25xxfd_priv *priv,
 	/* FIFO trigger */
 	addr = MCP25XXFD_CAN_FIFOCON(MCP25XXFD_TX_FIFO);
 	val = MCP25XXFD_CAN_FIFOCON_TXREQ | MCP25XXFD_CAN_FIFOCON_UINC;
-	len = mcp25xxfd_cmd_prepare_write(&tx_obj->trigger.buf, addr, val, val);
+	len = mcp25xxfd_cmd_prepare_write_reg(&tx_obj->trigger.buf, addr,
+					      val, val);
 
 	spi_message_init_with_transfers(&tx_obj->trigger.msg,
 					&tx_obj->trigger.xfer, 1);

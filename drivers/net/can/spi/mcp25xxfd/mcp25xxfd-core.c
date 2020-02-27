@@ -345,9 +345,15 @@ static int mcp25xxfd_chip_clock_enable(const struct mcp25xxfd_priv *priv)
 		return err;
 
 	/* Wait for "Oscillator Ready" bit */
-	return regmap_read_poll_timeout(priv->map, MCP25XXFD_OSC, osc,
-					(osc & osc_mask) == osc_reference,
-					10000, 1000000);
+	err = regmap_read_poll_timeout(priv->map, MCP25XXFD_OSC, osc,
+				       (osc & osc_mask) == osc_reference,
+				       10000, 1000000);
+	if (err)
+		netdev_err(priv->ndev,
+			   "Timeout waiting for Oscillator Ready (osc=0x%08x, osc_reference=0x%08x)\n",
+			   osc, osc_reference);
+
+	return err;
 }
 
 static int mcp25xxfd_chip_clock_init(const struct mcp25xxfd_priv *priv)

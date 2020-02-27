@@ -581,7 +581,7 @@ struct mcp25xxfd_rx_ring {
 	unsigned int head;
 	unsigned int tail;
 
-	u16 base;	/* relative to MCP25XXFD_RAM_START */
+	u16 base;
 	u8 nr;
 	u8 fifo_nr;
 	u8 obj_num;
@@ -744,7 +744,7 @@ mcp25xxfd_get_tx_obj_addr(const struct mcp25xxfd_priv *priv, u8 n)
 static inline u16
 mcp25xxfd_get_rx_obj_addr(const struct mcp25xxfd_rx_ring *ring, u8 n)
 {
-	return MCP25XXFD_RAM_START + ring->base + ring->obj_size * n;
+	return ring->base + ring->obj_size * n;
 }
 
 static inline u8 mcp25xxfd_get_tef_head(const struct mcp25xxfd_priv *priv)

@@ -191,7 +191,7 @@ mcp25xxfd_rx_tail_get_from_chip(const struct mcp25xxfd_priv *priv,
 	if (err)
 		return err;
 
-	rx_obj_tail_rel_addr -= ring->base;
+	rx_obj_tail_rel_addr -= ring->base - MCP25XXFD_RAM_START;
 	*rx_tail = rx_obj_tail_rel_addr / ring->obj_size;
 
 	return 0;
@@ -249,8 +249,9 @@ static void mcp25xxfd_ring_init(struct mcp25xxfd_priv *priv)
 		rx_ring->fifo_nr = MCP25XXFD_RX_FIFO(i);
 
 		if (!prev_rx_ring)
-			rx_ring->base = (sizeof(struct mcp25xxfd_hw_tef_obj) +
-					 priv->tx.obj_size) * priv->tx.obj_num;
+			rx_ring->base = MCP25XXFD_RAM_START +
+				(sizeof(struct mcp25xxfd_hw_tef_obj) +
+				 priv->tx.obj_size) * priv->tx.obj_num;
 		else
 			rx_ring->base = prev_rx_ring->base +
 				prev_rx_ring->obj_size *

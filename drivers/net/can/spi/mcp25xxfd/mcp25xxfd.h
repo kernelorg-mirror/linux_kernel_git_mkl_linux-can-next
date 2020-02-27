@@ -807,7 +807,8 @@ mcp25xxfd_get_rx_linear_len(const struct mcp25xxfd_rx_ring *ring)
 
 void mcp25xxfd_dump(struct mcp25xxfd_priv *priv);
 int mcp25xxfd_regmap_init(struct mcp25xxfd_priv *priv);
-u16 mcp25xxfd_crc16_compute(const void *cmd, size_t cmd_size,
-			    const void *data, size_t data_size);
+u16 mcp25xxfd_crc16_compute2(const void *cmd, size_t cmd_size,
+			     const void *data, size_t data_size);
+u16 mcp25xxfd_crc16_compute(const void *data, size_t data_size);
 
 #endif

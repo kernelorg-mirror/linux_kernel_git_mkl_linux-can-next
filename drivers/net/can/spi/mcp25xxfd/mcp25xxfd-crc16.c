@@ -70,12 +70,19 @@ static u16 mcp25xxfd_crc16(u16 crc, u8 const *buffer, size_t len)
 	return crc;
 }
 
-u16 mcp25xxfd_crc16_compute(const void *cmd, size_t cmd_size,
-			    const void *data, size_t data_size)
+u16 mcp25xxfd_crc16_compute(const void *data, size_t data_size)
 {
 	u16 crc = 0xffff;
 
-	crc = mcp25xxfd_crc16(crc, cmd, cmd_size);
+	return mcp25xxfd_crc16(crc, data, data_size);
+}
+
+u16 mcp25xxfd_crc16_compute2(const void *cmd, size_t cmd_size,
+			     const void *data, size_t data_size)
+{
+	u16 crc;
+
+	crc = mcp25xxfd_crc16_compute(cmd, cmd_size);
 	crc = mcp25xxfd_crc16(crc, data, data_size);
 
 	return crc;

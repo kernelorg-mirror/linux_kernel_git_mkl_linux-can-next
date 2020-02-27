@@ -133,8 +133,8 @@ static int mcp25xxfd_regmap_crc_gather_write(void *context,
 
 	mcp25xxfd_spi_cmd_write_crc(&priv->crc_buf.cmd, *(u16 *)reg, val_len);
 
-	crc = mcp25xxfd_crc16_compute(xfer[0].tx_buf, xfer[0].len,
-				      xfer[1].tx_buf, xfer[1].len);
+	crc = mcp25xxfd_crc16_compute2(xfer[0].tx_buf, xfer[0].len,
+				       xfer[1].tx_buf, xfer[1].len);
 	priv->crc_buf.crc = cpu_to_be16(crc);
 
 	return spi_sync_transfer(spi, xfer, ARRAY_SIZE(xfer));
@@ -179,8 +179,8 @@ static int mcp25xxfd_regmap_crc_read(void *context,
 		return err;
 
 	crc_received = be16_to_cpu(priv->crc_buf.crc);
-	crc_calculated = mcp25xxfd_crc16_compute(xfer[0].tx_buf, xfer[0].len,
-						 xfer[1].rx_buf, xfer[1].len);
+	crc_calculated = mcp25xxfd_crc16_compute2(xfer[0].tx_buf, xfer[0].len,
+						  xfer[1].rx_buf, xfer[1].len);
 	if (crc_received != crc_calculated) {
 		netdev_info(priv->ndev,
 			    "CRC read error: reg=0x%04x len=%d\n",

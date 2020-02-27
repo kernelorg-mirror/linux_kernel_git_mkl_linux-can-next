@@ -149,7 +149,7 @@ static int mcp25xxfd_regmap_crc_gather_write(void *context,
 			.tx_buf = val,
 			.len = val_len,
 		}, {
-			.rx_buf = &priv->crc_buf.crc,
+			.tx_buf = &priv->crc_buf.crc,
 			.len = sizeof(priv->crc_buf.crc),
 		},
 	};
@@ -159,7 +159,7 @@ static int mcp25xxfd_regmap_crc_gather_write(void *context,
 				       (__be16 *)reg, val_len);
 
 	crc = mcp25xxfd_crc16_compute(xfer[0].tx_buf, xfer[0].len,
-				      xfer[1].rx_buf, xfer[1].len);
+				      xfer[1].tx_buf, xfer[1].len);
 	priv->crc_buf.crc = cpu_to_be16(crc);
 
 	return spi_sync_transfer(spi, xfer, ARRAY_SIZE(xfer));
@@ -172,7 +172,7 @@ static int mcp25xxfd_regmap_crc_write(void *context,
 	struct mcp25xxfd_priv *priv = spi_get_drvdata(spi);
 
 	return mcp25xxfd_regmap_crc_gather_write(context, data,
-						 sizeof(priv->crc_buf.addr),
+						 sizeof(priv->crc_buf.addr.cmd),
 						 data + 4, count - 4);
 }
 

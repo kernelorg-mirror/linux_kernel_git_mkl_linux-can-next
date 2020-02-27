@@ -317,7 +317,7 @@ static inline void __dump(const void *d, unsigned int len)
 
 /* RAM */
 #define MCP25XXFD_RAM_START 0x400
-#define MCP25XXFD_RAM_SIZE SZ_4K
+#define MCP25XXFD_RAM_SIZE SZ_2K
 
 /* Message Object */
 #define MCP25XXFD_OBJ_ID_SID11 BIT(29)

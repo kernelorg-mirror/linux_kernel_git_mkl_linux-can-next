@@ -535,13 +535,13 @@ struct __packed mcp25xxfd_write_reg_buf {
 	u8 data[4];
 } ____cacheline_aligned;
 
-struct __packed mcp25xxfd_crc_buf_addr {
+struct __packed mcp25xxfd_crc_buf_cmd {
 	__be16 cmd;
 	u8 len;
 };
 
 struct mcp25xxfd_crc_buf {
-	struct mcp25xxfd_crc_buf_addr addr;
+	struct mcp25xxfd_crc_buf_cmd cmd;
 	__be16 crc;
 } ____cacheline_aligned;
 

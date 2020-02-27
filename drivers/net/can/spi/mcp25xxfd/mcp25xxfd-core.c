@@ -1770,7 +1770,7 @@ static irqreturn_t mcp25xxfd_irq(int irq, void *dev_id)
 				goto out_fail;
 		}
 
-		if (intf_pending & MCP25XXFD_CAN_INT_SPICRCIE) {
+		if (intf_pending & MCP25XXFD_CAN_INT_SPICRCIF) {
 			err = mcp25xxfd_handle(priv, spicrcif);
 			if (err)
 				goto out_fail;

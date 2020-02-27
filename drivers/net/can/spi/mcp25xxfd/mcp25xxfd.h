@@ -673,6 +673,60 @@ static inline __be16 mcp25xxfd_cmd_write(u16 addr)
 	return cpu_to_be16(MCP25XXFD_INSTRUCTION_WRITE | addr);
 }
 
+static inline bool mcp25xxfd_reg_in_ram(unsigned int reg)
+{
+	static const struct regmap_range range =
+		regmap_reg_range(MCP25XXFD_RAM_START,
+				 MCP25XXFD_RAM_START + MCP25XXFD_RAM_SIZE - 4);
+
+	return regmap_reg_in_range(reg, &range);
+}
+
+static inline void
+__mcp25xxfd_spi_cmd_crc_set_len(struct mcp25xxfd_crc_buf_cmd *cmd,
+				u16 len, bool in_ram)
+{
+	/* Number of u32 for RAM access, number of u8 otherwise. */
+	if (in_ram)
+		cmd->len = len >> 2;
+	else
+		cmd->len = len;
+}
+
+static inline void
+mcp25xxfd_spi_cmd_crc_set_len_in_ram(struct mcp25xxfd_crc_buf_cmd *cmd, u16 len)
+{
+	__mcp25xxfd_spi_cmd_crc_set_len(cmd, len, true);
+}
+
+static inline void
+mcp25xxfd_spi_cmd_read_crc_set_addr(struct mcp25xxfd_crc_buf_cmd *cmd, u16 addr)
+{
+	cmd->cmd = cpu_to_be16(MCP25XXFD_INSTRUCTION_READ_CRC | addr);
+}
+
+static inline void
+mcp25xxfd_spi_cmd_read_crc(struct mcp25xxfd_crc_buf_cmd *cmd,
+				    u16 addr, u16 len)
+{
+	mcp25xxfd_spi_cmd_read_crc_set_addr(cmd, addr);
+	__mcp25xxfd_spi_cmd_crc_set_len(cmd, len, mcp25xxfd_reg_in_ram(addr));
+}
+
+static inline void
+mcp25xxfd_spi_cmd_write_crc_set_addr(struct mcp25xxfd_crc_buf_cmd *cmd, u16 addr)
+{
+	cmd->cmd = cpu_to_be16(MCP25XXFD_INSTRUCTION_WRITE_CRC | addr);
+}
+
+static inline void
+mcp25xxfd_spi_cmd_write_crc(struct mcp25xxfd_crc_buf_cmd *cmd,
+				    u16 addr, u16 len)
+{
+	mcp25xxfd_spi_cmd_write_crc_set_addr(cmd, addr);
+	__mcp25xxfd_spi_cmd_crc_set_len(cmd, len, mcp25xxfd_reg_in_ram(addr));
+}
+
 static inline u16
 mcp25xxfd_get_tef_obj_addr(const struct mcp25xxfd_priv *priv, u8 n)
 {

@@ -111,30 +111,6 @@ static int mcp25xxfd_regmap_read(void *context,
 	return spi_sync_transfer(spi, xfer, ARRAY_SIZE(xfer));
 }
 
-static inline bool mcp25xxfd_regmap_reg_in_ram(unsigned int reg)
-{
-	static const struct regmap_range range =
-		regmap_reg_range(MCP25XXFD_RAM_START,
-				 MCP25XXFD_RAM_START + MCP25XXFD_RAM_SIZE - 4);
-
-	return regmap_reg_in_range(reg, &range);
-}
-
-static void
-mcp25xxfd_regmap_fill_crc_addr(struct mcp25xxfd_crc_buf_cmd *addr,
-			       __be16 *reg_be16, size_t val_len)
-{
-	u16 reg = be16_to_cpup(reg_be16) & MCP25XXFD_SPI_ADDRESS_MASK;
-
-	addr->cmd = *reg_be16;
-
-	/* Number of u32 for RAM access, number of u8 otherwise. */
-	if (mcp25xxfd_regmap_reg_in_ram(reg))
-		addr->len = val_len >> 2;
-	else
-		addr->len = val_len;
-}
-
 static int mcp25xxfd_regmap_crc_gather_write(void *context,
 					     const void *reg, size_t reg_len,
 					     const void *val, size_t val_len)
@@ -155,8 +131,7 @@ static int mcp25xxfd_regmap_crc_gather_write(void *context,
 	};
 	u16 crc;
 
-	mcp25xxfd_regmap_fill_crc_addr(&priv->crc_buf.cmd,
-				       (__be16 *)reg, val_len);
+	mcp25xxfd_spi_cmd_write_crc(&priv->crc_buf.cmd, *(u16 *)reg, val_len);
 
 	crc = mcp25xxfd_crc16_compute(xfer[0].tx_buf, xfer[0].len,
 				      xfer[1].tx_buf, xfer[1].len);
@@ -197,8 +172,7 @@ static int mcp25xxfd_regmap_crc_read(void *context,
 	u16 crc_received, crc_calculated;
 	int err;
 
-	mcp25xxfd_regmap_fill_crc_addr(&priv->crc_buf.cmd,
-				       (__be16 *)reg, val_len);
+	mcp25xxfd_spi_cmd_read_crc(&priv->crc_buf.cmd, *(u16 *)reg, val_len);
 
 	err = spi_sync_transfer(spi, xfer, ARRAY_SIZE(xfer));
 	if (err)
@@ -209,10 +183,8 @@ static int mcp25xxfd_regmap_crc_read(void *context,
 						 xfer[1].rx_buf, xfer[1].len);
 	if (crc_received != crc_calculated) {
 		netdev_info(priv->ndev,
-			    "CRC read error: reg=0x%04lx len=%d\n",
-			    be16_to_cpup((__be16 *)reg) &
-			    MCP25XXFD_SPI_ADDRESS_MASK,
-			    val_len);
+			    "CRC read error: reg=0x%04x len=%d\n",
+			    *(u16 *)reg, val_len);
 
 		return -EBADMSG;
 	}
@@ -277,17 +249,13 @@ static const struct regmap_config mcp25xxfd_regmap_crc = {
 	.wr_table = &mcp25xxfd_reg_table_crc,
 	.rd_table = &mcp25xxfd_reg_table_crc,
 	.cache_type = REGCACHE_NONE,
-	.read_flag_mask = (__force unsigned long)
-		cpu_to_be16(MCP25XXFD_INSTRUCTION_READ_CRC),
-	.write_flag_mask = (__force unsigned long)
-		cpu_to_be16(MCP25XXFD_INSTRUCTION_WRITE_CRC),
 };
 
 static const struct regmap_bus mcp25xxfd_bus_crc = {
 	.write = mcp25xxfd_regmap_crc_write,
 	.gather_write = mcp25xxfd_regmap_crc_gather_write,
 	.read = mcp25xxfd_regmap_crc_read,
-	.reg_format_endian_default = REGMAP_ENDIAN_BIG,
+	.reg_format_endian_default = REGMAP_ENDIAN_NATIVE,
 	.val_format_endian_default = REGMAP_ENDIAN_LITTLE,
 	.max_raw_read = 256 - 4,
 	.max_raw_write = 256 - 4,

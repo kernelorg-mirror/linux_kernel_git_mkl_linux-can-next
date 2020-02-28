@@ -289,9 +289,9 @@ static int mcp25xxfd_ring_alloc(struct mcp25xxfd_priv *priv)
 	for (i = 0;
 	     i < ARRAY_SIZE(priv->rx) && ram_free >= rx_obj_size;
 	     i++) {
-		struct mcp25xxfd_rx_ring *ring = &priv->rx[i];
 		int rx_obj_num;
 
+		ring = &priv->rx[i];
 		ring->obj_size = rx_obj_size;
 		rx_obj_num = ram_free / rx_obj_size;
 		rx_obj_num = 1 << (fls(rx_obj_num) - 1);

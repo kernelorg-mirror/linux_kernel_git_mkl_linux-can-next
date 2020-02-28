@@ -37,6 +37,8 @@
 #define MCP25XXFD_QUIRK_MAB_ERROR_NO_WARN BIT(0)
 /* Use CRC in RX-PATH */
 #define MCP25XXFD_QUIRK_RX_CRC BIT(1)
+/* Use CRC in TX-PATH */
+#define MCP25XXFD_QUIRK_TX_CRC BIT(2)
 
 static const struct mcp25xxfd_devtype_data mcp25xxfd_devtype_data_mcp2517fd = {
 	.quirks = MCP25XXFD_QUIRK_MAB_ERROR_NO_WARN | MCP25XXFD_QUIRK_RX_CRC,
@@ -226,7 +228,11 @@ mcp25xxfd_tx_ring_init_tx_obj(const struct mcp25xxfd_priv *priv,
 
 	/* FIFO load */
 	addr = mcp25xxfd_get_tx_obj_addr(ring, n);
-	tx_obj->load.buf.cmd = mcp25xxfd_cmd_write(addr);
+	if (priv->devtype_data->quirks & MCP25XXFD_QUIRK_TX_CRC)
+		mcp25xxfd_spi_cmd_write_crc_set_addr(&tx_obj->load.buf.crc.cmd,
+						     addr);
+	else
+		tx_obj->load.buf.no_crc.cmd = mcp25xxfd_cmd_write(addr);
 	/* len is calculated on the fly */
 
 	spi_message_init_with_transfers(&tx_obj->load.msg,
@@ -1862,7 +1868,7 @@ mcp25xxfd_tx_obj_from_skb(const struct mcp25xxfd_priv *priv,
 			  const struct sk_buff *skb)
 {
 	const struct canfd_frame *cfd = (struct canfd_frame *)skb->data;
-	struct mcp25xxfd_hw_tx_obj_raw *hw_tx_obj = &tx_obj->load.buf.hw_tx_obj;
+	struct mcp25xxfd_hw_tx_obj_raw *hw_tx_obj;
 	u32 id, flags, len;
 
 	if (cfd->can_id & CAN_EFF_FLAG) {
@@ -1902,6 +1908,11 @@ mcp25xxfd_tx_obj_from_skb(const struct mcp25xxfd_priv *priv,
 			flags |= MCP25XXFD_OBJ_FLAGS_BRS;
 	}
 
+	if (priv->devtype_data->quirks & MCP25XXFD_QUIRK_TX_CRC)
+		hw_tx_obj = &tx_obj->load.buf.crc.hw_tx_obj;
+	else
+		hw_tx_obj = &tx_obj->load.buf.no_crc.hw_tx_obj;
+
 	put_unaligned_le32(id, &hw_tx_obj->id);
 	put_unaligned_le32(flags, &hw_tx_obj->flags);
 
@@ -1910,9 +1921,26 @@ mcp25xxfd_tx_obj_from_skb(const struct mcp25xxfd_priv *priv,
 	       0x0, sizeof(u32));
 	memcpy(hw_tx_obj->data, cfd->data, cfd->len);
 
-	len = sizeof(tx_obj->load.buf.cmd);
-	len += sizeof(hw_tx_obj->id) + sizeof(hw_tx_obj->flags);
+	/* Number of bytes to be written into the RAM of the controller */
+	len = sizeof(hw_tx_obj->id) + sizeof(hw_tx_obj->flags);
 	len += round_up(cfd->len, sizeof(u32));
+
+	if (priv->devtype_data->quirks & MCP25XXFD_QUIRK_TX_CRC) {
+		u16 crc;
+
+		mcp25xxfd_spi_cmd_crc_set_len_in_ram(&tx_obj->load.buf.crc.cmd,
+						     len);
+		/* CRC */
+		len += sizeof(tx_obj->load.buf.crc.cmd);
+		crc = mcp25xxfd_crc16_compute(&tx_obj->load.buf.crc, len);
+		put_unaligned_be16(crc,
+				   &hw_tx_obj->data[round_up(cfd->len,
+							     sizeof(u32))]);
+		/* Total length */
+		len += sizeof(tx_obj->load.buf.crc.crc);
+	} else {
+		len += sizeof(tx_obj->load.buf.no_crc.cmd);
+	}
 
 	tx_obj->load.xfer.len = len;
 }

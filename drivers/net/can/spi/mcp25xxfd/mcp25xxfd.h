@@ -518,11 +518,6 @@ struct mcp25xxfd_hw_rx_obj_canfd {
 	u8 data[FIELD_SIZEOF(struct canfd_frame, data)];
 };
 
-struct __packed mcp25xxfd_tx_obj_load_buf {
-	__be16 cmd;
-	struct mcp25xxfd_hw_tx_obj_raw hw_tx_obj;
-} ____cacheline_aligned;
-
 struct __packed mcp25xxfd_write_reg_buf {
 	__be16 cmd;
 	u8 data[4];
@@ -538,6 +533,18 @@ struct mcp25xxfd_crc_buf {
 	__be16 crc;
 } ____cacheline_aligned;
 
+union mcp25xxfd_tx_obj_load_buf {
+	struct __packed {
+		__be16 cmd;
+		struct mcp25xxfd_hw_tx_obj_raw hw_tx_obj;
+	} no_crc;
+	struct __packed {
+		struct mcp25xxfd_crc_buf_cmd cmd;
+		struct mcp25xxfd_hw_tx_obj_raw hw_tx_obj;
+		__be16 crc;
+	} crc;
+} ____cacheline_aligned;
+
 struct mcp25xxfd_tef_ring {
 	unsigned int head;
 	unsigned int tail;
@@ -550,7 +557,7 @@ struct mcp25xxfd_tx_obj {
 	struct {
 		struct spi_message msg;
 		struct spi_transfer xfer;
-		struct mcp25xxfd_tx_obj_load_buf buf;
+		union mcp25xxfd_tx_obj_load_buf buf;
 	} load;
 
 	struct {

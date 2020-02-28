@@ -703,7 +703,7 @@ mcp25xxfd_spi_cmd_read_crc_set_addr(struct mcp25xxfd_crc_buf_cmd *cmd, u16 addr)
 
 static inline void
 mcp25xxfd_spi_cmd_read_crc(struct mcp25xxfd_crc_buf_cmd *cmd,
-				    u16 addr, u16 len)
+			   u16 addr, u16 len)
 {
 	mcp25xxfd_spi_cmd_read_crc_set_addr(cmd, addr);
 	__mcp25xxfd_spi_cmd_crc_set_len(cmd, len, mcp25xxfd_reg_in_ram(addr));
@@ -717,7 +717,7 @@ mcp25xxfd_spi_cmd_write_crc_set_addr(struct mcp25xxfd_crc_buf_cmd *cmd, u16 addr
 
 static inline void
 mcp25xxfd_spi_cmd_write_crc(struct mcp25xxfd_crc_buf_cmd *cmd,
-				    u16 addr, u16 len)
+			    u16 addr, u16 len)
 {
 	mcp25xxfd_spi_cmd_write_crc_set_addr(cmd, addr);
 	__mcp25xxfd_spi_cmd_crc_set_len(cmd, len, mcp25xxfd_reg_in_ram(addr));

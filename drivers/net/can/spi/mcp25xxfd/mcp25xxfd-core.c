@@ -267,7 +267,7 @@ static void mcp25xxfd_ring_free(struct mcp25xxfd_priv *priv)
 
 static int mcp25xxfd_ring_alloc(struct mcp25xxfd_priv *priv)
 {
-	struct mcp25xxfd_rx_ring *ring;
+	struct mcp25xxfd_rx_ring *rx_ring;
 	int tef_obj_size, tx_obj_size, rx_obj_size;
 	int tx_obj_num;
 	int ram_free, i;
@@ -291,12 +291,12 @@ static int mcp25xxfd_ring_alloc(struct mcp25xxfd_priv *priv)
 	     i++) {
 		int rx_obj_num;
 
-		ring = &priv->rx[i];
-		ring->obj_size = rx_obj_size;
+		rx_ring = &priv->rx[i];
+		rx_ring->obj_size = rx_obj_size;
 		rx_obj_num = ram_free / rx_obj_size;
 		rx_obj_num = 1 << (fls(rx_obj_num) - 1);
-		ring->obj_num = min(rx_obj_num, 32);
-		ram_free -= ring->obj_num * rx_obj_size;
+		rx_ring->obj_num = min(rx_obj_num, 32);
+		ram_free -= rx_ring->obj_num * rx_ring->obj_size;
 	}
 	priv->rx_ring_num = i;
 
@@ -308,11 +308,11 @@ static int mcp25xxfd_ring_alloc(struct mcp25xxfd_priv *priv)
 		   tx_obj_num, tef_obj_size, tef_obj_size * tx_obj_num,
 		   tx_obj_num, tx_obj_size, tx_obj_size * tx_obj_num);
 
-	mcp25xxfd_for_each_rx_ring(priv, ring, i) {
+	mcp25xxfd_for_each_rx_ring(priv, rx_ring, i) {
 		netdev_dbg(priv->ndev,
 			   "FIFO setup: RX-%d: %d*%d bytes = %d bytes\n",
-			   i, ring->obj_num, ring->obj_size,
-			   ring->obj_size * ring->obj_num);
+			   i, rx_ring->obj_num, rx_ring->obj_size,
+			   rx_ring->obj_size * rx_ring->obj_num);
 	}
 
 	netdev_dbg(priv->ndev,

@@ -33,6 +33,24 @@
 #define MCP25XXFD_OSC_PLL_MULTIPLIER 10
 #define MCP25XXFD_OSC_DELAY_MS 3
 
+/* Silence RX/TX MAB over/underlow warnings */
+#define MCP25XXFD_QUIRK_MAB_ERROR_NO_WARN BIT(0)
+/* Use CRC in RX-PATH */
+#define MCP25XXFD_QUIRK_RX_CRC BIT(1)
+
+static const struct mcp25xxfd_devtype_data mcp25xxfd_devtype_data_mcp2517fd = {
+	.quirks = MCP25XXFD_QUIRK_MAB_ERROR_NO_WARN | MCP25XXFD_QUIRK_RX_CRC,
+	.model = MCP25XXFD_MODEL_MCP2517FD,
+};
+
+static const struct mcp25xxfd_devtype_data mcp25xxfd_devtype_data_mcp2518fd = {
+	.model = MCP25XXFD_MODEL_MCP2518FD,
+};
+
+static const struct mcp25xxfd_devtype_data mcp25xxfd_devtype_data_mcp25xxfd = {
+	.model = MCP25XXFD_MODEL_MCP25XXFD,
+};
+
 static const struct can_bittiming_const mcp25xxfd_bittiming_const = {
 	.name = DEVICE_NAME,
 	.tseg1_min = 2,
@@ -1331,7 +1349,8 @@ static int mcp25xxfd_handle_rxovif(struct mcp25xxfd_priv *priv)
 
 		/* If SERRIF is active, there was a RX MAB overflow. */
 		if (priv->regs_status.intf & MCP25XXFD_CAN_INT_SERRIF) {
-			if (mcp25xxfd_is_2517(priv))
+			if (priv->devtype_data->quirks &
+			    MCP25XXFD_QUIRK_MAB_ERROR_NO_WARN)
 				netdev_dbg(priv->ndev,
 					   "RX-%d: MAB overflow detected.\n",
 					   ring->nr);
@@ -1556,7 +1575,8 @@ static int mcp25xxfd_handle_modif(const struct mcp25xxfd_priv *priv)
 	 * first. When polling this bit we see that it will transition
 	 * to Restricted Operation Mode shortly after.
 	 */
-	if (mcp25xxfd_is_2517(priv) &&
+	if ((priv->devtype_data->quirks &
+	     MCP25XXFD_QUIRK_MAB_ERROR_NO_WARN) &&
 	    (mode == MCP25XXFD_CAN_CON_MODE_RESTRICTED ||
 	     mode == MCP25XXFD_CAN_CON_MODE_LISTENONLY))
 		netdev_dbg(priv->ndev,
@@ -1590,7 +1610,8 @@ static int mcp25xxfd_handle_serrif(struct mcp25xxfd_priv *priv)
 	 */
 	if ((priv->regs_status.intf & MCP25XXFD_CAN_INT_MODIF) &&
 	    (priv->regs_status.intf & MCP25XXFD_CAN_INT_IVMIF)) {
-		if (mcp25xxfd_is_2517(priv))
+		if (priv->devtype_data->quirks &
+		     MCP25XXFD_QUIRK_MAB_ERROR_NO_WARN)
 			netdev_dbg(priv->ndev, "TX MAB underflow detected.\n");
 		else
 			netdev_info(priv->ndev, "TX MAB underflow detected.\n");
@@ -2047,8 +2068,8 @@ static const struct net_device_ops mcp25xxfd_netdev_ops = {
 static int mcp25xxfd_register_chip_detect(struct mcp25xxfd_priv *priv)
 {
 	const struct net_device *ndev = priv->ndev;
+	const struct mcp25xxfd_devtype_data *devtype_data;
 	u32 osc, osc_reference;
-	enum mcp25xxfd_model model;
 	int err;
 
 	osc_reference = MCP25XXFD_OSC_OSCRDY |
@@ -2080,24 +2101,24 @@ static int mcp25xxfd_register_chip_detect(struct mcp25xxfd_priv *priv)
 		return err;
 
 	if (osc & MCP25XXFD_OSC_LPMEN)
-		model = MCP25XXFD_MODEL_MCP2518FD;
+		devtype_data = &mcp25xxfd_devtype_data_mcp2518fd;
 	else
-		model = MCP25XXFD_MODEL_MCP2517FD;
+		devtype_data = &mcp25xxfd_devtype_data_mcp2517fd;
 
-	if (priv->model != MCP25XXFD_MODEL_MCP25XXFD &&
-	    priv->model != model) {
+	if (priv->devtype_data != &mcp25xxfd_devtype_data_mcp25xxfd &&
+	    priv->devtype_data != devtype_data) {
 		netdev_info(ndev,
 			    "Detected MCP%xFD, but firmware specifies a MCP%xFD. Fixing up.",
-			    model, priv->model);
+			    devtype_data->model, priv->devtype_data->model);
 	}
-	priv->model = model;
+	priv->devtype_data = devtype_data;
 
 	return 0;
 }
 
 static void mcp25xxfd_register_quirks(struct mcp25xxfd_priv *priv)
 {
-	if (mcp25xxfd_is_2517(priv))
+	if (priv->devtype_data->quirks & MCP25XXFD_QUIRK_RX_CRC)
 		priv->map_rx = priv->map_crc;
 }
 
@@ -2184,9 +2205,10 @@ static int mcp25xxfd_register(struct mcp25xxfd_priv *priv)
 
 	mcp25xxfd_register_check_controller(priv);
 
-	if (priv->model == MCP25XXFD_MODEL_MCP2517FD) {
+	if (priv->devtype_data->model == MCP25XXFD_MODEL_MCP2517FD) {
 		netdev_info(ndev, "MCP%xFD %ssuccessfully initialized.\n",
-			    priv->model, priv->rx_int ? "(+RX-INT) " : "");
+			    priv->devtype_data->model,
+			    priv->rx_int ? "(+RX-INT) " : "");
 	} else {
 		u32 devid;
 
@@ -2195,7 +2217,7 @@ static int mcp25xxfd_register(struct mcp25xxfd_priv *priv)
 			goto out_unregister_candev;
 
 		netdev_info(ndev, "MCP%xFD rev%lu.%lu %ssuccessfully initialized.\n",
-			    priv->model,
+			    priv->devtype_data->model,
 			    FIELD_GET(MCP25XXFD_DEVID_ID_MASK, devid),
 			    FIELD_GET(MCP25XXFD_DEVID_REV_MASK, devid),
 			    priv->rx_int ? "(+RX-INT) " : "");
@@ -2240,13 +2262,13 @@ static inline void mcp25xxfd_unregister(struct mcp25xxfd_priv *priv)
 static const struct of_device_id mcp25xxfd_of_match[] = {
 	{
 		.compatible = "microchip,mcp2517fd",
-		.data = (void *)MCP25XXFD_MODEL_MCP2517FD,
+		.data = &mcp25xxfd_devtype_data_mcp2517fd,
 	}, {
 		.compatible = "microchip,mcp2518fd",
-		.data = (void *)MCP25XXFD_MODEL_MCP2518FD,
+		.data = &mcp25xxfd_devtype_data_mcp2518fd,
 	}, {
 		.compatible = "microchip,mcp25xxfd",
-		.data = (void *)MCP25XXFD_MODEL_MCP25XXFD,
+		.data = &mcp25xxfd_devtype_data_mcp25xxfd,
 	}, {
 		/* sentinel */
 	},
@@ -2256,13 +2278,13 @@ MODULE_DEVICE_TABLE(of, mcp25xxfd_of_match);
 static const struct spi_device_id mcp25xxfd_id_table[] = {
 	{
 		.name = "mcp2517fd",
-		.driver_data = (kernel_ulong_t)MCP25XXFD_MODEL_MCP2517FD,
+		.driver_data = (kernel_ulong_t)&mcp25xxfd_devtype_data_mcp2517fd,
 	}, {
 		.name = "mcp2518fd",
-		.driver_data = (kernel_ulong_t)MCP25XXFD_MODEL_MCP2518FD,
+		.driver_data = (kernel_ulong_t)&mcp25xxfd_devtype_data_mcp2518fd,
 	}, {
 		.name = "mcp25xxfd",
-		.driver_data = (kernel_ulong_t)MCP25XXFD_MODEL_MCP25XXFD,
+		.driver_data = (kernel_ulong_t)&mcp25xxfd_devtype_data_mcp25xxfd,
 	}, {
 		/* sentinel */
 	},
@@ -2353,9 +2375,10 @@ static int mcp25xxfd_probe(struct spi_device *spi)
 
 	match = device_get_match_data(&spi->dev);
 	if (match)
-		priv->model = (enum mcp25xxfd_model)match;
+		priv->devtype_data = match;
 	else
-		priv->model = spi_get_device_id(spi)->driver_data;
+		priv->devtype_data = (struct mcp25xxfd_devtype_data *)
+			spi_get_device_id(spi)->driver_data;
 
 	spi->bits_per_word = 8;
 	/* SPI clock must be less or equal SYSCLOCK / 2 */

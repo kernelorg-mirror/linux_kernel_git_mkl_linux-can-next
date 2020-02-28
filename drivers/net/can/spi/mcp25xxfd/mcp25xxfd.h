@@ -593,6 +593,11 @@ enum mcp25xxfd_model {
 	MCP25XXFD_MODEL_MCP25XXFD = 0xffff,	/* autodetect model */
 };
 
+struct mcp25xxfd_devtype_data {
+	enum mcp25xxfd_model model;
+	u32 quirks;
+};
+
 struct mcp25xxfd_priv {
 	struct can_priv can;
 	struct can_rx_offload offload;
@@ -619,7 +624,7 @@ struct mcp25xxfd_priv {
 	struct regulator *reg_vdd;
 	struct regulator *reg_xceiver;
 
-	enum mcp25xxfd_model model;
+	const struct mcp25xxfd_devtype_data *devtype_data;
 
 	struct mcp25xxfd_dump dump;
 	atomic_t cnt;
@@ -627,15 +632,6 @@ struct mcp25xxfd_priv {
 	struct mcp25xxfd_log log[64];
 #endif
 };
-
-#define MCP25XXFD_IS(_model) \
-static inline bool \
-mcp25xxfd_is_##_model(const struct mcp25xxfd_priv *priv) \
-{ \
-	return priv->model == MCP25XXFD_MODEL_MCP##_model##FD; \
-}
-
-MCP25XXFD_IS(2517);
 
 static inline u8 mcp25xxfd_first_byte_set(u32 mask)
 {

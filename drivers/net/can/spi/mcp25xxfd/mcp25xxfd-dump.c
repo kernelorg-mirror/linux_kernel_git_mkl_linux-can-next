@@ -459,14 +459,14 @@ static u16 mcp25xxfd_dump_get_tx_obj_addr(const struct mcp25xxfd_priv *priv, con
 	return mcp25xxfd_dump_get_tx_obj_rel_addr(priv, regs, n) + MCP25XXFD_RAM_START;
 }
 
-static u8 mcp25xxfd_dump_get_tx_tail(const struct mcp25xxfd_priv *priv, const struct mcp25xxfd_dump_regs *regs)
+static u8 mcp25xxfd_dump_get_tx_head(const struct mcp25xxfd_priv *priv, const struct mcp25xxfd_dump_regs *regs)
 {
 	return (regs->fifo[MCP25XXFD_TX_FIFO].ua -
 		mcp25xxfd_dump_get_tx_obj_rel_addr(priv, regs, 0)) /
 		mcp25xxfd_dump_get_tx_obj_size(priv, regs);
 }
 
-static u8 mcp25xxfd_dump_get_tx_head(const struct mcp25xxfd_priv *priv, const struct mcp25xxfd_dump_regs *regs)
+static u8 mcp25xxfd_dump_get_tx_tail(const struct mcp25xxfd_priv *priv, const struct mcp25xxfd_dump_regs *regs)
 {
 	return FIELD_GET(MCP25XXFD_CAN_FIFOSTA_FIFOCI_MASK, regs->fifo[MCP25XXFD_TX_FIFO].sta);
 }

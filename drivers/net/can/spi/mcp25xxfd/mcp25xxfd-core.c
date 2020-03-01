@@ -33,15 +33,15 @@
 #define MCP25XXFD_OSC_PLL_MULTIPLIER 10
 #define MCP25XXFD_OSC_DELAY_MS 3
 
-/* Silence RX/TX MAB over/underlow warnings */
-#define MCP25XXFD_QUIRK_MAB_ERROR_NO_WARN BIT(0)
+/* Silence RX MAB underflow/TX MAB overflow warnings */
+#define MCP25XXFD_QUIRK_MAB_NO_WARN BIT(0)
 /* Use CRC in RX-PATH */
 #define MCP25XXFD_QUIRK_RX_CRC BIT(1)
 /* Use CRC in TX-PATH */
 #define MCP25XXFD_QUIRK_TX_CRC BIT(2)
 
 static const struct mcp25xxfd_devtype_data mcp25xxfd_devtype_data_mcp2517fd = {
-	.quirks = MCP25XXFD_QUIRK_MAB_ERROR_NO_WARN | MCP25XXFD_QUIRK_RX_CRC,
+	.quirks = MCP25XXFD_QUIRK_MAB_NO_WARN | MCP25XXFD_QUIRK_RX_CRC,
 	.model = MCP25XXFD_MODEL_MCP2517FD,
 };
 
@@ -1364,7 +1364,7 @@ static int mcp25xxfd_handle_rxovif(struct mcp25xxfd_priv *priv)
 		/* If SERRIF is active, there was a RX MAB overflow. */
 		if (priv->regs_status.intf & MCP25XXFD_CAN_INT_SERRIF) {
 			if (priv->devtype_data->quirks &
-			    MCP25XXFD_QUIRK_MAB_ERROR_NO_WARN)
+			    MCP25XXFD_QUIRK_MAB_NO_WARN)
 				netdev_dbg(priv->ndev,
 					   "RX-%d: MAB overflow detected.\n",
 					   ring->nr);
@@ -1590,7 +1590,7 @@ static int mcp25xxfd_handle_modif(const struct mcp25xxfd_priv *priv)
 	 * to Restricted Operation Mode shortly after.
 	 */
 	if ((priv->devtype_data->quirks &
-	     MCP25XXFD_QUIRK_MAB_ERROR_NO_WARN) &&
+	     MCP25XXFD_QUIRK_MAB_NO_WARN) &&
 	    (mode == MCP25XXFD_CAN_CON_MODE_RESTRICTED ||
 	     mode == MCP25XXFD_CAN_CON_MODE_LISTENONLY))
 		netdev_dbg(priv->ndev,
@@ -1625,7 +1625,7 @@ static int mcp25xxfd_handle_serrif(struct mcp25xxfd_priv *priv)
 	if ((priv->regs_status.intf & MCP25XXFD_CAN_INT_MODIF) &&
 	    (priv->regs_status.intf & MCP25XXFD_CAN_INT_IVMIF)) {
 		if (priv->devtype_data->quirks &
-		     MCP25XXFD_QUIRK_MAB_ERROR_NO_WARN)
+		     MCP25XXFD_QUIRK_MAB_NO_WARN)
 			netdev_dbg(priv->ndev, "TX MAB underflow detected.\n");
 		else
 			netdev_info(priv->ndev, "TX MAB underflow detected.\n");

@@ -2207,6 +2207,32 @@ mcp25xxfd_register_check_controller(const struct mcp25xxfd_priv *priv)
 		    ctlr->kworker_task->pid);
 }
 
+#define MCP25XXFD_QUIRK_ACTIVE(quirk) \
+	(priv->devtype_data->quirks & MCP25XXFD_QUIRK_##quirk ? '+' : '-')
+
+static int
+mcp25xxfd_register_done(const struct mcp25xxfd_priv *priv)
+{
+	u32 devid;
+	int err;
+
+	err = regmap_read(priv->map, MCP25XXFD_DEVID, &devid);
+	if (err)
+		return err;
+
+	netdev_info(priv->ndev,
+		    "MCP%xFD rev%lu.%lu (%cRX_INT %cMAB_NO_WARN %cRX_CRC %cTX_CRC) successfully initialized.\n",
+		    priv->devtype_data->model,
+		    FIELD_GET(MCP25XXFD_DEVID_ID_MASK, devid),
+		    FIELD_GET(MCP25XXFD_DEVID_REV_MASK, devid),
+		    priv->rx_int ? '+' : '-',
+		    MCP25XXFD_QUIRK_ACTIVE(MAB_NO_WARN),
+		    MCP25XXFD_QUIRK_ACTIVE(RX_CRC),
+		    MCP25XXFD_QUIRK_ACTIVE(TX_CRC));
+
+	return 0;
+}
+
 static int mcp25xxfd_register(struct mcp25xxfd_priv *priv)
 {
 	struct net_device *ndev = priv->ndev;
@@ -2245,23 +2271,9 @@ static int mcp25xxfd_register(struct mcp25xxfd_priv *priv)
 
 	mcp25xxfd_register_check_controller(priv);
 
-	if (priv->devtype_data->model == MCP25XXFD_MODEL_MCP2517FD) {
-		netdev_info(ndev, "MCP%xFD %ssuccessfully initialized.\n",
-			    priv->devtype_data->model,
-			    priv->rx_int ? "(+RX-INT) " : "");
-	} else {
-		u32 devid;
-
-		err = regmap_read(priv->map, MCP25XXFD_DEVID, &devid);
-		if (err)
-			goto out_unregister_candev;
-
-		netdev_info(ndev, "MCP%xFD rev%lu.%lu %ssuccessfully initialized.\n",
-			    priv->devtype_data->model,
-			    FIELD_GET(MCP25XXFD_DEVID_ID_MASK, devid),
-			    FIELD_GET(MCP25XXFD_DEVID_REV_MASK, devid),
-			    priv->rx_int ? "(+RX-INT) " : "");
-	}
+	err = mcp25xxfd_register_done(priv);
+	if (err)
+		goto out_unregister_candev;
 
 	/* Put core into sleep mode and let pm_runtime_put() disable
 	 * the clocks and vdd. If CONFIG_PM is not enabled, the clocks

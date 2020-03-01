@@ -2167,7 +2167,7 @@ static int mcp25xxfd_register_check_rx_int(struct mcp25xxfd_priv *priv)
 	if (err)
 		return err;
 
-	/* Check if RX_INT is properly working. The RX-INT should not
+	/* Check if RX_INT is properly working. The RX_INT should not
 	 * be active after a softreset.
 	 */
 	rx_pending = gpiod_get_value_cansleep(priv->rx_int);
@@ -2175,7 +2175,7 @@ static int mcp25xxfd_register_check_rx_int(struct mcp25xxfd_priv *priv)
 		return 0;
 
 	netdev_info(priv->ndev,
-		    "RX-INT active after softreset, disabling RX-INT support.");
+		    "RX_INT active after softreset, disabling RX_INT support.");
 	devm_gpiod_put(&priv->spi->dev, priv->rx_int);
 	priv->rx_int = NULL;
 

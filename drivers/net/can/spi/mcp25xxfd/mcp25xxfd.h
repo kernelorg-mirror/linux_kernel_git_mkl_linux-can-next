@@ -640,6 +640,15 @@ struct mcp25xxfd_priv {
 #endif
 };
 
+#define MCP25XXFD_IS(_model) \
+static inline bool \
+mcp25xxfd_is_##_model(const struct mcp25xxfd_priv *priv) \
+{ \
+	return priv->devtype_data->model == MCP25XXFD_MODEL_MCP##_model##FD; \
+}
+
+MCP25XXFD_IS(2517);
+
 static inline u8 mcp25xxfd_first_byte_set(u32 mask)
 {
 	return (mask & 0x0000ffff) ?

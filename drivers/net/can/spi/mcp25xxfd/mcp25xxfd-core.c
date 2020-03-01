@@ -2195,7 +2195,7 @@ mcp25xxfd_register_check_controller(const struct mcp25xxfd_priv *priv)
 	const struct spi_controller *ctlr = spi->controller;
 	unsigned int policy;
 
-	if (!ctlr->kworker_task)
+	if (!ctlr->kworker_task || !mcp25xxfd_is_2517(priv))
 		return;
 
 	policy = ctlr->kworker_task->policy;

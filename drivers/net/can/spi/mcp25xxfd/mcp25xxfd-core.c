@@ -1062,18 +1062,21 @@ static int mcp25xxfd_tef_ring_update(struct mcp25xxfd_priv *priv)
 	u8 tx_ci;
 	int err;
 
-	/* guess head */
 	err = regmap_read(priv->map, MCP25XXFD_CAN_FIFOSTA(MCP25XXFD_TX_FIFO),
 			  &fifo_sta);
 	if (err)
 		return err;
 
+	/* Read TX-FIFO ci, that's the next TX-Object send by the HW.
+	 * The new TEF head must be >= the old head, ...
+	 */
 	tx_ci = FIELD_GET(MCP25XXFD_CAN_FIFOSTA_FIFOCI_MASK, fifo_sta);
-	new_head = round_down(priv->tef.head, tx_ring->obj_num) + tx_ci;
 
+	new_head = round_down(priv->tef.head, tx_ring->obj_num) + tx_ci;
 	if (new_head <= priv->tef.head)
 		new_head += tx_ring->obj_num;
 
+	/* ... but it cannot exceed the TX head. */
 	priv->tef.head = min(new_head, tx_ring->head);
 
 	mcp25xxfd_log_hw_tx_ci(priv, tx_ci);

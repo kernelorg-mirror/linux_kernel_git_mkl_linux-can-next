@@ -33,6 +33,7 @@
 #define MCP25XXFD_OSC_PLL_MULTIPLIER 10
 #define MCP25XXFD_OSC_DELAY_MS 3
 #define MCP25XXFD_SOFTRESET_RETRIES_MAX 3
+#define MCP25XXFD_ECC_CNT_MAX (3)
 
 /* Silence RX MAB underflow/TX MAB overflow warnings */
 #define MCP25XXFD_QUIRK_MAB_NO_WARN BIT(0)
@@ -786,11 +787,15 @@ static int mcp25xxfd_chip_fifo_init(const struct mcp25xxfd_priv *priv)
 	return 0;
 }
 
-static int mcp25xxfd_chip_ecc_init(const struct mcp25xxfd_priv *priv)
+static int mcp25xxfd_chip_ecc_init(struct mcp25xxfd_priv *priv)
 {
+	struct mcp25xxfd_ecc *ecc = &priv->ecc;
 	void *ram;
 	u32 val;
 	int err;
+
+	ecc->ecc_stat = 0;
+	ecc->cnt = 0;
 
 	val = MCP25XXFD_ECCCON_ECCEN;
 	err = regmap_update_bits(priv->map, MCP25XXFD_ECCCON, val, val);
@@ -806,6 +811,13 @@ static int mcp25xxfd_chip_ecc_init(const struct mcp25xxfd_priv *priv)
 	kfree(ram);
 
 	return err;
+}
+
+static inline void mcp25xxfd_ecc_tefif_successful(struct mcp25xxfd_priv *priv)
+{
+	struct mcp25xxfd_ecc *ecc = &priv->ecc;
+
+	ecc->ecc_stat = 0;
 }
 
 static u8 mcp25xxfd_get_normal_mode(const struct mcp25xxfd_priv *priv)
@@ -1210,6 +1222,7 @@ static int mcp25xxfd_handle_tefif(struct mcp25xxfd_priv *priv)
 
  out_netif_wake_queue:
 	mcp25xxfd_log_wake(priv, hw_tef_obj->id);
+	mcp25xxfd_ecc_tefif_successful(priv);
 	netif_wake_queue(priv->ndev);
 
 	return 0;
@@ -1632,7 +1645,8 @@ static int mcp25xxfd_handle_cerrif(struct mcp25xxfd_priv *priv)
 	return 0;
 }
 
-static int mcp25xxfd_handle_modif(const struct mcp25xxfd_priv *priv)
+static int
+mcp25xxfd_handle_modif(const struct mcp25xxfd_priv *priv, bool *set_normal_mode)
 {
 	const u8 mode_reference = mcp25xxfd_get_normal_mode(priv);
 	u8 mode;
@@ -1671,10 +1685,19 @@ static int mcp25xxfd_handle_modif(const struct mcp25xxfd_priv *priv)
 			   "Controller changed into %s Mode (%u).\n",
 			   mcp25xxfd_get_mode_str(mode), mode);
 
-	/* After the application requests Normal mode, the CAN FD
-	 * Controller will automatically attempt to retransmit the
-	 * message that caused the TX MAB underflow.
+	/* After the application requests Normal mode, the Controller
+	 * will automatically attempt to retransmit the message that
+	 * caused the TX MAB underflow.
+	 *
+	 * However, if there is an ECC error in the TX-RAM, we first
+	 * have to reload the tx-object before requesting Normal
+	 * mode. This is done later in mcp25xxfd_handle_eccif().
 	 */
+	if (priv->regs_status.intf & MCP25XXFD_CAN_INT_ECCIF) {
+		*set_normal_mode = true;
+		return 0;
+	}
+
 	return mcp25xxfd_chip_set_normal_mode_nowait(priv);
 }
 
@@ -1693,12 +1716,19 @@ static int mcp25xxfd_handle_serrif(struct mcp25xxfd_priv *priv)
 	 * will be seen as well.
 	 */
 	if ((priv->regs_status.intf & MCP25XXFD_CAN_INT_MODIF) &&
-	    (priv->regs_status.intf & MCP25XXFD_CAN_INT_IVMIF)) {
-		if (priv->devtype_data->quirks &
-		     MCP25XXFD_QUIRK_MAB_NO_WARN)
-			netdev_dbg(priv->ndev, "TX MAB underflow detected.\n");
+	    (priv->regs_status.intf & (MCP25XXFD_CAN_INT_IVMIF |
+				       MCP25XXFD_CAN_INT_ECCIF))) {
+		const char *msg;
+
+		if (priv->regs_status.intf & MCP25XXFD_CAN_INT_ECCIF)
+			msg = "TX MAB underflow due to ECC error detected.";
 		else
-			netdev_info(priv->ndev, "TX MAB underflow detected.\n");
+			msg = "TX MAB underflow detected.";
+
+		if (priv->devtype_data->quirks & MCP25XXFD_QUIRK_MAB_NO_WARN)
+			netdev_dbg(priv->ndev, "%s\n", msg);
+		else
+			netdev_info(priv->ndev, "%s\n", msg);
 
 		stats->tx_aborted_errors++;
 		stats->tx_errors++;
@@ -1729,31 +1759,103 @@ static int mcp25xxfd_handle_serrif(struct mcp25xxfd_priv *priv)
 	return 0;
 }
 
-static int mcp25xxfd_handle_eccif(struct mcp25xxfd_priv *priv)
+static int
+mcp25xxfd_handle_eccif_recover_locked(struct mcp25xxfd_priv *priv, u8 nr)
+{
+	struct mcp25xxfd_tx_ring *tx_ring = priv->tx;
+	struct mcp25xxfd_tx_obj *tx_obj;
+	u8 chip_tx_tail;
+	int err;
+
+	err = mcp25xxfd_tx_tail_get_from_chip(priv, &chip_tx_tail);
+	if (err)
+		return err;
+
+	if (nr != chip_tx_tail || nr != mcp25xxfd_get_tx_tail(tx_ring)) {
+		netdev_err(priv->ndev,
+			   "ECC Error information inconsistent (nr=%d, tx_tail=0x%08x(%d), chip_tx_tail=%d).\n",
+			   nr, tx_ring->tail, mcp25xxfd_get_tx_tail(tx_ring),
+			   chip_tx_tail);
+		return -EINVAL;
+	}
+
+	netdev_info(priv->ndev,
+		    "Recovering ECC Error in TX-RAM (nr=%d).\n", nr);
+
+	/* reload tx_object into controller RAM ... */
+	tx_obj = &tx_ring->obj[nr];
+	err = spi_sync(priv->spi, &tx_obj->load.msg);
+	if (err)
+		return err;
+
+	/* spi_sync() leaves complete set, unset to avoid bogus
+	 * execution resulting in an Oops.
+	 */
+	tx_obj->load.msg.complete = NULL;
+
+	/* ... and trigger retransmit */
+	return mcp25xxfd_chip_set_normal_mode(priv);
+}
+
+static int mcp25xxfd_handle_eccif_recover(struct mcp25xxfd_priv *priv, u8 nr)
 {
 	int err;
+
+	netif_tx_lock(priv->ndev);
+	err = mcp25xxfd_handle_eccif_recover_locked(priv, nr);
+	netif_tx_unlock(priv->ndev);
+
+	return err;
+}
+
+static int
+mcp25xxfd_handle_eccif(struct mcp25xxfd_priv *priv, bool set_normal_mode)
+{
+	struct mcp25xxfd_ecc *ecc = &priv->ecc;
 	u32 ecc_stat;
+	u16 addr;
+	u8 nr;
+	int err;
 
 	err = regmap_read(priv->map, MCP25XXFD_ECCSTAT, &ecc_stat);
 	if (err)
 		return err;
 
 	err = regmap_update_bits(priv->map, MCP25XXFD_ECCSTAT,
-				 MCP25XXFD_ECCSTAT_IF_MASK,
-				 ~ecc_stat);
+				 MCP25XXFD_ECCSTAT_IF_MASK, ~ecc_stat);
 	if (err)
 		return err;
 
+	addr = FIELD_GET(MCP25XXFD_ECCSTAT_ERRADDR_MASK, ecc_stat);
 	if (ecc_stat & MCP25XXFD_ECCSTAT_SECIF)
 		netdev_info(priv->ndev,
-			    "Single ECC Error corrected at address 0x%04lx.\n",
-			    FIELD_GET(MCP25XXFD_ECCSTAT_ERRADDR_MASK,
-				      ecc_stat));
+			    "Single ECC Error corrected at address 0x%04x.\n",
+			    addr);
 	else if (ecc_stat & MCP25XXFD_ECCSTAT_DEDIF)
 		netdev_notice(priv->ndev,
-			      "Double ECC Error detected at address 0x%04lx.\n",
-			      FIELD_GET(MCP25XXFD_ECCSTAT_ERRADDR_MASK,
-					ecc_stat));
+			      "Double ECC Error detected at address 0x%04x.\n",
+			      addr);
+
+	/* check if ECC error occurred in TX-RAM */
+	err = mcp25xxfd_get_tx_nr_by_addr(priv->tx, &nr, addr);
+	if (err == -ENOENT)
+		goto out_set_normal_mode;
+	if (err)
+		return err;
+
+	if (ecc->ecc_stat == ecc_stat && ecc->cnt >= MCP25XXFD_ECC_CNT_MAX)
+		return mcp25xxfd_handle_eccif_recover(priv, nr);
+
+	if (ecc->ecc_stat == ecc_stat) {
+		ecc->cnt++;
+	} else {
+		ecc->ecc_stat = ecc_stat;
+		ecc->cnt = 1;
+	}
+
+ out_set_normal_mode:
+	if (set_normal_mode)
+		return mcp25xxfd_chip_set_normal_mode_nowait(priv);
 
 	return 0;
 }
@@ -1818,6 +1920,7 @@ static irqreturn_t mcp25xxfd_irq(int irq, void *dev_id)
 
 	do {
 		u32 intf_pending, intf_pending_clearable;
+		bool set_normal_mode;
 
 		err = regmap_bulk_read(priv->map, MCP25XXFD_CAN_INT,
 				       &priv->regs_status,
@@ -1853,7 +1956,7 @@ static irqreturn_t mcp25xxfd_irq(int irq, void *dev_id)
 		}
 
 		if (intf_pending & MCP25XXFD_CAN_INT_MODIF) {
-			err = mcp25xxfd_handle(priv, modif);
+			err = mcp25xxfd_handle(priv, modif, &set_normal_mode);
 			if (err)
 				goto out_fail;
 		}
@@ -1906,7 +2009,7 @@ static irqreturn_t mcp25xxfd_irq(int irq, void *dev_id)
 		}
 
 		if (intf_pending & MCP25XXFD_CAN_INT_ECCIF) {
-			err = mcp25xxfd_handle(priv, eccif);
+			err = mcp25xxfd_handle(priv, eccif, set_normal_mode);
 			if (err)
 				goto out_fail;
 		}

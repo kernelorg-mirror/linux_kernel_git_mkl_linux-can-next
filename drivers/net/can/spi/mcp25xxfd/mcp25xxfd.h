@@ -591,6 +591,11 @@ struct mcp25xxfd_rx_ring {
 	struct mcp25xxfd_hw_rx_obj_canfd obj[];
 };
 
+struct mcp25xxfd_ecc {
+	u32 ecc_stat;
+	int cnt;
+};
+
 struct mcp25xxfd_regs_status {
 	u32 intf;
 };
@@ -622,6 +627,7 @@ struct mcp25xxfd_priv {
 
 	u8 rx_ring_num;
 
+	struct mcp25xxfd_ecc ecc;
 	struct mcp25xxfd_regs_status regs_status;
 
 	struct mcp25xxfd_write_reg_buf update_bits_buf;
@@ -784,6 +790,20 @@ static inline u8 mcp25xxfd_get_tx_head(const struct mcp25xxfd_tx_ring *ring)
 static inline u8 mcp25xxfd_get_tx_tail(const struct mcp25xxfd_tx_ring *ring)
 {
 	return ring->tail & (ring->obj_num - 1);
+}
+
+static inline int
+mcp25xxfd_get_tx_nr_by_addr(const struct mcp25xxfd_tx_ring *tx_ring, u8 *nr,
+			    u16 addr)
+{
+	if (addr < mcp25xxfd_get_tx_obj_addr(tx_ring, 0) ||
+	    addr >= mcp25xxfd_get_tx_obj_addr(tx_ring, tx_ring->obj_num))
+		return -ENOENT;
+
+	*nr = (addr - mcp25xxfd_get_tx_obj_addr(tx_ring, 0)) /
+		tx_ring->obj_size;
+
+	return 0;
 }
 
 static inline u8 mcp25xxfd_get_rx_head(const struct mcp25xxfd_rx_ring *ring)

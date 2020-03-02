@@ -32,6 +32,7 @@
 #define MCP25XXFD_SPICLOCK_HZ_MAX 20000000
 #define MCP25XXFD_OSC_PLL_MULTIPLIER 10
 #define MCP25XXFD_OSC_DELAY_MS 3
+#define MCP25XXFD_SOFTRESET_RETRIES_MAX 3
 
 /* Silence RX MAB underflow/TX MAB overflow warnings */
 #define MCP25XXFD_QUIRK_MAB_NO_WARN BIT(0)
@@ -484,6 +485,7 @@ static int mcp25xxfd_chip_softreset_do(const struct mcp25xxfd_priv *priv)
 
 static int mcp25xxfd_chip_softreset_check(const struct mcp25xxfd_priv *priv)
 {
+	u32 osc, osc_reference;
 	u8 mode;
 	int err;
 
@@ -492,10 +494,10 @@ static int mcp25xxfd_chip_softreset_check(const struct mcp25xxfd_priv *priv)
 		return err;
 
 	if (mode != MCP25XXFD_CAN_CON_MODE_CONFIG) {
-		netdev_err(priv->ndev,
-			   "Controller not in Config Mode after reset, but in %s Mode (%u).\n",
-			   mcp25xxfd_get_mode_str(mode), mode);
-		return -EINVAL;
+		netdev_info(priv->ndev,
+			    "Controller not in Config Mode after reset, but in %s Mode (%u).\n",
+			    mcp25xxfd_get_mode_str(mode), mode);
+		return -ETIMEDOUT;
 	}
 
 	osc_reference = MCP25XXFD_OSC_OSCRDY |
@@ -508,9 +510,9 @@ static int mcp25xxfd_chip_softreset_check(const struct mcp25xxfd_priv *priv)
 		return err;
 
 	if (osc != osc_reference) {
-		netdev_err(priv->ndev,
-			   "Controller failed to soft reset. osc=0x%08x, reference value=0x%08x\n",
-			   osc, osc_reference);
+		netdev_info(priv->ndev,
+			    "Controller failed to reset. osc=0x%08x, reference value=0x%08x\n",
+			    osc, osc_reference);
 		return -ETIMEDOUT;
 	}
 
@@ -519,17 +521,32 @@ static int mcp25xxfd_chip_softreset_check(const struct mcp25xxfd_priv *priv)
 
 static int mcp25xxfd_chip_softreset(const struct mcp25xxfd_priv *priv)
 {
-	int err;
+	int err, i;
 
-	err = mcp25xxfd_chip_softreset_do(priv);
+	for (i = 0; i < MCP25XXFD_SOFTRESET_RETRIES_MAX; i++) {
+		if (i)
+			netdev_info(priv->ndev,
+				    "Retrying to reset Controller.\n");
+
+		err = mcp25xxfd_chip_softreset_do(priv);
+		if (err == -ETIMEDOUT)
+			continue;
+		if (err)
+			return err;
+
+		err = mcp25xxfd_chip_softreset_check(priv);
+		if (err == -ETIMEDOUT)
+			continue;
+		if (err)
+			return err;
+
+		return 0;
+	}
+
 	if (err)
 		return err;
 
-	err = mcp25xxfd_chip_softreset_check(priv);
-	if (err)
-		return err;
-
-	return 0;
+	return -ETIMEDOUT;
 }
 
 static int mcp25xxfd_chip_clock_init(const struct mcp25xxfd_priv *priv)

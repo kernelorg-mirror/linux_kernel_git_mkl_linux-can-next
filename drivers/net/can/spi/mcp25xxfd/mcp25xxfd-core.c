@@ -462,31 +462,6 @@ static int mcp25xxfd_chip_clock_enable(const struct mcp25xxfd_priv *priv)
 	return err;
 }
 
-static int mcp25xxfd_chip_clock_init(const struct mcp25xxfd_priv *priv)
-{
-	u32 osc;
-	int err;
-
-	/* Activate Low Power Mode on Oscillator Disable. This only
-	 * works on the MCP2518FD. The MCP2517FD will go into normal
-	 * Sleep Mode instead.
-	 */
-	osc = MCP25XXFD_OSC_LPMEN |
-		FIELD_PREP(MCP25XXFD_OSC_CLKODIV_MASK,
-			   MCP25XXFD_OSC_CLKODIV_10);
-	err = regmap_write(priv->map, MCP25XXFD_OSC, osc);
-	if (err)
-		return err;
-
-	/* Set Time Base Counter Prescaler to 1.
-	 *
-	 * This means an overflow of the 32 bit Time Base Counter
-	 * register at 40 MHz every 107 seconds.
-	 */
-	return regmap_write(priv->map, MCP25XXFD_CAN_TSCON,
-			    MCP25XXFD_CAN_TSCON_TBCEN);
-}
-
 static int mcp25xxfd_chip_softreset(const struct mcp25xxfd_priv *priv)
 {
 	const __be16 cmd = mcp25xxfd_cmd_reset();
@@ -521,6 +496,31 @@ static int mcp25xxfd_chip_softreset(const struct mcp25xxfd_priv *priv)
 	}
 
 	return 0;
+}
+
+static int mcp25xxfd_chip_clock_init(const struct mcp25xxfd_priv *priv)
+{
+	u32 osc;
+	int err;
+
+	/* Activate Low Power Mode on Oscillator Disable. This only
+	 * works on the MCP2518FD. The MCP2517FD will go into normal
+	 * Sleep Mode instead.
+	 */
+	osc = MCP25XXFD_OSC_LPMEN |
+		FIELD_PREP(MCP25XXFD_OSC_CLKODIV_MASK,
+			   MCP25XXFD_OSC_CLKODIV_10);
+	err = regmap_write(priv->map, MCP25XXFD_OSC, osc);
+	if (err)
+		return err;
+
+	/* Set Time Base Counter Prescaler to 1.
+	 *
+	 * This means an overflow of the 32 bit Time Base Counter
+	 * register at 40 MHz every 107 seconds.
+	 */
+	return regmap_write(priv->map, MCP25XXFD_CAN_TSCON,
+			    MCP25XXFD_CAN_TSCON_TBCEN);
 }
 
 static int mcp25xxfd_set_bittiming(const struct mcp25xxfd_priv *priv)

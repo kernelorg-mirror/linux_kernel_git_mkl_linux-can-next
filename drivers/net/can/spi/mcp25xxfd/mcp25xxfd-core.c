@@ -462,10 +462,9 @@ static int mcp25xxfd_chip_clock_enable(const struct mcp25xxfd_priv *priv)
 	return err;
 }
 
-static int mcp25xxfd_chip_softreset(const struct mcp25xxfd_priv *priv)
+static int mcp25xxfd_chip_softreset_do(const struct mcp25xxfd_priv *priv)
 {
 	const __be16 cmd = mcp25xxfd_cmd_reset();
-	u8 mode;
 	int err;
 
 	/* The Set Mode and SPI Reset command only seems to works if
@@ -480,9 +479,13 @@ static int mcp25xxfd_chip_softreset(const struct mcp25xxfd_priv *priv)
 		return err;
 
 	/* spi_write_then_read() works with non DMA-safe buffers */
-	err = spi_write_then_read(priv->spi, &cmd, sizeof(cmd), NULL, 0);
-	if (err)
-		return err;
+	return spi_write_then_read(priv->spi, &cmd, sizeof(cmd), NULL, 0);
+}
+
+static int mcp25xxfd_chip_softreset_check(const struct mcp25xxfd_priv *priv)
+{
+	u8 mode;
+	int err;
 
 	err = mcp25xxfd_chip_get_mode(priv, &mode);
 	if (err)
@@ -494,6 +497,21 @@ static int mcp25xxfd_chip_softreset(const struct mcp25xxfd_priv *priv)
 			   mcp25xxfd_get_mode_str(mode), mode);
 		return -EINVAL;
 	}
+
+	return 0;
+}
+
+static int mcp25xxfd_chip_softreset(const struct mcp25xxfd_priv *priv)
+{
+	int err;
+
+	err = mcp25xxfd_chip_softreset_do(priv);
+	if (err)
+		return err;
+
+	err = mcp25xxfd_chip_softreset_check(priv);
+	if (err)
+		return err;
 
 	return 0;
 }

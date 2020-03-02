@@ -2119,7 +2119,7 @@ static int mcp25xxfd_register_chip_detect(struct mcp25xxfd_priv *priv)
 
 	if (osc != osc_reference) {
 		netdev_err(ndev,
-			   "Chip failed to soft reset. osc=0x%08x, reference value=0x%08x\n",
+			   "Controller failed to soft reset. osc=0x%08x, reference value=0x%08x\n",
 			   osc, osc_reference);
 		return -ENODEV;
 	}

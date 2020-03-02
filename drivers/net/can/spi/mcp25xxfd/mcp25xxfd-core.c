@@ -498,6 +498,22 @@ static int mcp25xxfd_chip_softreset_check(const struct mcp25xxfd_priv *priv)
 		return -EINVAL;
 	}
 
+	osc_reference = MCP25XXFD_OSC_OSCRDY |
+		FIELD_PREP(MCP25XXFD_OSC_CLKODIV_MASK,
+			   MCP25XXFD_OSC_CLKODIV_10);
+
+	/* check reset defaults of OSC reg */
+	err = regmap_read(priv->map, MCP25XXFD_OSC, &osc);
+	if (err)
+		return err;
+
+	if (osc != osc_reference) {
+		netdev_err(priv->ndev,
+			   "Controller failed to soft reset. osc=0x%08x, reference value=0x%08x\n",
+			   osc, osc_reference);
+		return -ETIMEDOUT;
+	}
+
 	return 0;
 }
 
@@ -2127,24 +2143,8 @@ static int mcp25xxfd_register_chip_detect(struct mcp25xxfd_priv *priv)
 {
 	const struct net_device *ndev = priv->ndev;
 	const struct mcp25xxfd_devtype_data *devtype_data;
-	u32 osc, osc_reference;
+	u32 osc;
 	int err;
-
-	osc_reference = MCP25XXFD_OSC_OSCRDY |
-		FIELD_PREP(MCP25XXFD_OSC_CLKODIV_MASK,
-			   MCP25XXFD_OSC_CLKODIV_10);
-
-	/* check reset defaults of OSC reg */
-	err = regmap_read(priv->map, MCP25XXFD_OSC, &osc);
-	if (err)
-		return err;
-
-	if (osc != osc_reference) {
-		netdev_err(ndev,
-			   "Controller failed to soft reset. osc=0x%08x, reference value=0x%08x\n",
-			   osc, osc_reference);
-		return -ENODEV;
-	}
 
 	/* The OSC_LPMEN is only supported on MCP2518FD, so use it to
 	 * autodetect the model.

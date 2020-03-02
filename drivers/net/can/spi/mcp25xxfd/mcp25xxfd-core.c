@@ -360,7 +360,7 @@ static int mcp25xxfd_ring_alloc(struct mcp25xxfd_priv *priv)
 	}
 
 	netdev_dbg(priv->ndev,
-		   "FIFO setup: free: %d bytes.\n",
+		   "FIFO setup: free: %d bytes\n",
 		   ram_free);
 
 	return 0;

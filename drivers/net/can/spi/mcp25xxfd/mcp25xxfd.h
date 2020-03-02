@@ -391,8 +391,8 @@ static inline void __dump(const void *d, unsigned int len)
 
 /* number of TX FIFO objects, depending on CAN mode
  *
- * FIFO setup: tef: 8*12 bytes = 96 bytes, tx: 8*16 bytes = 128, rx: 32*20 bytes =  640 bytes, free: 1184 bytes.
- * FIFO setup: tef: 4*12 bytes = 48 bytes, tx: 4*72 bytes = 288, rx: 22*76 bytes = 1672 bytes, free:   40 bytes.
+ * FIFO setup: tef: 8*12 bytes = 96 bytes, tx: 8*16 bytes = 128 bytes
+ * FIFO setup: tef: 4*12 bytes = 48 bytes, tx: 4*72 bytes = 288 bytes
  */
 #define MCP25XXFD_TX_OBJ_NUM_CAN 8
 #define MCP25XXFD_TX_OBJ_NUM_CANFD 4

@@ -1861,18 +1861,18 @@ static irqreturn_t mcp25xxfd_irq(int irq, void *dev_id)
 }
 
 static inline struct
-mcp25xxfd_tx_obj *mcp25xxfd_get_tx_obj_next(struct mcp25xxfd_tx_ring *ring)
+mcp25xxfd_tx_obj *mcp25xxfd_get_tx_obj_next(struct mcp25xxfd_tx_ring *tx_ring)
 {
 	u8 tx_head;
 
-	tx_head = mcp25xxfd_get_tx_head(ring);
+	tx_head = mcp25xxfd_get_tx_head(tx_ring);
 
-	return &ring->obj[tx_head];
+	return &tx_ring->obj[tx_head];
 }
 
 static void
 mcp25xxfd_tx_obj_from_skb(const struct mcp25xxfd_priv *priv,
-			  struct mcp25xxfd_tx_ring *ring,
+			  struct mcp25xxfd_tx_ring *tx_ring,
 			  struct mcp25xxfd_tx_obj *tx_obj,
 			  const struct sk_buff *skb)
 {
@@ -1900,7 +1900,7 @@ mcp25xxfd_tx_obj_from_skb(const struct mcp25xxfd_priv *priv,
 	 * TEF object.
 	 */
 	flags |= FIELD_PREP(MCP25XXFD_OBJ_FLAGS_SEQ_MCP2518FD_MASK,
-			    ring->head) |
+			    tx_ring->head) |
 		FIELD_PREP(MCP25XXFD_OBJ_FLAGS_DLC, can_len2dlc(cfd->len));
 
 	if (cfd->can_id & CAN_RTR_FLAG)
@@ -1970,7 +1970,7 @@ static netdev_tx_t mcp25xxfd_start_xmit(struct sk_buff *skb,
 					struct net_device *ndev)
 {
 	struct mcp25xxfd_priv *priv = netdev_priv(ndev);
-	struct mcp25xxfd_tx_ring *ring = priv->tx;
+	struct mcp25xxfd_tx_ring *tx_ring = priv->tx;
 	struct mcp25xxfd_tx_obj *tx_obj;
 	const canid_t can_id = ((struct canfd_frame *)skb->data)->can_id;
 	u8 tx_head;
@@ -1981,11 +1981,11 @@ static netdev_tx_t mcp25xxfd_start_xmit(struct sk_buff *skb,
 
 	mcp25xxfd_log(priv, can_id);
 
-	if (ring->head - ring->tail >= ring->obj_num) {
+	if (tx_ring->head - tx_ring->tail >= tx_ring->obj_num) {
 		netdev_dbg(priv->ndev,
 			   "Stopping tx-queue (tx_head=0x%08x, tx_tail=0x%08x, len=%d).\n",
-			   ring->head, ring->tail,
-			   ring->head - ring->tail);
+			   tx_ring->head, tx_ring->tail,
+			   tx_ring->head - tx_ring->tail);
 
 		mcp25xxfd_log_busy(priv, can_id);
 		netif_stop_queue(ndev);
@@ -1993,17 +1993,17 @@ static netdev_tx_t mcp25xxfd_start_xmit(struct sk_buff *skb,
 		return NETDEV_TX_BUSY;
 	}
 
-	tx_obj = mcp25xxfd_get_tx_obj_next(ring);
-	mcp25xxfd_tx_obj_from_skb(priv, ring, tx_obj, skb);
+	tx_obj = mcp25xxfd_get_tx_obj_next(tx_ring);
+	mcp25xxfd_tx_obj_from_skb(priv, tx_ring, tx_obj, skb);
 
 	// FIXME:
 	// if (!netdev_xmit_more() ||
 	//	netif_xmit_stopped(netdev_get_tx_queue(netdev, 0)))
 
 	/* Stop queue if we occupy the complete TX FIFO */
-	tx_head = mcp25xxfd_get_tx_head(ring);
-	ring->head++;
-	if (ring->head - ring->tail >= ring->obj_num) {
+	tx_head = mcp25xxfd_get_tx_head(tx_ring);
+	tx_ring->head++;
+	if (tx_ring->head - tx_ring->tail >= tx_ring->obj_num) {
 		mcp25xxfd_log_stop(priv, can_id);
 		netif_stop_queue(ndev);
 	}

@@ -571,6 +571,7 @@ struct mcp25xxfd_tx_ring {
 	unsigned int head;
 	unsigned int tail;
 
+	u16 base;
 	u8 obj_num;
 	u8 obj_size;
 
@@ -742,8 +743,7 @@ mcp25xxfd_get_tef_obj_addr(u8 n)
 static inline u16
 mcp25xxfd_get_tx_obj_addr(const struct mcp25xxfd_tx_ring *ring, u8 n)
 {
-	return mcp25xxfd_get_tef_obj_addr(ring->obj_num) +
-		ring->obj_size * n;
+	return ring->base + ring->obj_size * n;
 }
 
 static inline u16

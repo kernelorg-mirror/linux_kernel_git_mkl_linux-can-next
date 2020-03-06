@@ -267,6 +267,7 @@ static void mcp25xxfd_ring_init(struct mcp25xxfd_priv *priv)
 	tx_ring = priv->tx;
 	tx_ring->head = 0;
 	tx_ring->tail = 0;
+	tx_ring->base = mcp25xxfd_get_tef_obj_addr(tx_ring->obj_num);
 	mcp25xxfd_for_each_tx_obj(tx_ring, tx_obj, i)
 		mcp25xxfd_tx_ring_init_tx_obj(priv, tx_ring, tx_obj, i);
 
@@ -278,9 +279,9 @@ static void mcp25xxfd_ring_init(struct mcp25xxfd_priv *priv)
 		rx_ring->fifo_nr = MCP25XXFD_RX_FIFO(i);
 
 		if (!prev_rx_ring)
-			rx_ring->base = MCP25XXFD_RAM_START +
-				(sizeof(struct mcp25xxfd_hw_tef_obj) +
-				 tx_ring->obj_size) * tx_ring->obj_num;
+			rx_ring->base =
+				mcp25xxfd_get_tx_obj_addr(tx_ring,
+							  tx_ring->obj_num);
 		else
 			rx_ring->base = prev_rx_ring->base +
 				prev_rx_ring->obj_size *

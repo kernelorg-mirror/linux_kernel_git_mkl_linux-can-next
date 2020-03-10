@@ -47,6 +47,7 @@ static inline bool mcp25xxfd_update_bits_read_reg(unsigned int reg)
 	case MCP25XXFD_CAN_CON:
 	case MCP25XXFD_CAN_FIFOSTA(MCP25XXFD_RX_FIFO(0)):
 	case MCP25XXFD_OSC:
+	case MCP25XXFD_ECCCON:
 		return true;
 	default:
 		WARN(1, "Status of reg=%03x unknown.\n", reg);

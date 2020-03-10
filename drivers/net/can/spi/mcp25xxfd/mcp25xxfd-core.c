@@ -721,7 +721,13 @@ static int mcp25xxfd_chip_fifo_init(const struct mcp25xxfd_priv *priv)
 static int mcp25xxfd_chip_ecc_init(const struct mcp25xxfd_priv *priv)
 {
 	void *ram;
+	u32 val;
 	int err;
+
+	val = MCP25XXFD_ECCCON_ECCEN;
+	err = regmap_update_bits(priv->map, MCP25XXFD_ECCCON, val, val);
+	if (err)
+		return err;
 
 	ram = kzalloc(MCP25XXFD_RAM_SIZE, GFP_KERNEL);
 	if (!ram)
@@ -797,17 +803,17 @@ static int mcp25xxfd_chip_interrupts_enable(const struct mcp25xxfd_priv *priv)
 	if (err)
 		return err;
 
-	val = MCP25XXFD_ECCCON_DEDIE |
-		MCP25XXFD_ECCCON_SECIE |
-		MCP25XXFD_ECCCON_ECCEN;
-	return regmap_write(priv->map, MCP25XXFD_ECCCON, val);
+	val = MCP25XXFD_ECCCON_DEDIE | MCP25XXFD_ECCCON_SECIE;
+	return regmap_update_bits(priv->map, MCP25XXFD_ECCCON, val, val);
 }
 
 static int mcp25xxfd_chip_interrupts_disable(const struct mcp25xxfd_priv *priv)
 {
 	int err;
+	u32 mask;
 
-	err = regmap_write(priv->map, MCP25XXFD_ECCCON, 0);
+	mask = MCP25XXFD_ECCCON_DEDIE | MCP25XXFD_ECCCON_SECIE;
+	err = regmap_update_bits(priv->map, MCP25XXFD_ECCCON, mask, 0x0);
 	if (err)
 		return err;
 

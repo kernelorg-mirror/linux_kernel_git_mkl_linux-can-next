@@ -2048,9 +2048,9 @@ mcp25xxfd_tx_obj *mcp25xxfd_get_tx_obj_next(struct mcp25xxfd_tx_ring *tx_ring)
 
 static void
 mcp25xxfd_tx_obj_from_skb(const struct mcp25xxfd_priv *priv,
-			  struct mcp25xxfd_tx_ring *tx_ring,
 			  struct mcp25xxfd_tx_obj *tx_obj,
-			  const struct sk_buff *skb)
+			  const struct sk_buff *skb,
+			  unsigned int seq)
 {
 	const struct canfd_frame *cfd = (struct canfd_frame *)skb->data;
 	struct mcp25xxfd_hw_tx_obj_raw *hw_tx_obj;
@@ -2075,8 +2075,7 @@ mcp25xxfd_tx_obj_from_skb(const struct mcp25xxfd_priv *priv,
 	 * harm, only the lower 7 bits will be transferred into the
 	 * TEF object.
 	 */
-	flags |= FIELD_PREP(MCP25XXFD_OBJ_FLAGS_SEQ_MCP2518FD_MASK,
-			    tx_ring->head) |
+	flags |= FIELD_PREP(MCP25XXFD_OBJ_FLAGS_SEQ_MCP2518FD_MASK, seq) |
 		FIELD_PREP(MCP25XXFD_OBJ_FLAGS_DLC, can_len2dlc(cfd->len));
 
 	if (cfd->can_id & CAN_RTR_FLAG)
@@ -2170,7 +2169,7 @@ static netdev_tx_t mcp25xxfd_start_xmit(struct sk_buff *skb,
 	}
 
 	tx_obj = mcp25xxfd_get_tx_obj_next(tx_ring);
-	mcp25xxfd_tx_obj_from_skb(priv, tx_ring, tx_obj, skb);
+	mcp25xxfd_tx_obj_from_skb(priv, tx_obj, skb, tx_ring->head);
 
 	// FIXME:
 	// if (!netdev_xmit_more() ||

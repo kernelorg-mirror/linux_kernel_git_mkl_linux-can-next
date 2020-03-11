@@ -185,15 +185,14 @@ static inline int
 mcp25xxfd_tef_tail_get_from_chip(const struct mcp25xxfd_priv *priv,
 				 u8 *tef_tail)
 {
+	u32 tef_ua;
 	int err;
-	u32 tef_obj_tail_rel_addr;
 
-	err = regmap_read(priv->map, MCP25XXFD_CAN_TEFUA,
-			  &tef_obj_tail_rel_addr);
+	err = regmap_read(priv->map, MCP25XXFD_CAN_TEFUA, &tef_ua);
 	if (err)
 		return err;
 
-	*tef_tail = tef_obj_tail_rel_addr / sizeof(struct mcp25xxfd_hw_tef_obj);
+	*tef_tail = tef_ua / sizeof(struct mcp25xxfd_hw_tef_obj);
 
 	return 0;
 }
@@ -203,16 +202,16 @@ mcp25xxfd_rx_tail_get_from_chip(const struct mcp25xxfd_priv *priv,
 				const struct mcp25xxfd_rx_ring *ring,
 				u8 *rx_tail)
 {
+	u32 fifo_ua;
 	int err;
-	u32 rx_obj_tail_rel_addr;
 
 	err = regmap_read(priv->map, MCP25XXFD_CAN_FIFOUA(ring->fifo_nr),
-			  &rx_obj_tail_rel_addr);
+			  &fifo_ua);
 	if (err)
 		return err;
 
-	rx_obj_tail_rel_addr -= ring->base - MCP25XXFD_RAM_START;
-	*rx_tail = rx_obj_tail_rel_addr / ring->obj_size;
+	fifo_ua -= ring->base - MCP25XXFD_RAM_START;
+	*rx_tail = fifo_ua / ring->obj_size;
 
 	return 0;
 }

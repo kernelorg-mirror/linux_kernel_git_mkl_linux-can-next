@@ -1576,8 +1576,12 @@ static int mcp25xxfd_handle_modif(const struct mcp25xxfd_priv *priv)
 	if (err)
 		return err;
 
-	if (mode == mode_reference)
+	if (mode == mode_reference) {
+		netdev_dbg(priv->ndev,
+			   "Controller changed into %s Mode (%u).\n",
+			   mcp25xxfd_get_mode_str(mode), mode);
 		return 0;
+	}
 
 	/* According to MCP2517FD errata DS80000792B 1., during a TX
 	 * MAB underflow, the controller will transition to Restricted

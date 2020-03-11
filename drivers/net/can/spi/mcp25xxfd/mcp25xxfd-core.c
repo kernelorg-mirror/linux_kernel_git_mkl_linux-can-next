@@ -199,6 +199,23 @@ mcp25xxfd_tef_tail_get_from_chip(const struct mcp25xxfd_priv *priv,
 }
 
 static inline int
+mcp25xxfd_tx_tail_get_from_chip(const struct mcp25xxfd_priv *priv,
+				u8 *tx_tail)
+{
+	u32 fifo_sta;
+	int err;
+
+	err = regmap_read(priv->map, MCP25XXFD_CAN_FIFOSTA(MCP25XXFD_TX_FIFO),
+			  &fifo_sta);
+	if (err)
+		return err;
+
+	*tx_tail = FIELD_GET(MCP25XXFD_CAN_FIFOSTA_FIFOCI_MASK, fifo_sta);
+
+	return 0;
+}
+
+static inline int
 mcp25xxfd_rx_tail_get_from_chip(const struct mcp25xxfd_priv *priv,
 				const struct mcp25xxfd_rx_ring *ring,
 				u8 *rx_tail)

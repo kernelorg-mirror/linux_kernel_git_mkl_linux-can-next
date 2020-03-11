@@ -41,13 +41,17 @@
 #define MCP25XXFD_QUIRK_RX_CRC BIT(1)
 /* Use CRC in TX-PATH */
 #define MCP25XXFD_QUIRK_TX_CRC BIT(2)
+/* Enable ECC for RAM */
+#define MCP25XXFD_QUIRK_ECC BIT(3)
 
 static const struct mcp25xxfd_devtype_data mcp25xxfd_devtype_data_mcp2517fd = {
-	.quirks = MCP25XXFD_QUIRK_MAB_NO_WARN | MCP25XXFD_QUIRK_RX_CRC,
+	.quirks = MCP25XXFD_QUIRK_MAB_NO_WARN | MCP25XXFD_QUIRK_RX_CRC |
+		MCP25XXFD_QUIRK_ECC,
 	.model = MCP25XXFD_MODEL_MCP2517FD,
 };
 
 static const struct mcp25xxfd_devtype_data mcp25xxfd_devtype_data_mcp2518fd = {
+	.quirks = MCP25XXFD_QUIRK_ECC,
 	.model = MCP25XXFD_MODEL_MCP2518FD,
 };
 
@@ -793,6 +797,9 @@ static int mcp25xxfd_chip_ecc_init(struct mcp25xxfd_priv *priv)
 	void *ram;
 	u32 val;
 	int err;
+
+	if (!(priv->devtype_data->quirks & MCP25XXFD_QUIRK_ECC))
+		return 0;
 
 	ecc->ecc_stat = 0;
 	ecc->cnt = 0;
@@ -2374,14 +2381,15 @@ mcp25xxfd_register_done(const struct mcp25xxfd_priv *priv)
 		return err;
 
 	netdev_info(priv->ndev,
-		    "MCP%xFD rev%lu.%lu (%cRX_INT %cMAB_NO_WARN %cRX_CRC %cTX_CRC) successfully initialized.\n",
+		    "MCP%xFD rev%lu.%lu (%cRX_INT %cMAB_NO_WARN %cRX_CRC %cTX_CRC %cECC) successfully initialized.\n",
 		    priv->devtype_data->model,
 		    FIELD_GET(MCP25XXFD_DEVID_ID_MASK, devid),
 		    FIELD_GET(MCP25XXFD_DEVID_REV_MASK, devid),
 		    priv->rx_int ? '+' : '-',
 		    MCP25XXFD_QUIRK_ACTIVE(MAB_NO_WARN),
 		    MCP25XXFD_QUIRK_ACTIVE(RX_CRC),
-		    MCP25XXFD_QUIRK_ACTIVE(TX_CRC));
+		    MCP25XXFD_QUIRK_ACTIVE(TX_CRC),
+		    MCP25XXFD_QUIRK_ACTIVE(ECC));
 
 	return 0;
 }

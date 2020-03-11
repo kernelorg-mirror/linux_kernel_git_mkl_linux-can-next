@@ -1680,8 +1680,7 @@ mcp25xxfd_handle_modif(const struct mcp25xxfd_priv *priv, bool *set_normal_mode)
 	 * first. When polling this bit we see that it will transition
 	 * to Restricted Operation Mode shortly after.
 	 */
-	if ((priv->devtype_data->quirks &
-	     MCP25XXFD_QUIRK_MAB_NO_WARN) &&
+	if ((priv->devtype_data->quirks & MCP25XXFD_QUIRK_MAB_NO_WARN) &&
 	    (mode == MCP25XXFD_CAN_CON_MODE_RESTRICTED ||
 	     mode == MCP25XXFD_CAN_CON_MODE_LISTENONLY))
 		netdev_dbg(priv->ndev,

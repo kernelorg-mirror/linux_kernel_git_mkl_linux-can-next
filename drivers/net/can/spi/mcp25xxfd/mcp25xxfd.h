@@ -739,8 +739,7 @@ mcp25xxfd_spi_cmd_write_crc(struct mcp25xxfd_crc_buf_cmd *cmd,
 	__mcp25xxfd_spi_cmd_crc_set_len(cmd, len, mcp25xxfd_reg_in_ram(addr));
 }
 
-static inline u16
-mcp25xxfd_get_tef_obj_addr(u8 n)
+static inline u16 mcp25xxfd_get_tef_obj_addr(u8 n)
 {
 	return MCP25XXFD_RAM_START +
 		sizeof(struct mcp25xxfd_hw_tef_obj) * n;

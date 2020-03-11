@@ -1850,11 +1850,10 @@ mcp25xxfd_handle_eccif(struct mcp25xxfd_priv *priv, bool set_normal_mode)
 	if (err)
 		return err;
 
-	if (ecc->ecc_stat == ecc_stat && ecc->cnt >= MCP25XXFD_ECC_CNT_MAX)
-		return mcp25xxfd_handle_eccif_recover(priv, nr);
-
 	if (ecc->ecc_stat == ecc_stat) {
 		ecc->cnt++;
+		if (ecc->cnt >= MCP25XXFD_ECC_CNT_MAX)
+			return mcp25xxfd_handle_eccif_recover(priv, nr);
 	} else {
 		ecc->ecc_stat = ecc_stat;
 		ecc->cnt = 1;

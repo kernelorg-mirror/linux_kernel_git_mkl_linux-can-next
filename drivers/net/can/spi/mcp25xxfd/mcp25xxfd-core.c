@@ -884,8 +884,7 @@ static int mcp25xxfd_chip_interrupts_enable(const struct mcp25xxfd_priv *priv)
 	if (err)
 		return err;
 
-	val = MCP25XXFD_CRC_FERRIE |
-		MCP25XXFD_CRC_CRCERRIE;
+	val = MCP25XXFD_CRC_FERRIE | MCP25XXFD_CRC_CRCERRIE;
 	err = regmap_write(priv->map, MCP25XXFD_CRC, val);
 	if (err)
 		return err;

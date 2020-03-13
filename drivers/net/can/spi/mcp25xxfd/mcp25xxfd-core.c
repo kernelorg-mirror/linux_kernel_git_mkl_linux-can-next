@@ -801,17 +801,17 @@ static int mcp25xxfd_chip_ecc_init(struct mcp25xxfd_priv *priv)
 {
 	struct mcp25xxfd_ecc *ecc = &priv->ecc;
 	void *ram;
-	u32 val;
+	u32 val = 0;
 	int err;
-
-	if (!(priv->devtype_data->quirks & MCP25XXFD_QUIRK_ECC))
-		return 0;
 
 	ecc->ecc_stat = 0;
 	ecc->cnt = 0;
 
-	val = MCP25XXFD_ECCCON_ECCEN;
-	err = regmap_update_bits(priv->map, MCP25XXFD_ECCCON, val, val);
+	if (priv->devtype_data->quirks & MCP25XXFD_QUIRK_ECC)
+		val = MCP25XXFD_ECCCON_ECCEN;
+
+	err = regmap_update_bits(priv->map, MCP25XXFD_ECCCON,
+				 MCP25XXFD_ECCCON_ECCEN, val);
 	if (err)
 		return err;
 

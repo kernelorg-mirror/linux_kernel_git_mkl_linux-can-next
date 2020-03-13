@@ -67,6 +67,9 @@ static int mcp25xxfd_regmap_update_bits(void *context, unsigned int reg,
 	u8 first_byte, last_byte, len;
 	int err;
 
+	if (mask == 0)
+		return -EINVAL;
+
 	first_byte = mcp25xxfd_first_byte_set(mask);
 	last_byte = mcp25xxfd_last_byte_set(mask);
 	len = last_byte - first_byte + 1;

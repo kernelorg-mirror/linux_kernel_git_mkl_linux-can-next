@@ -1886,9 +1886,10 @@ static int mcp25xxfd_handle_spicrcif(struct mcp25xxfd_priv *priv)
 		return err;
 
 	if (crc & MCP25XXFD_CRC_FERRIF)
-		netdev_info(priv->ndev, "CRC Command Format Error.\n");
+		netdev_notice(priv->ndev, "CRC write command format error.\n");
 	else if (crc & MCP25XXFD_CRC_CRCERRIF)
-		netdev_notice(priv->ndev, "CRC Error detected. CRC=0x%04lx.\n",
+		netdev_notice(priv->ndev,
+			      "CRC write error detected. CRC=0x%04lx.\n",
 			      FIELD_GET(MCP25XXFD_CRC_MASK, crc));
 
 	return 0;

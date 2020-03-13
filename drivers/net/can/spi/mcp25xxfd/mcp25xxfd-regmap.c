@@ -49,7 +49,7 @@ static inline bool mcp25xxfd_update_bits_read_reg(unsigned int reg)
 	case MCP25XXFD_ECCCON:
 		return true;
 	default:
-		WARN(1, "Status of reg=%03x unknown.\n", reg);
+		WARN(1, "Status of reg 0x%04x unknown.\n", reg);
 	}
 
 	return true;
@@ -183,7 +183,7 @@ static int mcp25xxfd_regmap_crc_read(void *context,
 						  xfer[1].rx_buf, xfer[1].len);
 	if (crc_received != crc_calculated) {
 		netdev_info(priv->ndev,
-			    "CRC read error: reg=0x%04x len=%d\n",
+			    "CRC read error at address 0x%04x, length %d.\n",
 			    *(u16 *)reg, val_len);
 
 		return -EBADMSG;

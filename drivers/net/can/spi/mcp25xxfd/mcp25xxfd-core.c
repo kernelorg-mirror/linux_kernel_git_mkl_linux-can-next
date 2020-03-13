@@ -584,6 +584,12 @@ static int mcp25xxfd_chip_clock_init(const struct mcp25xxfd_priv *priv)
 	osc = MCP25XXFD_OSC_LPMEN |
 		FIELD_PREP(MCP25XXFD_OSC_CLKODIV_MASK,
 			   MCP25XXFD_OSC_CLKODIV_10);
+
+	/* Disable Low Power Mode for now, as the Controller sometimes
+	 * has troubles to properly wakeup.
+	 */
+	osc &= ~MCP25XXFD_OSC_LPMEN;
+
 	err = regmap_write(priv->map, MCP25XXFD_OSC, osc);
 	if (err)
 		return err;
@@ -2299,6 +2305,11 @@ static int mcp25xxfd_register_chip_detect(struct mcp25xxfd_priv *priv)
 		return err;
 
 	err = regmap_read(priv->map, MCP25XXFD_OSC, &osc);
+	if (err)
+		return err;
+
+	err = regmap_update_bits(priv->map, MCP25XXFD_OSC,
+				 MCP25XXFD_OSC_LPMEN, 0x0);
 	if (err)
 		return err;
 

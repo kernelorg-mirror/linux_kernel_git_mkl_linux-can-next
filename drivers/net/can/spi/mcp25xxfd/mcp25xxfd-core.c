@@ -1757,11 +1757,10 @@ static int mcp25xxfd_handle_serrif(struct mcp25xxfd_priv *priv)
 		handled = true;
 	}
 
-	if (!handled) {
+	if (!handled)
 		netdev_err(priv->ndev,
-			   "Unhandled System Error Interrupt!\n");
-		return -EINVAL;
-	}
+			   "Unhandled System Error Interrupt (intf=0x%08x)!\n",
+			   priv->regs_status.intf);
 
 	return 0;
 }

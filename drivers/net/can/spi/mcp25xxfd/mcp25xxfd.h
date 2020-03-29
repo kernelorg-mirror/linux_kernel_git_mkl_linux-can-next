@@ -597,7 +597,6 @@ struct mcp25xxfd_ecc {
 };
 
 struct mcp25xxfd_regs_status {
-	u32 vec;
 	u32 intf;
 };
 

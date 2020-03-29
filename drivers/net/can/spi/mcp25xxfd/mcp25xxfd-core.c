@@ -1758,8 +1758,8 @@ static int mcp25xxfd_handle_serrif(struct mcp25xxfd_priv *priv)
 
 	if (!handled)
 		netdev_err(priv->ndev,
-			   "Unhandled System Error Interrupt (vec=0x%08x, intf=0x%08x)!\n",
-			   priv->regs_status.vec, priv->regs_status.intf);
+			   "Unhandled System Error Interrupt (intf=0x%08x)!\n",
+			   priv->regs_status.intf);
 
 	return 0;
 }
@@ -1926,7 +1926,7 @@ static irqreturn_t mcp25xxfd_irq(int irq, void *dev_id)
 		u32 intf_pending, intf_pending_clearable;
 		bool set_normal_mode;
 
-		err = regmap_bulk_read(priv->map, MCP25XXFD_CAN_VEC,
+		err = regmap_bulk_read(priv->map, MCP25XXFD_CAN_INT,
 				       &priv->regs_status,
 				       sizeof(priv->regs_status) /
 				       sizeof(u32));

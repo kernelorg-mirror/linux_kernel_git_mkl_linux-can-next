@@ -1720,10 +1720,16 @@ static int mcp25xxfd_handle_serrif(struct mcp25xxfd_priv *priv)
 	 * In addition to the effects mentioned in the Errata, there
 	 * are Bus Errors due to the aborted CAN frame, so a IVMIF
 	 * will be seen as well.
+	 *
+	 * Sometimes there is a ECC error in the TX-RAM, which leads
+	 * to a TX MAB underflow. However, probably due to a race
+	 * condition (probably in the driver), there is no associated
+	 * MODIF pending (yet), treat this as a known system error as
+	 * well.
 	 */
-	if ((priv->regs_status.intf & MCP25XXFD_CAN_INT_MODIF) &&
-	    (priv->regs_status.intf & (MCP25XXFD_CAN_INT_IVMIF |
-				       MCP25XXFD_CAN_INT_ECCIF))) {
+	if ((priv->regs_status.intf & MCP25XXFD_CAN_INT_MODIF &&
+	     priv->regs_status.intf & MCP25XXFD_CAN_INT_IVMIF) ||
+	    priv->regs_status.intf & MCP25XXFD_CAN_INT_ECCIF) {
 		const char *msg;
 
 		if (priv->regs_status.intf & MCP25XXFD_CAN_INT_ECCIF)

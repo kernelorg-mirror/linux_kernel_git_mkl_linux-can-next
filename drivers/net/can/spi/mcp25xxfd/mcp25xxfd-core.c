@@ -1796,7 +1796,7 @@ static int mcp25xxfd_handle_serrif(struct mcp25xxfd_priv *priv)
 }
 
 static int
-mcp25xxfd_handle_eccif_recover_locked(struct mcp25xxfd_priv *priv, u8 nr)
+mcp25xxfd_handle_eccif_recover(struct mcp25xxfd_priv *priv, u8 nr)
 {
 	struct mcp25xxfd_tx_ring *tx_ring = priv->tx;
 	struct mcp25xxfd_ecc *ecc = &priv->ecc;
@@ -1847,17 +1847,6 @@ mcp25xxfd_handle_eccif_recover_locked(struct mcp25xxfd_priv *priv, u8 nr)
 
 	/* ... and trigger retransmit */
 	return mcp25xxfd_chip_set_normal_mode(priv);
-}
-
-static int mcp25xxfd_handle_eccif_recover(struct mcp25xxfd_priv *priv, u8 nr)
-{
-	int err;
-
-	netif_tx_lock(priv->ndev);
-	err = mcp25xxfd_handle_eccif_recover_locked(priv, nr);
-	netif_tx_unlock(priv->ndev);
-
-	return err;
 }
 
 static int

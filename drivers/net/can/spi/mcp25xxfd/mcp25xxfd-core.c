@@ -1714,6 +1714,7 @@ mcp25xxfd_handle_modif(const struct mcp25xxfd_priv *priv, bool *set_normal_mode)
 
 static int mcp25xxfd_handle_serrif(struct mcp25xxfd_priv *priv)
 {
+	struct mcp25xxfd_ecc *ecc = &priv->ecc;
 	struct net_device_stats *stats = &priv->ndev->stats;
 	bool handled = false;
 
@@ -1726,18 +1727,27 @@ static int mcp25xxfd_handle_serrif(struct mcp25xxfd_priv *priv)
 	 * are Bus Errors due to the aborted CAN frame, so a IVMIF
 	 * will be seen as well.
 	 *
-	 * Sometimes there is a ECC error in the TX-RAM, which leads
-	 * to a TX MAB underflow. However, probably due to a race
-	 * condition (probably in the driver), there is no associated
-	 * MODIF pending (yet), treat this as a known system error as
-	 * well.
+	 * Sometimes there is an ECC error in the TX-RAM, which leads
+	 * to a TX MAB underflow.
+	 *
+	 * However, probably due to a race condition, there is no
+	 * associated MODIF pending.
+	 *
+	 * Further, there are situations, where the SERRIF is caused
+	 * by an ECC error in the TX-RAM, but not even the ECCIF is
+	 * set. This only seems to happen _after_ the first occurance
+	 * of a ECCIF (which is tracked in ecc->cnt).
+	 *
+	 * Treat all as a known system errors..
 	 */
 	if ((priv->regs_status.intf & MCP25XXFD_CAN_INT_MODIF &&
 	     priv->regs_status.intf & MCP25XXFD_CAN_INT_IVMIF) ||
-	    priv->regs_status.intf & MCP25XXFD_CAN_INT_ECCIF) {
+	    priv->regs_status.intf & MCP25XXFD_CAN_INT_ECCIF ||
+	    ecc->cnt) {
 		const char *msg;
 
-		if (priv->regs_status.intf & MCP25XXFD_CAN_INT_ECCIF)
+		if (priv->regs_status.intf & MCP25XXFD_CAN_INT_ECCIF ||
+		    ecc->cnt)
 			msg = "TX MAB underflow due to ECC error detected.";
 		else
 			msg = "TX MAB underflow detected.";

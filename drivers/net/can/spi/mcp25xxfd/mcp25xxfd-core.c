@@ -1774,28 +1774,38 @@ mcp25xxfd_handle_eccif_recover_locked(struct mcp25xxfd_priv *priv, u8 nr)
 	struct mcp25xxfd_tx_ring *tx_ring = priv->tx;
 	struct mcp25xxfd_ecc *ecc = &priv->ecc;
 	struct mcp25xxfd_tx_obj *tx_obj;
-	u8 chip_tx_tail;
+	u8 chip_tx_tail, tx_tail, offset;
 	u16 addr;
 	int err;
+
+	addr = FIELD_GET(MCP25XXFD_ECCSTAT_ERRADDR_MASK, ecc->ecc_stat);
 
 	err = mcp25xxfd_tx_tail_get_from_chip(priv, &chip_tx_tail);
 	if (err)
 		return err;
 
-	addr = FIELD_GET(MCP25XXFD_ECCSTAT_ERRADDR_MASK, ecc->ecc_stat);
-	if (nr != chip_tx_tail || nr != mcp25xxfd_get_tx_tail(tx_ring)) {
+	tx_tail = mcp25xxfd_get_tx_tail(tx_ring);
+	offset = (nr - chip_tx_tail) & (tx_ring->obj_num - 1);
+
+	/* Bail out if one of the following is met:
+	 * - tx_tail information is inconsistent
+	 * - for mcp2517fd: offset not 0
+	 * - for mcp2518fd: offset not 0 or 1
+	 */
+	if (chip_tx_tail != tx_tail ||
+	    !(offset == 0 || (offset == 1 && mcp25xxfd_is_2518(priv)))) {
 		netdev_err(priv->ndev,
-			   "ECC Error information inconsistent (addr=0x%04x, nr=%d, tx_tail=0x%08x(%d), chip_tx_tail=%d).\n",
-			   addr, nr, tx_ring->tail,
-			   mcp25xxfd_get_tx_tail(tx_ring), chip_tx_tail);
+			   "ECC Error information inconsistent (addr=0x%04x, nr=%d, tx_tail=0x%08x(%d), chip_tx_tail=%d, offset=%d).\n",
+			   addr, nr, tx_ring->tail, tx_tail, chip_tx_tail,
+			   offset);
 		return -EINVAL;
 	}
 
 	netdev_info(priv->ndev,
-		    "Recovering %s ECC Error at address 0x%04x (in TX-RAM, tx_obj=%d).\n",
+		    "Recovering %s ECC Error at address 0x%04x (in TX-RAM, tx_obj=%d, tx_tail=0x%08x(%d), offset=%d).\n",
 		    ecc->ecc_stat & MCP25XXFD_ECCSTAT_SECIF ?
 		    "Single" : "Double",
-		    addr, nr);
+		    addr, nr, tx_ring->tail, tx_tail, offset);
 
 	/* reload tx_obj into controller RAM ... */
 	tx_obj = &tx_ring->obj[nr];

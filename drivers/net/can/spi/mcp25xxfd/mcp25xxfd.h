@@ -673,6 +673,7 @@ mcp25xxfd_is_##_model(const struct mcp25xxfd_priv *priv) \
 }
 
 MCP25XXFD_IS(2517);
+MCP25XXFD_IS(2518);
 
 static inline u8 mcp25xxfd_first_byte_set(u32 mask)
 {

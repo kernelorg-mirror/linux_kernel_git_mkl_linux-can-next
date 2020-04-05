@@ -204,6 +204,24 @@ mcp25xxfd_tx_tail_get_from_chip(const struct mcp25xxfd_priv *priv,
 }
 
 static inline int
+mcp25xxfd_rx_head_get_from_chip(const struct mcp25xxfd_priv *priv,
+				const struct mcp25xxfd_rx_ring *ring,
+				u8 *rx_head)
+{
+	u32 fifo_sta;
+	int err;
+
+	err = regmap_read(priv->map, MCP25XXFD_CAN_FIFOSTA(ring->fifo_nr),
+			  &fifo_sta);
+	if (err)
+		return err;
+
+	*rx_head = FIELD_GET(MCP25XXFD_CAN_FIFOSTA_FIFOCI_MASK, fifo_sta);
+
+	return 0;
+}
+
+static inline int
 mcp25xxfd_rx_tail_get_from_chip(const struct mcp25xxfd_priv *priv,
 				const struct mcp25xxfd_rx_ring *ring,
 				u8 *rx_tail)
@@ -1227,19 +1245,18 @@ static int
 mcp25xxfd_rx_ring_update(struct mcp25xxfd_priv *priv,
 			 struct mcp25xxfd_rx_ring *ring)
 {
-	u32 fifo_sta, new_head;
-	u8 rx_ci;
+	u32 new_head;
+	u8 chip_rx_head;
 	int err;
 
-	err = regmap_read(priv->map,
-			  MCP25XXFD_CAN_FIFOSTA(ring->fifo_nr),
-			  &fifo_sta);
+	err = mcp25xxfd_rx_head_get_from_chip(priv, ring, &chip_rx_head);
 	if (err)
 		return err;
 
-	rx_ci = FIELD_GET(MCP25XXFD_CAN_FIFOSTA_FIFOCI_MASK, fifo_sta);
-	new_head = round_down(ring->head, ring->obj_num) + rx_ci;
-
+	/* chip_rx_head, is the next RX-Object filled by the HW.
+	 * The new RX head must be >= the old head.
+	 */
+	new_head = round_down(ring->head, ring->obj_num) + chip_rx_head;
 	if (new_head <= ring->head)
 		new_head += ring->obj_num;
 

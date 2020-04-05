@@ -1808,13 +1808,13 @@ mcp25xxfd_handle_eccif_recover_locked(struct mcp25xxfd_priv *priv, u8 nr)
 	netdev_info(priv->ndev,
 		    "Recovering ECC Error in TX-RAM (nr=%d).\n", nr);
 
-	/* reload tx_object into controller RAM ... */
+	/* reload tx_obj into controller RAM ... */
 	tx_obj = &tx_ring->obj[nr];
 	err = spi_sync(priv->spi, &tx_obj->load.msg);
 	if (err)
 		return err;
 
-	/* spi_sync() leaves complete set, unset to avoid bogus
+	/* spi_sync() leaves msg->complete set, unset to avoid bogus
 	 * execution resulting in an Oops.
 	 */
 	tx_obj->load.msg.complete = NULL;

@@ -1838,6 +1838,7 @@ static int
 mcp25xxfd_handle_eccif(struct mcp25xxfd_priv *priv, bool set_normal_mode)
 {
 	struct mcp25xxfd_ecc *ecc = &priv->ecc;
+	bool in_tx_ram;
 	u32 ecc_stat;
 	u16 addr;
 	u8 nr;
@@ -1853,32 +1854,39 @@ mcp25xxfd_handle_eccif(struct mcp25xxfd_priv *priv, bool set_normal_mode)
 		return err;
 
 	addr = FIELD_GET(MCP25XXFD_ECCSTAT_ERRADDR_MASK, ecc_stat);
-	if (ecc_stat & MCP25XXFD_ECCSTAT_SECIF)
-		netdev_info(priv->ndev,
-			    "Single ECC Error corrected at address 0x%04x.\n",
-			    addr);
-	else if (ecc_stat & MCP25XXFD_ECCSTAT_DEDIF)
-		netdev_notice(priv->ndev,
-			      "Double ECC Error detected at address 0x%04x.\n",
-			      addr);
 
-	/* check if ECC error occurred in TX-RAM */
+	/* Check if ECC error occurred in TX-RAM */
 	err = mcp25xxfd_get_tx_nr_by_addr(priv->tx, &nr, addr);
-	if (err == -ENOENT)
-		goto out_set_normal_mode;
-	if (err)
-		return err;
+	if (err) {
+		if (err != -ENOENT)
+			return err;
 
-	if (ecc->ecc_stat == ecc_stat) {
-		ecc->cnt++;
-		if (ecc->cnt >= MCP25XXFD_ECC_CNT_MAX)
-			return mcp25xxfd_handle_eccif_recover(priv, nr);
+		in_tx_ram = false;
 	} else {
-		ecc->ecc_stat = ecc_stat;
-		ecc->cnt = 1;
+		in_tx_ram = true;
 	}
 
- out_set_normal_mode:
+	if (ecc_stat & MCP25XXFD_ECCSTAT_SECIF)
+		netdev_info(priv->ndev,
+			    "Single ECC Error corrected at address 0x%04x%s.\n",
+			    addr, in_tx_ram ? " (in TX-RAM)" : "");
+	else if (ecc_stat & MCP25XXFD_ECCSTAT_DEDIF)
+		netdev_notice(priv->ndev,
+			      "Double ECC Error detected at address 0x%04x%s.\n",
+			      addr, in_tx_ram ? " (in TX-RAM)" : "");
+
+	/* Try recover from ECC Error occured in TX-RAM. */
+	if (in_tx_ram)  {
+		if (ecc->ecc_stat == ecc_stat) {
+			ecc->cnt++;
+			if (ecc->cnt >= MCP25XXFD_ECC_CNT_MAX)
+				return mcp25xxfd_handle_eccif_recover(priv, nr);
+		} else {
+			ecc->ecc_stat = ecc_stat;
+			ecc->cnt = 1;
+		}
+	}
+
 	if (set_normal_mode)
 		return mcp25xxfd_chip_set_normal_mode_nowait(priv);
 

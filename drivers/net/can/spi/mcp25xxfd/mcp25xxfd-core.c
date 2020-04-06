@@ -1827,6 +1827,7 @@ static int
 mcp25xxfd_handle_eccif(struct mcp25xxfd_priv *priv, bool set_normal_mode)
 {
 	struct mcp25xxfd_ecc *ecc = &priv->ecc;
+	const char *msg;
 	bool in_tx_ram;
 	u32 ecc_stat;
 	u16 addr;
@@ -1842,38 +1843,47 @@ mcp25xxfd_handle_eccif(struct mcp25xxfd_priv *priv, bool set_normal_mode)
 	if (err)
 		return err;
 
-	addr = FIELD_GET(MCP25XXFD_ECCSTAT_ERRADDR_MASK, ecc_stat);
-
 	/* Check if ECC error occurred in TX-RAM */
+	addr = FIELD_GET(MCP25XXFD_ECCSTAT_ERRADDR_MASK, ecc_stat);
 	err = mcp25xxfd_get_tx_nr_by_addr(priv->tx, &nr, addr);
-	if (err) {
-		if (err != -ENOENT)
-			return err;
-
+	if (err == -ENOENT)
 		in_tx_ram = false;
-	} else {
+	else if (err)
+		return err;
+	else
 		in_tx_ram = true;
-	}
 
 	if (ecc_stat & MCP25XXFD_ECCSTAT_SECIF)
-		netdev_info(priv->ndev,
-			    "Single ECC Error corrected at address 0x%04x%s.\n",
-			    addr, in_tx_ram ? " (in TX-RAM)" : "");
+		msg = "Single ECC Error corrected at address";
 	else if (ecc_stat & MCP25XXFD_ECCSTAT_DEDIF)
-		netdev_notice(priv->ndev,
-			      "Double ECC Error detected at address 0x%04x%s.\n",
-			      addr, in_tx_ram ? " (in TX-RAM)" : "");
+		msg = "Double ECC Error detected at address";
+	else
+		return -EINVAL;
 
-	/* Try recover from ECC Error occured in TX-RAM. */
-	if (in_tx_ram)  {
+	if (!in_tx_ram) {
+		ecc->ecc_stat = 0;
+
+		if (ecc_stat & MCP25XXFD_ECCSTAT_SECIF)
+			netdev_info(priv->ndev, "%s 0x%04x.\n",
+				    msg, addr);
+		else
+			netdev_notice(priv->ndev, "%s 0x%04x.\n",
+				      msg, addr);
+	} else {
+		/* Re-occurring error? */
 		if (ecc->ecc_stat == ecc_stat) {
 			ecc->cnt++;
-			if (ecc->cnt >= MCP25XXFD_ECC_CNT_MAX)
-				return mcp25xxfd_handle_eccif_recover(priv, nr);
 		} else {
 			ecc->ecc_stat = ecc_stat;
 			ecc->cnt = 1;
 		}
+
+		netdev_info(priv->ndev,
+			    "%s 0x%04x (in TX-RAM, tx_obj=%d), occurred %d time%s.\n",
+			    msg, addr, nr, ecc->cnt, ecc->cnt > 1 ? "s" : "");
+
+		if (ecc->cnt >= MCP25XXFD_ECC_CNT_MAX)
+			return mcp25xxfd_handle_eccif_recover(priv, nr);
 	}
 
 	if (set_normal_mode)

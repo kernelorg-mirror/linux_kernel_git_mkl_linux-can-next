@@ -1792,7 +1792,7 @@ mcp25xxfd_handle_eccif_recover_locked(struct mcp25xxfd_priv *priv, u8 nr)
 	}
 
 	netdev_info(priv->ndev,
-		    "Recovering %s ECC Error at address 0x%04x (in TX-RAM), tx_obj=%d.\n",
+		    "Recovering %s ECC Error at address 0x%04x (in TX-RAM, tx_obj=%d).\n",
 		    ecc->ecc_stat & MCP25XXFD_ECCSTAT_SECIF ?
 		    "Single" : "Double",
 		    addr, nr);

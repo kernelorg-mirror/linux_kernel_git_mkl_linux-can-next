@@ -22,15 +22,17 @@ static int mcp25xxfd_regmap_gather_write(void *context,
 					 const void *val, size_t val_len)
 {
 	struct spi_device *spi = context;
+	struct mcp25xxfd_priv *priv = spi_get_drvdata(spi);
+	struct mcp25xxfd_map_buf *buf_tx = priv->map_buf_tx;
 	struct spi_transfer xfer[] = {
 		{
-			.tx_buf = reg,
-			.len = reg_len,
-		}, {
-			.tx_buf = val,
-			.len = val_len,
+			.tx_buf = buf_tx,
+			.len = sizeof(buf_tx->cmd) + val_len,
 		},
 	};
+
+	memcpy(&buf_tx->cmd, reg, sizeof(buf_tx->cmd));
+	memcpy(buf_tx->data, val, val_len);
 
 	return spi_sync_transfer(spi, xfer, ARRAY_SIZE(xfer));
 }
@@ -59,12 +61,11 @@ static inline bool mcp25xxfd_update_bits_read_reg(unsigned int reg)
 
 static int mcp25xxfd_regmap_update_bits(void *context, unsigned int reg,
 					unsigned int mask, unsigned int val)
-
 {
 	struct spi_device *spi = context;
 	struct mcp25xxfd_priv *priv = spi_get_drvdata(spi);
-	struct mcp25xxfd_write_reg_buf *buf = &priv->update_bits_buf;
-	__be16 cmd;
+	struct mcp25xxfd_map_buf *buf_rx = priv->map_buf_rx;
+	struct mcp25xxfd_map_buf *buf_tx = priv->map_buf_tx;
 	__le32 orig_le32 = 0, mask_le32, val_le32, tmp_le32;
 	u8 first_byte, last_byte, len;
 	int err;
@@ -77,13 +78,20 @@ static int mcp25xxfd_regmap_update_bits(void *context, unsigned int reg,
 	len = last_byte - first_byte + 1;
 
 	if (mcp25xxfd_update_bits_read_reg(reg)) {
-		cmd = mcp25xxfd_cmd_read(reg + first_byte);
-		/* spi_write_then_read() works with non DMA-safe buffers */
-		err = spi_write_then_read(priv->spi,
-					  &cmd, sizeof(cmd), &orig_le32, len);
+		struct spi_transfer xfer[] = {
+			{
+				.tx_buf = buf_tx,
+				.rx_buf = buf_rx,
+				.len = sizeof(buf_tx->cmd) + len,
+			},
+		};
 
+		mcp25xxfd_spi_cmd_read(&buf_tx->cmd, reg + first_byte);
+		err = spi_sync_transfer(spi, xfer, ARRAY_SIZE(xfer));
 		if (err)
 			return err;
+
+		memcpy(&orig_le32, buf_rx->data, len);
 	}
 
 	mask_le32 = cpu_to_le32(mask >> 8 * first_byte);
@@ -92,10 +100,10 @@ static int mcp25xxfd_regmap_update_bits(void *context, unsigned int reg,
 	tmp_le32 = orig_le32 & ~mask_le32;
 	tmp_le32 |= val_le32 & mask_le32;
 
-	buf->cmd = mcp25xxfd_cmd_write(reg + first_byte);
-	memcpy(buf->data, &tmp_le32, len);
+	mcp25xxfd_spi_cmd_write(&buf_tx->cmd, reg + first_byte);
+	memcpy(buf_tx->data, &tmp_le32, len);
 
-	return spi_write(spi, buf, sizeof(buf->cmd) + len);
+	return spi_write(spi, buf_tx, sizeof(buf_tx->cmd) + len);
 }
 
 static int mcp25xxfd_regmap_read(void *context,
@@ -103,17 +111,27 @@ static int mcp25xxfd_regmap_read(void *context,
 				 void *val_buf, size_t val_len)
 {
 	struct spi_device *spi = context;
+	struct mcp25xxfd_priv *priv = spi_get_drvdata(spi);
+	struct mcp25xxfd_map_buf *buf_rx = priv->map_buf_rx;
+	struct mcp25xxfd_map_buf *buf_tx = priv->map_buf_tx;
 	struct spi_transfer xfer[] = {
 		{
-			.tx_buf = reg,
-			.len = reg_len,
-		}, {
-			.rx_buf = val_buf,
-			.len = val_len,
+			.tx_buf = buf_tx,
+			.rx_buf = buf_rx,
+			.len = sizeof(buf_tx->cmd) + val_len,
 		},
 	};
+	int err;
 
-	return spi_sync_transfer(spi, xfer, ARRAY_SIZE(xfer));
+	memcpy(&buf_tx->cmd, reg, sizeof(buf_tx->cmd));
+
+	err = spi_sync_transfer(spi, xfer, ARRAY_SIZE(xfer));
+	if (err)
+		return err;
+
+	memcpy(val_buf, buf_rx->data, val_len);
+
+	return 0;
 }
 
 static int mcp25xxfd_regmap_crc_gather_write(void *context,
@@ -252,6 +270,8 @@ static const struct regmap_bus mcp25xxfd_bus = {
 	.read = mcp25xxfd_regmap_read,
 	.reg_format_endian_default = REGMAP_ENDIAN_BIG,
 	.val_format_endian_default = REGMAP_ENDIAN_LITTLE,
+	.max_raw_read = FIELD_SIZEOF(struct mcp25xxfd_map_buf, data),
+	.max_raw_write = FIELD_SIZEOF(struct mcp25xxfd_map_buf, data),
 };
 
 static const struct regmap_config mcp25xxfd_regmap_crc = {
@@ -275,6 +295,15 @@ static const struct regmap_bus mcp25xxfd_bus_crc = {
 	.max_raw_read = FIELD_SIZEOF(struct mcp25xxfd_map_buf_crc, data),
 	.max_raw_write = FIELD_SIZEOF(struct mcp25xxfd_map_buf_crc, data),
 };
+
+static int
+mcp25xxfd_regmap_init_nocrc(struct mcp25xxfd_priv *priv)
+{
+	priv->map = devm_regmap_init(&priv->spi->dev, &mcp25xxfd_bus,
+				     priv->spi, &mcp25xxfd_regmap);
+
+	return PTR_ERR_OR_ZERO(priv->map);
+}
 
 static int
 mcp25xxfd_regmap_init_crc(struct mcp25xxfd_priv *priv)
@@ -309,10 +338,11 @@ mcp25xxfd_regmap_init_crc(struct mcp25xxfd_priv *priv)
 
 int mcp25xxfd_regmap_init(struct mcp25xxfd_priv *priv)
 {
-	priv->map = devm_regmap_init(&priv->spi->dev, &mcp25xxfd_bus,
-				     priv->spi, &mcp25xxfd_regmap);
-	if (IS_ERR(priv->map))
-		return PTR_ERR(priv->map);
+	int err;
+
+	err = mcp25xxfd_regmap_init_nocrc(priv);
+	if (err)
+		return err;
 
 	return mcp25xxfd_regmap_init_crc(priv);
 }

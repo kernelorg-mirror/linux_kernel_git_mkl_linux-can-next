@@ -548,6 +548,10 @@ struct __packed mcp25xxfd_write_reg_buf {
 	u8 data[4];
 } ____cacheline_aligned;
 
+struct __packed mcp25xxfd_buf_cmd {
+	__be16 cmd;
+};
+
 struct __packed mcp25xxfd_crc_buf_cmd {
 	__be16 cmd;
 	u8 len;
@@ -604,6 +608,11 @@ struct mcp25xxfd_rx_ring {
 	struct mcp25xxfd_hw_rx_obj_canfd obj[];
 };
 
+struct __packed mcp25xxfd_map_buf {
+	struct mcp25xxfd_buf_cmd cmd;
+	u8 data[256];
+} ____cacheline_aligned;
+
 struct __packed mcp25xxfd_map_buf_crc {
 	struct mcp25xxfd_crc_buf_cmd cmd;
 	u8 data[256 - 4];
@@ -636,6 +645,9 @@ struct mcp25xxfd_priv {
 	struct net_device *ndev;
 
 	struct regmap *map;
+	struct mcp25xxfd_map_buf map_buf_rx[1];
+	struct mcp25xxfd_map_buf map_buf_tx[1];
+
 	struct regmap *map_crc;
 	struct mcp25xxfd_map_buf_crc *map_buf_crc_rx;
 	struct mcp25xxfd_map_buf_crc *map_buf_crc_tx;
@@ -651,8 +663,6 @@ struct mcp25xxfd_priv {
 
 	struct mcp25xxfd_ecc ecc;
 	struct mcp25xxfd_regs_status regs_status;
-
-	struct mcp25xxfd_write_reg_buf update_bits_buf;
 
 	struct gpio_desc *rx_int;
 	struct clk *clk;
@@ -705,6 +715,18 @@ static inline __be16 mcp25xxfd_cmd_read(u16 addr)
 static inline __be16 mcp25xxfd_cmd_write(u16 addr)
 {
 	return cpu_to_be16(MCP25XXFD_INSTRUCTION_WRITE | addr);
+}
+
+static inline void
+mcp25xxfd_spi_cmd_read(struct mcp25xxfd_buf_cmd *cmd, u16 addr)
+{
+	cmd->cmd = cpu_to_be16(MCP25XXFD_INSTRUCTION_READ | addr);
+}
+
+static inline void
+mcp25xxfd_spi_cmd_write(struct mcp25xxfd_buf_cmd *cmd, u16 addr)
+{
+	cmd->cmd = cpu_to_be16(MCP25XXFD_INSTRUCTION_WRITE | addr);
 }
 
 static inline bool mcp25xxfd_reg_in_ram(unsigned int reg)

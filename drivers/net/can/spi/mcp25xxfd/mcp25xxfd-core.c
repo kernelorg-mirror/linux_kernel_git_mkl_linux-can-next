@@ -2373,12 +2373,6 @@ static int mcp25xxfd_register_chip_detect(struct mcp25xxfd_priv *priv)
 	return 0;
 }
 
-static void mcp25xxfd_register_quirks(struct mcp25xxfd_priv *priv)
-{
-	if (priv->devtype_data->quirks & MCP25XXFD_QUIRK_RX_CRC)
-		priv->map_rx = priv->map_crc;
-}
-
 static int mcp25xxfd_register_check_rx_int(struct mcp25xxfd_priv *priv)
 {
 	int err, rx_pending;
@@ -2476,8 +2470,6 @@ static int mcp25xxfd_register(struct mcp25xxfd_priv *priv)
 	err = mcp25xxfd_register_chip_detect(priv);
 	if (err)
 		goto out_chip_set_mode_sleep;
-
-	mcp25xxfd_register_quirks(priv);
 
 	err = mcp25xxfd_register_check_rx_int(priv);
 	if (err)

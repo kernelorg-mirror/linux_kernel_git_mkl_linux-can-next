@@ -553,11 +553,6 @@ struct __packed mcp25xxfd_crc_buf_cmd {
 	u8 len;
 };
 
-struct mcp25xxfd_crc_buf {
-	struct mcp25xxfd_crc_buf_cmd cmd;
-	__be16 crc;
-} ____cacheline_aligned;
-
 union mcp25xxfd_tx_obj_load_buf {
 	struct __packed {
 		__be16 cmd;
@@ -609,6 +604,12 @@ struct mcp25xxfd_rx_ring {
 	struct mcp25xxfd_hw_rx_obj_canfd obj[];
 };
 
+struct __packed mcp25xxfd_map_buf_crc {
+	struct mcp25xxfd_crc_buf_cmd cmd;
+	u8 data[256 - 4];
+	__be16 crc;
+} ____cacheline_aligned;
+
 struct mcp25xxfd_ecc {
 	u32 ecc_stat;
 	int cnt;
@@ -636,6 +637,9 @@ struct mcp25xxfd_priv {
 
 	struct regmap *map;
 	struct regmap *map_crc;
+	struct mcp25xxfd_map_buf_crc *map_buf_crc_rx;
+	struct mcp25xxfd_map_buf_crc *map_buf_crc_tx;
+
 	struct regmap *map_rx;
 	struct spi_device *spi;
 
@@ -649,7 +653,6 @@ struct mcp25xxfd_priv {
 	struct mcp25xxfd_regs_status regs_status;
 
 	struct mcp25xxfd_write_reg_buf update_bits_buf;
-	struct mcp25xxfd_crc_buf crc_buf;
 
 	struct gpio_desc *rx_int;
 	struct clk *clk;

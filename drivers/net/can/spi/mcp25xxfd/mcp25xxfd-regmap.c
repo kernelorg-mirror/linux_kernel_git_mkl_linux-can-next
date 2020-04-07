@@ -8,6 +8,8 @@
 
 #include "mcp25xxfd.h"
 
+#include <asm/unaligned.h>
+
 static int mcp25xxfd_regmap_write(void *context, const void *data, size_t count)
 {
 	struct spi_device *spi = context;
@@ -115,30 +117,27 @@ static int mcp25xxfd_regmap_read(void *context,
 }
 
 static int mcp25xxfd_regmap_crc_gather_write(void *context,
-					     const void *reg, size_t reg_len,
+					     const void *reg_p, size_t reg_len,
 					     const void *val, size_t val_len)
 {
 	struct spi_device *spi = context;
 	struct mcp25xxfd_priv *priv = spi_get_drvdata(spi);
+	struct mcp25xxfd_map_buf_crc *buf_tx = priv->map_buf_crc_tx;
 	struct spi_transfer xfer[] = {
 		{
-			.tx_buf = &priv->crc_buf.cmd,
-			.len = sizeof(priv->crc_buf.cmd),
-		}, {
-			.tx_buf = val,
-			.len = val_len,
-		}, {
-			.tx_buf = &priv->crc_buf.crc,
-			.len = sizeof(priv->crc_buf.crc),
+			.tx_buf = buf_tx,
+			.len = sizeof(buf_tx->cmd) + val_len +
+				sizeof(buf_tx->crc),
 		},
 	};
+	u16 reg = *(u16 *)reg_p;
 	u16 crc;
 
-	mcp25xxfd_spi_cmd_write_crc(&priv->crc_buf.cmd, *(u16 *)reg, val_len);
+	mcp25xxfd_spi_cmd_write_crc(&buf_tx->cmd, reg, val_len);
+	memcpy(buf_tx->data, val, val_len);
 
-	crc = mcp25xxfd_crc16_compute2(xfer[0].tx_buf, xfer[0].len,
-				       xfer[1].tx_buf, xfer[1].len);
-	priv->crc_buf.crc = cpu_to_be16(crc);
+	crc = mcp25xxfd_crc16_compute(buf_tx, sizeof(buf_tx->cmd) + val_len);
+	put_unaligned_be16(crc, buf_tx->data + val_len);
 
 	return spi_sync_transfer(spi, xfer, ARRAY_SIZE(xfer));
 }
@@ -146,51 +145,49 @@ static int mcp25xxfd_regmap_crc_gather_write(void *context,
 static int mcp25xxfd_regmap_crc_write(void *context,
 				      const void *data, size_t count)
 {
-	struct spi_device *spi = context;
-	struct mcp25xxfd_priv *priv = spi_get_drvdata(spi);
-
-	return mcp25xxfd_regmap_crc_gather_write(context, data,
-						 sizeof(priv->crc_buf.cmd.cmd),
+	return mcp25xxfd_regmap_crc_gather_write(context, data, sizeof(__be16),
 						 data + 4, count - 4);
 }
 
 static int mcp25xxfd_regmap_crc_read(void *context,
-				     const void *reg, size_t reg_len,
+				     const void *reg_p, size_t reg_len,
 				     void *val_buf, size_t val_len)
 {
 	struct spi_device *spi = context;
 	struct mcp25xxfd_priv *priv = spi_get_drvdata(spi);
+	struct mcp25xxfd_map_buf_crc *buf_rx = priv->map_buf_crc_rx;
+	struct mcp25xxfd_map_buf_crc *buf_tx = priv->map_buf_crc_tx;
 	struct spi_transfer xfer[] = {
 		{
-			.tx_buf = &priv->crc_buf.cmd,
-			.len = sizeof(priv->crc_buf.cmd),
-		}, {
-			.rx_buf = val_buf,
-			.len = val_len,
-		}, {
-			.rx_buf = &priv->crc_buf.crc,
-			.len = sizeof(priv->crc_buf.crc),
+			.tx_buf = buf_tx,
+			.rx_buf = buf_rx,
+			.len = sizeof(buf_tx->cmd) + val_len +
+				sizeof(buf_tx->crc),
 		},
 	};
 	u16 crc_received, crc_calculated;
+	u16 reg = *(u16 *)reg_p;
 	int err;
 
-	mcp25xxfd_spi_cmd_read_crc(&priv->crc_buf.cmd, *(u16 *)reg, val_len);
+	mcp25xxfd_spi_cmd_read_crc(&buf_tx->cmd, reg, val_len);
 
 	err = spi_sync_transfer(spi, xfer, ARRAY_SIZE(xfer));
 	if (err)
 		return err;
 
-	crc_received = be16_to_cpu(priv->crc_buf.crc);
-	crc_calculated = mcp25xxfd_crc16_compute2(xfer[0].tx_buf, xfer[0].len,
-						  xfer[1].rx_buf, xfer[1].len);
+	crc_received = get_unaligned_be16(buf_rx->data + val_len);
+	crc_calculated = mcp25xxfd_crc16_compute2(&buf_tx->cmd,
+						  sizeof(buf_tx->cmd),
+						  buf_rx->data, val_len);
 	if (crc_received != crc_calculated) {
 		netdev_info(priv->ndev,
 			    "CRC read error at address 0x%04x, length %d.\n",
-			    *(u16 *)reg, val_len);
+			    reg, val_len);
 
 		return -EBADMSG;
 	}
+
+	memcpy(val_buf, buf_rx->data, val_len);
 
 	return 0;
 }
@@ -262,9 +259,40 @@ static const struct regmap_bus mcp25xxfd_bus_crc = {
 	.read = mcp25xxfd_regmap_crc_read,
 	.reg_format_endian_default = REGMAP_ENDIAN_NATIVE,
 	.val_format_endian_default = REGMAP_ENDIAN_LITTLE,
-	.max_raw_read = 256 - 4,
-	.max_raw_write = 256 - 4,
+	.max_raw_read = FIELD_SIZEOF(struct mcp25xxfd_map_buf_crc, data),
+	.max_raw_write = FIELD_SIZEOF(struct mcp25xxfd_map_buf_crc, data),
 };
+
+static int
+mcp25xxfd_regmap_init_crc(struct mcp25xxfd_priv *priv)
+{
+	if (!(priv->devtype_data->quirks & MCP25XXFD_QUIRK_RX_CRC)) {
+		priv->map_rx = priv->map;
+
+		return 0;
+	}
+
+	priv->map_crc = devm_regmap_init(&priv->spi->dev, &mcp25xxfd_bus_crc,
+					 priv->spi, &mcp25xxfd_regmap_crc);
+	if (IS_ERR(priv->map_crc))
+		return PTR_ERR(priv->map_crc);
+
+	priv->map_buf_crc_rx = devm_kzalloc(&priv->spi->dev,
+					    sizeof(*priv->map_buf_crc_rx),
+					    GFP_KERNEL);
+	if (!priv->map_buf_crc_rx)
+		return -ENOMEM;
+
+	priv->map_buf_crc_tx = devm_kzalloc(&priv->spi->dev,
+					    sizeof(*priv->map_buf_crc_tx),
+					    GFP_KERNEL);
+	if (!priv->map_buf_crc_tx)
+		return -ENOMEM;
+
+	priv->map_rx = priv->map_crc;
+
+	return 0;
+}
 
 int mcp25xxfd_regmap_init(struct mcp25xxfd_priv *priv)
 {
@@ -273,10 +301,5 @@ int mcp25xxfd_regmap_init(struct mcp25xxfd_priv *priv)
 	if (IS_ERR(priv->map))
 		return PTR_ERR(priv->map);
 
-	/* Use normal regmap by default. */
-	priv->map_rx = priv->map;
-
-	priv->map_crc = devm_regmap_init(&priv->spi->dev, &mcp25xxfd_bus_crc,
-					 priv->spi, &mcp25xxfd_regmap_crc);
-	return PTR_ERR_OR_ZERO(priv->map_crc);
+	return mcp25xxfd_regmap_init_crc(priv);
 }

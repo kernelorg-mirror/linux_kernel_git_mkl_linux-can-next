@@ -1191,7 +1191,7 @@ mcp25xxfd_tef_obj_read(const struct mcp25xxfd_priv *priv,
 		return -ERANGE;
 	}
 
-	return regmap_bulk_read(priv->map,
+	return regmap_bulk_read(priv->map_rx,
 				mcp25xxfd_get_tef_obj_addr(offset),
 				hw_tef_obj,
 				sizeof(*hw_tef_obj) / sizeof(u32) * len);

@@ -2110,7 +2110,9 @@ mcp25xxfd_tx_obj_from_skb(const struct mcp25xxfd_priv *priv,
 {
 	const struct canfd_frame *cfd = (struct canfd_frame *)skb->data;
 	struct mcp25xxfd_hw_tx_obj_raw *hw_tx_obj;
-	u32 id, flags, len;
+	u8 dlc;
+	u32 id, flags;
+	int offset, len;
 
 	if (cfd->can_id & CAN_EFF_FLAG) {
 		u32 sid, eid;
@@ -2131,8 +2133,9 @@ mcp25xxfd_tx_obj_from_skb(const struct mcp25xxfd_priv *priv,
 	 * harm, only the lower 7 bits will be transferred into the
 	 * TEF object.
 	 */
+	dlc = can_len2dlc(cfd->len);
 	flags |= FIELD_PREP(MCP25XXFD_OBJ_FLAGS_SEQ_MCP2518FD_MASK, seq) |
-		FIELD_PREP(MCP25XXFD_OBJ_FLAGS_DLC, can_len2dlc(cfd->len));
+		FIELD_PREP(MCP25XXFD_OBJ_FLAGS_DLC, dlc);
 
 	if (cfd->can_id & CAN_RTR_FLAG)
 		flags |= MCP25XXFD_OBJ_FLAGS_RTR;
@@ -2156,9 +2159,12 @@ mcp25xxfd_tx_obj_from_skb(const struct mcp25xxfd_priv *priv,
 	put_unaligned_le32(id, &hw_tx_obj->id);
 	put_unaligned_le32(flags, &hw_tx_obj->flags);
 
+	/* Clear data at end of CAN frame */
 	// FIXME: what does the controller send in CANFD if can_dlc2len(can_len2dlc(cfd->len)) > cfd->len?
-	memset(hw_tx_obj->data + round_down(cfd->len, sizeof(u32)),
-	       0x0, sizeof(u32));
+	offset = round_down(cfd->len, sizeof(u32));
+	len = round_up(can_dlc2len(dlc), sizeof(u32)) - offset;
+	if (len)
+		memset(hw_tx_obj->data + offset, 0x0, len);
 	memcpy(hw_tx_obj->data, cfd->data, cfd->len);
 
 	/* Number of bytes to be written into the RAM of the controller */

@@ -133,6 +133,12 @@ static int mcp25xxfd_regmap_crc_gather_write(void *context,
 	u16 reg = *(u16 *)reg_p;
 	u16 crc;
 
+	BUILD_BUG_ON(sizeof(buf_tx->cmd) != sizeof(__be16) + sizeof(u8));
+
+	if (IS_ENABLED(CONFIG_CAN_MCP25XXFD_SANITY) &&
+	    reg_len != sizeof(buf_tx->cmd.cmd))
+		return -EINVAL;
+
 	mcp25xxfd_spi_cmd_write_crc(&buf_tx->cmd, reg, val_len);
 	memcpy(buf_tx->data, val, val_len);
 
@@ -168,6 +174,13 @@ static int mcp25xxfd_regmap_crc_read(void *context,
 	u16 crc_received, crc_calculated;
 	u16 reg = *(u16 *)reg_p;
 	int err;
+
+	BUILD_BUG_ON(sizeof(buf_rx->cmd) != sizeof(__be16) + sizeof(u8));
+	BUILD_BUG_ON(sizeof(buf_tx->cmd) != sizeof(__be16) + sizeof(u8));
+
+	if (IS_ENABLED(CONFIG_CAN_MCP25XXFD_SANITY) &&
+	    reg_len != sizeof(buf_tx->cmd))
+		return -EINVAL;
 
 	mcp25xxfd_spi_cmd_read_crc(&buf_tx->cmd, reg, val_len);
 

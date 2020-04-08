@@ -255,7 +255,7 @@ mcp25xxfd_tx_ring_init_tx_obj(const struct mcp25xxfd_priv *priv,
 		mcp25xxfd_spi_cmd_write_crc_set_addr(&tx_obj->load.buf.crc.cmd,
 						     addr);
 	else
-		tx_obj->load.buf.no_crc.cmd = mcp25xxfd_cmd_write(addr);
+		mcp25xxfd_spi_cmd_write(&tx_obj->load.buf.no_crc.cmd, addr);
 	/* len is calculated on the fly */
 
 	spi_message_init_with_transfers(&tx_obj->load.msg,

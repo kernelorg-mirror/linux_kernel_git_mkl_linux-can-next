@@ -416,6 +416,23 @@ static inline void __dump(const void *d, unsigned int len)
 #define MCP25XXFD_INSTRUCTION_WRITE_CRC_SAFE 0xc000
 #define MCP25XXFD_SPI_ADDRESS_MASK GENMASK(11, 0)
 
+#define MCP25XXFD_SYSCLOCK_HZ_MAX 40000000
+#define MCP25XXFD_SYSCLOCK_HZ_MIN 1000000
+#define MCP25XXFD_SPICLOCK_HZ_MAX 20000000
+#define MCP25XXFD_OSC_PLL_MULTIPLIER 10
+#define MCP25XXFD_OSC_DELAY_MS 3
+#define MCP25XXFD_SOFTRESET_RETRIES_MAX 3
+#define MCP25XXFD_ECC_CNT_MAX 2
+
+/* Silence RX MAB underflow/TX MAB overflow warnings */
+#define MCP25XXFD_QUIRK_MAB_NO_WARN BIT(0)
+/* Use CRC in RX-PATH */
+#define MCP25XXFD_QUIRK_RX_CRC BIT(1)
+/* Use CRC in TX-PATH */
+#define MCP25XXFD_QUIRK_TX_CRC BIT(2)
+/* Enable ECC for RAM */
+#define MCP25XXFD_QUIRK_ECC BIT(3)
+
 struct mcp25xxfd_dump_regs_fifo {
 	u32 con;
 	u32 sta;

@@ -104,8 +104,8 @@ static int mcp25xxfd_regmap_update_bits(void *context, unsigned int reg,
 		memcpy(&orig_le32, buf_rx->data, len);
 	}
 
-	mask_le32 = cpu_to_le32(mask >> 8 * first_byte);
-	val_le32 = cpu_to_le32(val >> 8 * first_byte);
+	mask_le32 = cpu_to_le32(mask >> BITS_PER_BYTE * first_byte);
+	val_le32 = cpu_to_le32(val >> BITS_PER_BYTE * first_byte);
 
 	tmp_le32 = orig_le32 & ~mask_le32;
 	tmp_le32 |= val_le32 & mask_le32;

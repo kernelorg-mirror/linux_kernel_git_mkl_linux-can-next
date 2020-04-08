@@ -706,16 +706,6 @@ static inline __be16 mcp25xxfd_cmd_reset(void)
 	return cpu_to_be16(MCP25XXFD_INSTRUCTION_RESET);
 }
 
-static inline __be16 mcp25xxfd_cmd_read(u16 addr)
-{
-	return cpu_to_be16(MCP25XXFD_INSTRUCTION_READ | addr);
-}
-
-static inline __be16 mcp25xxfd_cmd_write(u16 addr)
-{
-	return cpu_to_be16(MCP25XXFD_INSTRUCTION_WRITE | addr);
-}
-
 static inline void
 mcp25xxfd_spi_cmd_read(struct mcp25xxfd_buf_cmd *cmd, u16 addr)
 {

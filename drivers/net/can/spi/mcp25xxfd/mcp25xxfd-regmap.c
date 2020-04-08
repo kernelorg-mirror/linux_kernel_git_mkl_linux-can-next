@@ -190,6 +190,39 @@ static int mcp25xxfd_regmap_crc_write(void *context,
 						 data + 4, count - 4);
 }
 
+static int
+mcp25xxfd_regmap_crc_read_one(struct mcp25xxfd_priv *priv,
+			      struct spi_transfer *xfer,
+			      u16 reg,
+			      size_t val_len)
+{
+	struct mcp25xxfd_map_buf_crc *buf_rx = priv->map_buf_crc_rx;
+	struct mcp25xxfd_map_buf_crc *buf_tx = priv->map_buf_crc_tx;
+	u16 crc_received, crc_calculated;
+	int err;
+
+	BUILD_BUG_ON(sizeof(buf_rx->cmd) != sizeof(__be16) + sizeof(u8));
+	BUILD_BUG_ON(sizeof(buf_tx->cmd) != sizeof(__be16) + sizeof(u8));
+
+	err = spi_sync_transfer(priv->spi, xfer, 1);
+	if (err)
+		return err;
+
+	crc_received = get_unaligned_be16(buf_rx->data + val_len);
+	crc_calculated = mcp25xxfd_crc16_compute2(&buf_tx->cmd,
+						  sizeof(buf_tx->cmd),
+						  buf_rx->data, val_len);
+	if (crc_received != crc_calculated) {
+		netdev_info(priv->ndev,
+			    "CRC read error at address 0x%04x, length %d.\n",
+			    reg, val_len);
+
+		return -EBADMSG;
+	}
+
+	return 0;
+}
+
 static int mcp25xxfd_regmap_crc_read(void *context,
 				     const void *reg_p, size_t reg_len,
 				     void *val_buf, size_t val_len)
@@ -206,7 +239,6 @@ static int mcp25xxfd_regmap_crc_read(void *context,
 				sizeof(buf_tx->crc),
 		},
 	};
-	u16 crc_received, crc_calculated;
 	u16 reg = *(u16 *)reg_p;
 	int err;
 
@@ -218,22 +250,9 @@ static int mcp25xxfd_regmap_crc_read(void *context,
 		return -EINVAL;
 
 	mcp25xxfd_spi_cmd_read_crc(&buf_tx->cmd, reg, val_len);
-
-	err = spi_sync_transfer(spi, xfer, ARRAY_SIZE(xfer));
+	err = mcp25xxfd_regmap_crc_read_one(priv, xfer, buf_rx, reg, val_len);
 	if (err)
 		return err;
-
-	crc_received = get_unaligned_be16(buf_rx->data + val_len);
-	crc_calculated = mcp25xxfd_crc16_compute2(&buf_tx->cmd,
-						  sizeof(buf_tx->cmd),
-						  buf_rx->data, val_len);
-	if (crc_received != crc_calculated) {
-		netdev_info(priv->ndev,
-			    "CRC read error at address 0x%04x, length %d.\n",
-			    reg, val_len);
-
-		return -EBADMSG;
-	}
 
 	memcpy(val_buf, buf_rx->data, val_len);
 

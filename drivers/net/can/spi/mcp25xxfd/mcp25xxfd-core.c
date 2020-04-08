@@ -1718,7 +1718,7 @@ static int mcp25xxfd_handle_serrif(struct mcp25xxfd_priv *priv)
 	 *
 	 * Further, there are situations, where the SERRIF is caused
 	 * by an ECC error in the TX-RAM, but not even the ECCIF is
-	 * set. This only seems to happen _after_ the first occurance
+	 * set. This only seems to happen _after_ the first occurrence
 	 * of a ECCIF (which is tracked in ecc->cnt).
 	 *
 	 * Treat all as a known system errors..

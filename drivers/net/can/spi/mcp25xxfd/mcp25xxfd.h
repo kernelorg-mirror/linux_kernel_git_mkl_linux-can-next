@@ -543,11 +543,6 @@ struct mcp25xxfd_tef_ring {
 	/* u8 obj_size equals sizeof(struct mcp25xxfd_hw_tef_obj) */
 };
 
-struct __packed mcp25xxfd_write_reg_buf {
-	__be16 cmd;
-	u8 data[4];
-} ____cacheline_aligned;
-
 struct __packed mcp25xxfd_buf_cmd {
 	__be16 cmd;
 };
@@ -569,6 +564,10 @@ union mcp25xxfd_tx_obj_load_buf {
 	} crc;
 } ____cacheline_aligned;
 
+struct __packed mcp25xxfd_write_reg_buf {
+	struct mcp25xxfd_buf_cmd cmd;
+	u8 data[4];
+} ____cacheline_aligned;
 
 struct mcp25xxfd_tx_obj {
 	struct {

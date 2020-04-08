@@ -163,7 +163,7 @@ mcp25xxfd_cmd_prepare_write_reg(struct mcp25xxfd_write_reg_buf *write_reg_buf,
 	last_byte = mcp25xxfd_last_byte_set(mask);
 	len = last_byte - first_byte + 1;
 
-	write_reg_buf->cmd = mcp25xxfd_cmd_write(reg + first_byte);
+	mcp25xxfd_spi_cmd_write(&write_reg_buf->cmd, reg + first_byte);
 	val_le32 = cpu_to_le32(val >> BITS_PER_BYTE * first_byte);
 	memcpy(write_reg_buf->data, &val_le32, len);
 

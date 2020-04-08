@@ -245,6 +245,8 @@ mcp25xxfd_tx_ring_init_tx_obj(const struct mcp25xxfd_priv *priv,
 			      const struct mcp25xxfd_tx_ring *ring,
 			      struct mcp25xxfd_tx_obj *tx_obj, const u8 n)
 {
+	struct spi_message *msg;
+	struct spi_transfer *xfer;
 	u32 val;
 	u16 addr;
 	u8 len;
@@ -256,23 +258,25 @@ mcp25xxfd_tx_ring_init_tx_obj(const struct mcp25xxfd_priv *priv,
 						     addr);
 	else
 		mcp25xxfd_spi_cmd_write(&tx_obj->load.buf.nocrc.cmd, addr);
-	/* len is calculated on the fly */
 
-	spi_message_init_with_transfers(&tx_obj->load.msg,
-					&tx_obj->load.xfer, 1);
-	tx_obj->load.xfer.tx_buf = &tx_obj->load.buf;
-	/* len is assigned on the fly */
+	xfer = &tx_obj->load.xfer;
+	xfer->tx_buf = &tx_obj->load.buf;
+	xfer->len = 0; /* actual len is assigned on the fly */
+
+	msg = &tx_obj->load.msg;
+	spi_message_init_with_transfers(msg, xfer, 1);
 
 	/* FIFO trigger */
 	addr = MCP25XXFD_CAN_FIFOCON(MCP25XXFD_TX_FIFO);
 	val = MCP25XXFD_CAN_FIFOCON_TXREQ | MCP25XXFD_CAN_FIFOCON_UINC;
 	len = mcp25xxfd_cmd_prepare_write_reg(&tx_obj->trigger.buf, addr,
 					      val, val);
+	xfer = &tx_obj->trigger.xfer;
+	xfer->tx_buf = &tx_obj->trigger.buf;
+	xfer->len = len;
 
-	spi_message_init_with_transfers(&tx_obj->trigger.msg,
-					&tx_obj->trigger.xfer, 1);
-	tx_obj->trigger.xfer.tx_buf = &tx_obj->trigger.buf;
-	tx_obj->trigger.xfer.len = len;
+	msg = &tx_obj->trigger.msg;
+	spi_message_init_with_transfers(msg, xfer, 1);
 }
 
 static void mcp25xxfd_ring_init(struct mcp25xxfd_priv *priv)

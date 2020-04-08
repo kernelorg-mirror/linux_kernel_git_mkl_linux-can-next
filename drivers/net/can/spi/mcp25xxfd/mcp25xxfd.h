@@ -547,7 +547,7 @@ struct __packed mcp25xxfd_buf_cmd {
 	__be16 cmd;
 };
 
-struct __packed mcp25xxfd_crc_buf_cmd {
+struct __packed mcp25xxfd_buf_cmd_crc {
 	__be16 cmd;
 	u8 len;
 };
@@ -558,7 +558,7 @@ union mcp25xxfd_tx_obj_load_buf {
 		struct mcp25xxfd_hw_tx_obj_raw hw_tx_obj;
 	} nocrc;
 	struct __packed {
-		struct mcp25xxfd_crc_buf_cmd cmd;
+		struct mcp25xxfd_buf_cmd_crc cmd;
 		struct mcp25xxfd_hw_tx_obj_raw hw_tx_obj;
 		__be16 crc;
 	} crc;
@@ -613,7 +613,7 @@ struct __packed mcp25xxfd_map_buf {
 } ____cacheline_aligned;
 
 struct __packed mcp25xxfd_map_buf_crc {
-	struct mcp25xxfd_crc_buf_cmd cmd;
+	struct mcp25xxfd_buf_cmd_crc cmd;
 	u8 data[256 - 4];
 	__be16 crc;
 } ____cacheline_aligned;
@@ -728,7 +728,7 @@ static inline bool mcp25xxfd_reg_in_ram(unsigned int reg)
 }
 
 static inline void
-__mcp25xxfd_spi_cmd_crc_set_len(struct mcp25xxfd_crc_buf_cmd *cmd,
+__mcp25xxfd_spi_cmd_crc_set_len(struct mcp25xxfd_buf_cmd_crc *cmd,
 				u16 len, bool in_ram)
 {
 	/* Number of u32 for RAM access, number of u8 otherwise. */
@@ -739,19 +739,19 @@ __mcp25xxfd_spi_cmd_crc_set_len(struct mcp25xxfd_crc_buf_cmd *cmd,
 }
 
 static inline void
-mcp25xxfd_spi_cmd_crc_set_len_in_ram(struct mcp25xxfd_crc_buf_cmd *cmd, u16 len)
+mcp25xxfd_spi_cmd_crc_set_len_in_ram(struct mcp25xxfd_buf_cmd_crc *cmd, u16 len)
 {
 	__mcp25xxfd_spi_cmd_crc_set_len(cmd, len, true);
 }
 
 static inline void
-mcp25xxfd_spi_cmd_read_crc_set_addr(struct mcp25xxfd_crc_buf_cmd *cmd, u16 addr)
+mcp25xxfd_spi_cmd_read_crc_set_addr(struct mcp25xxfd_buf_cmd_crc *cmd, u16 addr)
 {
 	cmd->cmd = cpu_to_be16(MCP25XXFD_INSTRUCTION_READ_CRC | addr);
 }
 
 static inline void
-mcp25xxfd_spi_cmd_read_crc(struct mcp25xxfd_crc_buf_cmd *cmd,
+mcp25xxfd_spi_cmd_read_crc(struct mcp25xxfd_buf_cmd_crc *cmd,
 			   u16 addr, u16 len)
 {
 	mcp25xxfd_spi_cmd_read_crc_set_addr(cmd, addr);
@@ -759,13 +759,14 @@ mcp25xxfd_spi_cmd_read_crc(struct mcp25xxfd_crc_buf_cmd *cmd,
 }
 
 static inline void
-mcp25xxfd_spi_cmd_write_crc_set_addr(struct mcp25xxfd_crc_buf_cmd *cmd, u16 addr)
+mcp25xxfd_spi_cmd_write_crc_set_addr(struct mcp25xxfd_buf_cmd_crc *cmd,
+				     u16 addr)
 {
 	cmd->cmd = cpu_to_be16(MCP25XXFD_INSTRUCTION_WRITE_CRC | addr);
 }
 
 static inline void
-mcp25xxfd_spi_cmd_write_crc(struct mcp25xxfd_crc_buf_cmd *cmd,
+mcp25xxfd_spi_cmd_write_crc(struct mcp25xxfd_buf_cmd_crc *cmd,
 			    u16 addr, u16 len)
 {
 	mcp25xxfd_spi_cmd_write_crc_set_addr(cmd, addr);

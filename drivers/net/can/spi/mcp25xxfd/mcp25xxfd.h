@@ -556,7 +556,7 @@ union mcp25xxfd_tx_obj_load_buf {
 	struct __packed {
 		struct mcp25xxfd_buf_cmd cmd;
 		struct mcp25xxfd_hw_tx_obj_raw hw_tx_obj;
-	} no_crc;
+	} nocrc;
 	struct __packed {
 		struct mcp25xxfd_crc_buf_cmd cmd;
 		struct mcp25xxfd_hw_tx_obj_raw hw_tx_obj;

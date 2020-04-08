@@ -255,7 +255,7 @@ mcp25xxfd_tx_ring_init_tx_obj(const struct mcp25xxfd_priv *priv,
 		mcp25xxfd_spi_cmd_write_crc_set_addr(&tx_obj->load.buf.crc.cmd,
 						     addr);
 	else
-		mcp25xxfd_spi_cmd_write(&tx_obj->load.buf.no_crc.cmd, addr);
+		mcp25xxfd_spi_cmd_write(&tx_obj->load.buf.nocrc.cmd, addr);
 	/* len is calculated on the fly */
 
 	spi_message_init_with_transfers(&tx_obj->load.msg,
@@ -2154,7 +2154,7 @@ mcp25xxfd_tx_obj_from_skb(const struct mcp25xxfd_priv *priv,
 	if (priv->devtype_data->quirks & MCP25XXFD_QUIRK_TX_CRC)
 		hw_tx_obj = &tx_obj->load.buf.crc.hw_tx_obj;
 	else
-		hw_tx_obj = &tx_obj->load.buf.no_crc.hw_tx_obj;
+		hw_tx_obj = &tx_obj->load.buf.nocrc.hw_tx_obj;
 
 	put_unaligned_le32(id, &hw_tx_obj->id);
 	put_unaligned_le32(flags, &hw_tx_obj->flags);
@@ -2185,7 +2185,7 @@ mcp25xxfd_tx_obj_from_skb(const struct mcp25xxfd_priv *priv,
 		/* Total length */
 		len += sizeof(tx_obj->load.buf.crc.crc);
 	} else {
-		len += sizeof(tx_obj->load.buf.no_crc.cmd);
+		len += sizeof(tx_obj->load.buf.nocrc.cmd);
 	}
 
 	tx_obj->load.xfer.len = len;

@@ -201,7 +201,9 @@ static const struct regmap_range mcp25xxfd_reg_table_yes_range[] = {
 	regmap_reg_range(0xe00, 0xe14),	/* MCP2517/18FD SFR */
 };
 
-/* At least on the mcp2517fd the CRC on the TBC fails */
+/* On the mcp2517fd the CRC on the TBC fails, while on the mcp2518fd
+ * it work, disallow it in general.
+ */
 static const struct regmap_range mcp25xxfd_reg_table_no_range_crc[] = {
 	regmap_reg_range(0x010, 0x010),	/* TBC */
 };

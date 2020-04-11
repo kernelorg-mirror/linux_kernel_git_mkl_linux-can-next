@@ -1361,14 +1361,10 @@ mcp25xxfd_rx_obj_read(struct mcp25xxfd_priv *priv,
 {
 	int err;
 
- retry:
 	err = regmap_bulk_read(priv->map_rx,
 			       mcp25xxfd_get_rx_obj_addr(ring, offset),
 			       hw_rx_obj,
 			       len * ring->obj_size / sizeof(u32));
-
-	if (err == -EBADMSG)
-		goto retry;
 
 	mcp25xxfd_log_rx_obj_read(priv, offset, len);
 

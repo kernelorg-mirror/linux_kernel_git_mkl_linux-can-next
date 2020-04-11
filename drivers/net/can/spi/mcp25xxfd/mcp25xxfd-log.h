@@ -20,14 +20,20 @@ struct mcp25xxfd_log {
 	u32 tef_tail;
 	u32 tx_head;
 	u32 tx_tail;
+	u32 rx_head;
+	u32 rx_tail;
 
 #define MCP25XXFD_LOG_STOP BIT(0)
 #define MCP25XXFD_LOG_WAKE BIT(1)
 #define MCP25XXFD_LOG_BUSY BIT(2)
 	u32 flags;
 
-	u32 hw_tx_ci;
 	u32 hw_tef_tail;
+	u32 hw_tx_ci;
+	u32 hw_rx_head;
+	u32 hw_rx_tail;
+	u8 rx_offset;
+	u8 rx_len;
 };
 
 struct mcp25xxfd_log *___mcp25xxfd_log(struct mcp25xxfd_priv *priv, const char *func, canid_t can_id);
@@ -38,8 +44,12 @@ static inline struct mcp25xxfd_log *__mcp25xxfd_log(struct mcp25xxfd_priv *priv,
 	struct mcp25xxfd_log *log;
 
 	log = ___mcp25xxfd_log(priv, func, can_id);
-	log->hw_tx_ci = -1;
 	log->hw_tef_tail = -1;
+	log->hw_tx_ci = -1;
+	log->hw_rx_head = -1;
+	log->hw_rx_tail = -1;
+	log->rx_offset = -1;
+	log->rx_len = -1;
 
 	return log;
 }
@@ -106,6 +116,18 @@ static inline struct mcp25xxfd_log *__mcp25xxfd_log_hw_tx_ci(struct mcp25xxfd_pr
 
 #define mcp25xxfd_log_hw_tx_ci(priv, ...) __mcp25xxfd_log_hw_tx_ci(priv, __func__, ## __VA_ARGS__)
 
+static inline struct mcp25xxfd_log *__mcp25xxfd_log_hw_rx_head(struct mcp25xxfd_priv *priv, const char *func, u32 rx_head)
+{
+	struct mcp25xxfd_log *log;
+
+	log = __mcp25xxfd_log_no_canid(priv, func);
+	log->hw_rx_head = rx_head;
+
+	return log;
+}
+
+#define mcp25xxfd_log_hw_rx_head(priv, ...) __mcp25xxfd_log_hw_rx_head(priv, __func__, ## __VA_ARGS__)
+
 static inline struct mcp25xxfd_log *__mcp25xxfd_log_hw_tef_tail(struct mcp25xxfd_priv *priv, const char *func, u32 tef_tail)
 {
 	struct mcp25xxfd_log *log;
@@ -117,6 +139,31 @@ static inline struct mcp25xxfd_log *__mcp25xxfd_log_hw_tef_tail(struct mcp25xxfd
 }
 
 #define mcp25xxfd_log_hw_tef_tail(priv, ...) __mcp25xxfd_log_hw_tef_tail(priv, __func__, ## __VA_ARGS__)
+
+static inline struct mcp25xxfd_log *__mcp25xxfd_log_hw_rx_tail(struct mcp25xxfd_priv *priv, const char *func, u32 rx_tail)
+{
+	struct mcp25xxfd_log *log;
+
+	log = __mcp25xxfd_log_no_canid(priv, func);
+	log->hw_rx_tail = rx_tail;
+
+	return log;
+}
+
+#define mcp25xxfd_log_hw_rx_tail(priv, ...) __mcp25xxfd_log_hw_rx_tail(priv, __func__, ## __VA_ARGS__)
+
+static inline struct mcp25xxfd_log *__mcp25xxfd_log_rx_obj_read(struct mcp25xxfd_priv *priv, const char *func, u8 offset, u8 len)
+{
+	struct mcp25xxfd_log *log;
+
+	log = __mcp25xxfd_log_no_canid(priv, func);
+	log->rx_offset = offset;
+	log->rx_len = len;
+
+	return log;
+}
+
+#define mcp25xxfd_log_rx_obj_read(priv, ...) __mcp25xxfd_log_rx_obj_read(priv, __func__, ## __VA_ARGS__)
 
 #else
 

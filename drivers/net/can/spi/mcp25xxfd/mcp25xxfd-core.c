@@ -1058,7 +1058,7 @@ static int mcp25xxfd_check_tef_tail(struct mcp25xxfd_priv *priv)
 }
 
 static int
-mcp25xxfd_check_rx_tail(const struct mcp25xxfd_priv *priv,
+mcp25xxfd_check_rx_tail(struct mcp25xxfd_priv *priv,
 			const struct mcp25xxfd_rx_ring *ring)
 {
 	u8 rx_tail_chip, rx_tail;
@@ -1070,6 +1070,8 @@ mcp25xxfd_check_rx_tail(const struct mcp25xxfd_priv *priv,
 	err = mcp25xxfd_rx_tail_get_from_chip(priv, ring, &rx_tail_chip);
 	if (err)
 		return err;
+
+	mcp25xxfd_log_hw_rx_tail(priv, rx_tail_chip);
 
 	rx_tail = mcp25xxfd_get_rx_tail(ring);
 	if (rx_tail_chip != rx_tail) {
@@ -1266,6 +1268,8 @@ mcp25xxfd_rx_ring_update(struct mcp25xxfd_priv *priv,
 
 	ring->head = new_head;
 
+	mcp25xxfd_log_hw_rx_head(priv, chip_rx_head);
+
 	return mcp25xxfd_check_rx_tail(priv, ring);
 }
 
@@ -1348,7 +1352,7 @@ mcp25xxfd_handle_rxif_one(struct mcp25xxfd_priv *priv,
 }
 
 static inline int
-mcp25xxfd_rx_obj_read(const struct mcp25xxfd_priv *priv,
+mcp25xxfd_rx_obj_read(struct mcp25xxfd_priv *priv,
 		      const struct mcp25xxfd_rx_ring *ring,
 		      struct mcp25xxfd_hw_rx_obj_canfd *hw_rx_obj,
 		      const u8 offset, const u8 len)
@@ -1363,6 +1367,8 @@ mcp25xxfd_rx_obj_read(const struct mcp25xxfd_priv *priv,
 
 	if (err == -EBADMSG)
 		goto retry;
+
+	mcp25xxfd_log_rx_obj_read(priv, offset, len);
 
 	return err;
 }

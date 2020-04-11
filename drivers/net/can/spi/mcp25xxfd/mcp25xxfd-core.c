@@ -429,7 +429,8 @@ __mcp25xxfd_chip_set_mode(const struct mcp25xxfd_priv *priv,
 	err = regmap_read_poll_timeout(priv->map, MCP25XXFD_CAN_CON, con,
 				       FIELD_GET(MCP25XXFD_CAN_CON_OPMOD_MASK,
 						 con) == mode_req,
-				       10000, 1000000);
+				       MCP25XXFD_POLL_SLEEP_US,
+				       MCP25XXFD_POLL_TIMEOUT_US);
 	if (err) {
 		u8 mode = FIELD_GET(MCP25XXFD_CAN_CON_OPMOD_MASK, con);
 
@@ -482,7 +483,8 @@ static int mcp25xxfd_chip_clock_enable(const struct mcp25xxfd_priv *priv)
 	/* Wait for "Oscillator Ready" bit */
 	err = regmap_read_poll_timeout(priv->map, MCP25XXFD_OSC, osc,
 				       (osc & osc_mask) == osc_reference,
-				       10000, 1000000);
+				       MCP25XXFD_POLL_SLEEP_US,
+				       MCP25XXFD_POLL_TIMEOUT_US);
 	if (err == -ETIMEDOUT)
 		netdev_err(priv->ndev,
 			   "Timeout waiting for Oscillator Ready (osc=0x%08x, osc_reference=0x%08x)\n",

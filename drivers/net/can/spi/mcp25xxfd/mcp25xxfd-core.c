@@ -2652,9 +2652,21 @@ static int mcp25xxfd_probe(struct spi_device *spi)
 		priv->devtype_data = (struct mcp25xxfd_devtype_data *)
 			spi_get_device_id(spi)->driver_data;
 
+	/* According to the datasheet the SPI clock must be less or
+	 * equal SYSCLOCK / 2.
+	 *
+	 * It turns out, that the Controller is not stable at this
+	 * rate. Known good an bad combinations are:
+	 *
+	 * MCP	ext-clk	SoC		SPI	SPI-clk		Status
+	 *
+	 * 2518	10 MHz	allwinner H3	sun6i	9090909	Hz	good
+	 * 2518	10 MHz	allwinner H3	sun6i	9375000	Hz	bad
+	 *
+	 * Limit SPI clock to 92.5% of SYSCLOCK / 2 for now.
+	 */
+	spi->max_speed_hz = min(spi->max_speed_hz, freq / 2 / 1000 * 925);
 	spi->bits_per_word = 8;
-	/* SPI clock must be less or equal SYSCLOCK / 2 */
-	spi->max_speed_hz = min(spi->max_speed_hz, freq / 2);
 	err = spi_setup(spi);
 	if (err)
 		goto out_free_candev;

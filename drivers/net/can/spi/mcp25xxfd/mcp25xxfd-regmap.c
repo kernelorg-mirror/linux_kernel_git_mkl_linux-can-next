@@ -308,9 +308,9 @@ static const struct regmap_config mcp25xxfd_regmap = {
 	.rd_table = &mcp25xxfd_reg_table,
 	.cache_type = REGCACHE_NONE,
 	.read_flag_mask = (__force unsigned long)
-		cpu_to_be16(MCP25XXFD_INSTRUCTION_READ),
+		cpu_to_be16(MCP25XXFD_SPI_INSTRUCTION_READ),
 	.write_flag_mask = (__force unsigned long)
-		cpu_to_be16(MCP25XXFD_INSTRUCTION_WRITE),
+		cpu_to_be16(MCP25XXFD_SPI_INSTRUCTION_WRITE),
 };
 
 static const struct regmap_bus mcp25xxfd_bus = {

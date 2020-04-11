@@ -408,12 +408,12 @@ static inline void __dump(const void *d, unsigned int len)
 #define MCP25XXFD_RX_FIFO(x) (MCP25XXFD_TX_FIFO + 1 + (x))
 
 /* SPI commands */
-#define MCP25XXFD_INSTRUCTION_RESET 0x0000
-#define MCP25XXFD_INSTRUCTION_WRITE 0x2000
-#define MCP25XXFD_INSTRUCTION_READ 0x3000
-#define MCP25XXFD_INSTRUCTION_WRITE_CRC 0xa000
-#define MCP25XXFD_INSTRUCTION_READ_CRC 0xb000
-#define MCP25XXFD_INSTRUCTION_WRITE_CRC_SAFE 0xc000
+#define MCP25XXFD_SPI_INSTRUCTION_RESET 0x0000
+#define MCP25XXFD_SPI_INSTRUCTION_WRITE 0x2000
+#define MCP25XXFD_SPI_INSTRUCTION_READ 0x3000
+#define MCP25XXFD_SPI_INSTRUCTION_WRITE_CRC 0xa000
+#define MCP25XXFD_SPI_INSTRUCTION_READ_CRC 0xb000
+#define MCP25XXFD_SPI_INSTRUCTION_WRITE_CRC_SAFE 0xc000
 #define MCP25XXFD_SPI_ADDRESS_MASK GENMASK(11, 0)
 
 #define MCP25XXFD_SYSCLOCK_HZ_MAX 40000000
@@ -706,19 +706,19 @@ static inline u8 mcp25xxfd_last_byte_set(u32 mask)
 
 static inline __be16 mcp25xxfd_cmd_reset(void)
 {
-	return cpu_to_be16(MCP25XXFD_INSTRUCTION_RESET);
+	return cpu_to_be16(MCP25XXFD_SPI_INSTRUCTION_RESET);
 }
 
 static inline void
 mcp25xxfd_spi_cmd_read(struct mcp25xxfd_buf_cmd *cmd, u16 addr)
 {
-	cmd->cmd = cpu_to_be16(MCP25XXFD_INSTRUCTION_READ | addr);
+	cmd->cmd = cpu_to_be16(MCP25XXFD_SPI_INSTRUCTION_READ | addr);
 }
 
 static inline void
 mcp25xxfd_spi_cmd_write(struct mcp25xxfd_buf_cmd *cmd, u16 addr)
 {
-	cmd->cmd = cpu_to_be16(MCP25XXFD_INSTRUCTION_WRITE | addr);
+	cmd->cmd = cpu_to_be16(MCP25XXFD_SPI_INSTRUCTION_WRITE | addr);
 }
 
 static inline bool mcp25xxfd_reg_in_ram(unsigned int reg)
@@ -750,7 +750,7 @@ mcp25xxfd_spi_cmd_crc_set_len_in_ram(struct mcp25xxfd_buf_cmd_crc *cmd, u16 len)
 static inline void
 mcp25xxfd_spi_cmd_read_crc_set_addr(struct mcp25xxfd_buf_cmd_crc *cmd, u16 addr)
 {
-	cmd->cmd = cpu_to_be16(MCP25XXFD_INSTRUCTION_READ_CRC | addr);
+	cmd->cmd = cpu_to_be16(MCP25XXFD_SPI_INSTRUCTION_READ_CRC | addr);
 }
 
 static inline void
@@ -765,7 +765,7 @@ static inline void
 mcp25xxfd_spi_cmd_write_crc_set_addr(struct mcp25xxfd_buf_cmd_crc *cmd,
 				     u16 addr)
 {
-	cmd->cmd = cpu_to_be16(MCP25XXFD_INSTRUCTION_WRITE_CRC | addr);
+	cmd->cmd = cpu_to_be16(MCP25XXFD_SPI_INSTRUCTION_WRITE_CRC | addr);
 }
 
 static inline void

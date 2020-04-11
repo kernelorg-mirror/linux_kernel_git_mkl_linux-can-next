@@ -25,22 +25,22 @@ static void mcp25xxfd_dump_reg_con(const struct mcp25xxfd_priv *priv, u32 val, u
 {
 	pr_info("CON: con(0x%03x)=0x%08x\n", addr, val);
 
-	__dump_mask(val, MCP25XXFD_CAN_CON, TXBWS, "0x%02lx", "Transmit Bandwidth Sharing");
-	__dump_bit(val, MCP25XXFD_CAN_CON, ABAT, "Abort All Pending Transmissions");
-	__dump_mask(val, MCP25XXFD_CAN_CON, REQOP, "0x%02lx", "Request Operation Mode");
-	__dump_mask(val, MCP25XXFD_CAN_CON, OPMOD, "0x%02lx", "Operation Mode Status");
-	__dump_bit(val, MCP25XXFD_CAN_CON, TXQEN, "Enable Transmit Queue");
-	__dump_bit(val, MCP25XXFD_CAN_CON, STEF, "Store in Transmit Event FIFO");
-	__dump_bit(val, MCP25XXFD_CAN_CON, SERR2LOM, "Transition to Listen Only Mode on System Error");
-	__dump_bit(val, MCP25XXFD_CAN_CON, ESIGM, "Transmit ESI in Gateway Mode");
-	__dump_bit(val, MCP25XXFD_CAN_CON, RTXAT, "Restrict Retransmission Attempts");
-	__dump_bit(val, MCP25XXFD_CAN_CON, BRSDIS, "Bit Rate Switching Disable");
-	__dump_bit(val, MCP25XXFD_CAN_CON, BUSY, "CAN Module is Busy");
-	__dump_mask(val, MCP25XXFD_CAN_CON, WFT, "0x%02lx", "Selectable Wake-up Filter Time");
-	__dump_bit(val, MCP25XXFD_CAN_CON, WAKFIL, "Enable CAN Bus Line Wake-up Filter");
-	__dump_bit(val, MCP25XXFD_CAN_CON, PXEDIS, "Protocol Exception Event Detection Disabled");
-	__dump_bit(val, MCP25XXFD_CAN_CON, ISOCRCEN, "Enable ISO CRC in CAN FD Frames");
-	__dump_mask(val, MCP25XXFD_CAN_CON, DNCNT, "0x%02lx", "Device Net Filter Bit Number");
+	__dump_mask(val, MCP25XXFD_REG_CON, TXBWS, "0x%02lx", "Transmit Bandwidth Sharing");
+	__dump_bit(val, MCP25XXFD_REG_CON, ABAT, "Abort All Pending Transmissions");
+	__dump_mask(val, MCP25XXFD_REG_CON, REQOP, "0x%02lx", "Request Operation Mode");
+	__dump_mask(val, MCP25XXFD_REG_CON, OPMOD, "0x%02lx", "Operation Mode Status");
+	__dump_bit(val, MCP25XXFD_REG_CON, TXQEN, "Enable Transmit Queue");
+	__dump_bit(val, MCP25XXFD_REG_CON, STEF, "Store in Transmit Event FIFO");
+	__dump_bit(val, MCP25XXFD_REG_CON, SERR2LOM, "Transition to Listen Only Mode on System Error");
+	__dump_bit(val, MCP25XXFD_REG_CON, ESIGM, "Transmit ESI in Gateway Mode");
+	__dump_bit(val, MCP25XXFD_REG_CON, RTXAT, "Restrict Retransmission Attempts");
+	__dump_bit(val, MCP25XXFD_REG_CON, BRSDIS, "Bit Rate Switching Disable");
+	__dump_bit(val, MCP25XXFD_REG_CON, BUSY, "CAN Module is Busy");
+	__dump_mask(val, MCP25XXFD_REG_CON, WFT, "0x%02lx", "Selectable Wake-up Filter Time");
+	__dump_bit(val, MCP25XXFD_REG_CON, WAKFIL, "Enable CAN Bus Line Wake-up Filter");
+	__dump_bit(val, MCP25XXFD_REG_CON, PXEDIS, "Protocol Exception Event Detection Disabled");
+	__dump_bit(val, MCP25XXFD_REG_CON, ISOCRCEN, "Enable ISO CRC in CAN FD Frames");
+	__dump_mask(val, MCP25XXFD_REG_CON, DNCNT, "0x%02lx", "Device Net Filter Bit Number");
 }
 
 static void mcp25xxfd_dump_reg_tbc(const struct mcp25xxfd_priv *priv, u32 val, u16 addr)
@@ -54,9 +54,9 @@ static void mcp25xxfd_dump_reg_vec(const struct mcp25xxfd_priv *priv, u32 val, u
 
 	pr_info("VEC: vec(0x%03x)=0x%08x\n", addr, val);
 
-	rx_code = FIELD_GET(MCP25XXFD_CAN_VEC_RXCODE_MASK, val);
-	tx_code = FIELD_GET(MCP25XXFD_CAN_VEC_TXCODE_MASK, val);
-	i_code = FIELD_GET(MCP25XXFD_CAN_VEC_ICODE_MASK, val);
+	rx_code = FIELD_GET(MCP25XXFD_REG_VEC_RXCODE_MASK, val);
+	tx_code = FIELD_GET(MCP25XXFD_REG_VEC_TXCODE_MASK, val);
+	i_code = FIELD_GET(MCP25XXFD_REG_VEC_ICODE_MASK, val);
 
 	pr_info("\trxcode: ");
 	if (rx_code == 0x40)
@@ -108,11 +108,11 @@ static void mcp25xxfd_dump_reg_vec(const struct mcp25xxfd_priv *priv, u32 val, u
 
 #define __dump_int(val, bit, desc) \
 	pr_info("\t" __stringify(bit) "\t%s\t%s\t%s\t%s\n", \
-		 (val) & MCP25XXFD_CAN_INT_##bit##E ? "x" : "", \
-		 (val) & MCP25XXFD_CAN_INT_##bit##F ? "x" : "", \
-		 FIELD_GET(MCP25XXFD_CAN_INT_IF_MASK, val) & \
-		 FIELD_GET(MCP25XXFD_CAN_INT_IE_MASK, val) & \
-		 MCP25XXFD_CAN_INT_##bit##F ? "x" : "", \
+		 (val) & MCP25XXFD_REG_INT_##bit##E ? "x" : "", \
+		 (val) & MCP25XXFD_REG_INT_##bit##F ? "x" : "", \
+		 FIELD_GET(MCP25XXFD_REG_INT_IF_MASK, val) & \
+		 FIELD_GET(MCP25XXFD_REG_INT_IE_MASK, val) & \
+		 MCP25XXFD_REG_INT_##bit##F ? "x" : "", \
 		 desc)
 
 static void mcp25xxfd_dump_reg_intf(const struct mcp25xxfd_priv *priv, u32 val, u16 addr)
@@ -170,84 +170,84 @@ static void mcp25xxfd_dump_reg_trec(const struct mcp25xxfd_priv *priv, u32 val, 
 {
 	pr_info("TREC: trec(0x%03x)=0x%08x\n", addr, val);
 
-	__dump_bit(val, MCP25XXFD_CAN_TREC, TXBO, "Transmitter in Bus Off State");
-	__dump_bit(val, MCP25XXFD_CAN_TREC, TXBP, "Transmitter in Error Passive State");
-	__dump_bit(val, MCP25XXFD_CAN_TREC, RXBP, "Receiver in Error Passive State");
-	__dump_bit(val, MCP25XXFD_CAN_TREC, TXWARN, "Transmitter in Error Warning State");
-	__dump_bit(val, MCP25XXFD_CAN_TREC, RXWARN, "Receiver in Error Warning State");
-	__dump_bit(val, MCP25XXFD_CAN_TREC, EWARN, "Transmitter or Receiver is in Error Warning State");
+	__dump_bit(val, MCP25XXFD_REG_TREC, TXBO, "Transmitter in Bus Off State");
+	__dump_bit(val, MCP25XXFD_REG_TREC, TXBP, "Transmitter in Error Passive State");
+	__dump_bit(val, MCP25XXFD_REG_TREC, RXBP, "Receiver in Error Passive State");
+	__dump_bit(val, MCP25XXFD_REG_TREC, TXWARN, "Transmitter in Error Warning State");
+	__dump_bit(val, MCP25XXFD_REG_TREC, RXWARN, "Receiver in Error Warning State");
+	__dump_bit(val, MCP25XXFD_REG_TREC, EWARN, "Transmitter or Receiver is in Error Warning State");
 
-	__dump_mask(val, MCP25XXFD_CAN_TREC, TEC, "%3lu", "Transmit Error Counter");
-	__dump_mask(val, MCP25XXFD_CAN_TREC, REC, "%3lu", "Receive Error Counter");
+	__dump_mask(val, MCP25XXFD_REG_TREC, TEC, "%3lu", "Transmit Error Counter");
+	__dump_mask(val, MCP25XXFD_REG_TREC, REC, "%3lu", "Receive Error Counter");
 }
 
 static void mcp25xxfd_dump_reg_bdiag0(const struct mcp25xxfd_priv *priv, u32 val, u16 addr)
 {
 	pr_info("BDIAG0: bdiag0(0x%03x)=0x%08x\n", addr, val);
 
-	__dump_mask(val, MCP25XXFD_CAN_BDIAG0, DTERRCNT, "%3lu", "Data Bit Rate Transmit Error Counter");
-	__dump_mask(val, MCP25XXFD_CAN_BDIAG0, DRERRCNT, "%3lu", "Data Bit Rate Receive Error Counter");
-	__dump_mask(val, MCP25XXFD_CAN_BDIAG0, NTERRCNT, "%3lu", "Nominal Bit Rate Transmit Error Counter");
-	__dump_mask(val, MCP25XXFD_CAN_BDIAG0, NRERRCNT, "%3lu", "Nominal Bit Rate Receive Error Counter");
+	__dump_mask(val, MCP25XXFD_REG_BDIAG0, DTERRCNT, "%3lu", "Data Bit Rate Transmit Error Counter");
+	__dump_mask(val, MCP25XXFD_REG_BDIAG0, DRERRCNT, "%3lu", "Data Bit Rate Receive Error Counter");
+	__dump_mask(val, MCP25XXFD_REG_BDIAG0, NTERRCNT, "%3lu", "Nominal Bit Rate Transmit Error Counter");
+	__dump_mask(val, MCP25XXFD_REG_BDIAG0, NRERRCNT, "%3lu", "Nominal Bit Rate Receive Error Counter");
 }
 
 static void mcp25xxfd_dump_reg_bdiag1(const struct mcp25xxfd_priv *priv, u32 val, u16 addr)
 {
 	pr_info("BDIAG1: bdiag1(0x%03x)=0x%08x\n", addr, val);
 
-	__dump_bit(val, MCP25XXFD_CAN_BDIAG1, DLCMM, "DLC Mismatch");
-	__dump_bit(val, MCP25XXFD_CAN_BDIAG1, ESI, "ESI flag of a received CAN FD message was set");
-	__dump_bit(val, MCP25XXFD_CAN_BDIAG1, DCRCERR, "Data CRC Error");
-	__dump_bit(val, MCP25XXFD_CAN_BDIAG1, DSTUFERR, "Data Bit Stuffing Error");
-	__dump_bit(val, MCP25XXFD_CAN_BDIAG1, DFORMERR, "Data Format Error");
-	__dump_bit(val, MCP25XXFD_CAN_BDIAG1, DBIT1ERR, "Data BIT1 Error");
-	__dump_bit(val, MCP25XXFD_CAN_BDIAG1, DBIT0ERR, "Data BIT0 Error");
-	__dump_bit(val, MCP25XXFD_CAN_BDIAG1, TXBOERR, "Device went to bus-off (and auto-recovered)");
-	__dump_bit(val, MCP25XXFD_CAN_BDIAG1, NCRCERR, "CRC Error");
-	__dump_bit(val, MCP25XXFD_CAN_BDIAG1, NSTUFERR, "Bit Stuffing Error");
-	__dump_bit(val, MCP25XXFD_CAN_BDIAG1, NFORMERR, "Format Error");
-	__dump_bit(val, MCP25XXFD_CAN_BDIAG1, NACKERR, "Transmitted message was not acknowledged");
-	__dump_bit(val, MCP25XXFD_CAN_BDIAG1, NBIT1ERR, "Bit1 Error");
-	__dump_bit(val, MCP25XXFD_CAN_BDIAG1, NBIT0ERR, "Bit0 Error");
-	__dump_mask(val, MCP25XXFD_CAN_BDIAG1, EFMSGCNT, "%3lu", "Error Free Message Counter bits");
+	__dump_bit(val, MCP25XXFD_REG_BDIAG1, DLCMM, "DLC Mismatch");
+	__dump_bit(val, MCP25XXFD_REG_BDIAG1, ESI, "ESI flag of a received CAN FD message was set");
+	__dump_bit(val, MCP25XXFD_REG_BDIAG1, DCRCERR, "Data CRC Error");
+	__dump_bit(val, MCP25XXFD_REG_BDIAG1, DSTUFERR, "Data Bit Stuffing Error");
+	__dump_bit(val, MCP25XXFD_REG_BDIAG1, DFORMERR, "Data Format Error");
+	__dump_bit(val, MCP25XXFD_REG_BDIAG1, DBIT1ERR, "Data BIT1 Error");
+	__dump_bit(val, MCP25XXFD_REG_BDIAG1, DBIT0ERR, "Data BIT0 Error");
+	__dump_bit(val, MCP25XXFD_REG_BDIAG1, TXBOERR, "Device went to bus-off (and auto-recovered)");
+	__dump_bit(val, MCP25XXFD_REG_BDIAG1, NCRCERR, "CRC Error");
+	__dump_bit(val, MCP25XXFD_REG_BDIAG1, NSTUFERR, "Bit Stuffing Error");
+	__dump_bit(val, MCP25XXFD_REG_BDIAG1, NFORMERR, "Format Error");
+	__dump_bit(val, MCP25XXFD_REG_BDIAG1, NACKERR, "Transmitted message was not acknowledged");
+	__dump_bit(val, MCP25XXFD_REG_BDIAG1, NBIT1ERR, "Bit1 Error");
+	__dump_bit(val, MCP25XXFD_REG_BDIAG1, NBIT0ERR, "Bit0 Error");
+	__dump_mask(val, MCP25XXFD_REG_BDIAG1, EFMSGCNT, "%3lu", "Error Free Message Counter bits");
 }
 
 static void mcp25xxfd_dump_reg_osc(const struct mcp25xxfd_priv *priv, u32 val, u16 addr)
 {
 	pr_info("OSC: osc(0x%03x)=0x%08x\n", addr, val);
 
-	__dump_bit(val, MCP25XXFD_OSC, SCLKRDY, "Synchronized SCLKDIV");
-	__dump_bit(val, MCP25XXFD_OSC, OSCRDY, "Clock Ready");
-	__dump_bit(val, MCP25XXFD_OSC, PLLRDY, "PLL Ready");
-	__dump_mask(val, MCP25XXFD_OSC, CLKODIV, "%2lu", "Clock Output Divisor");
-	__dump_bit(val, MCP25XXFD_OSC, SCLKDIV, "System Clock Divisor");
-	__dump_bit(val, MCP25XXFD_OSC, LPMEN, "Low Power Mode (LPM) Enable (MCP2518FD only)");
-	__dump_bit(val, MCP25XXFD_OSC, OSCDIS, "Clock (Oscillator) Disable");
-	__dump_bit(val, MCP25XXFD_OSC, PLLEN, "PLL Enable");
+	__dump_bit(val, MCP25XXFD_REG_OSC, SCLKRDY, "Synchronized SCLKDIV");
+	__dump_bit(val, MCP25XXFD_REG_OSC, OSCRDY, "Clock Ready");
+	__dump_bit(val, MCP25XXFD_REG_OSC, PLLRDY, "PLL Ready");
+	__dump_mask(val, MCP25XXFD_REG_OSC, CLKODIV, "%2lu", "Clock Output Divisor");
+	__dump_bit(val, MCP25XXFD_REG_OSC, SCLKDIV, "System Clock Divisor");
+	__dump_bit(val, MCP25XXFD_REG_OSC, LPMEN, "Low Power Mode (LPM) Enable (MCP2518FD only)");
+	__dump_bit(val, MCP25XXFD_REG_OSC, OSCDIS, "Clock (Oscillator) Disable");
+	__dump_bit(val, MCP25XXFD_REG_OSC, PLLEN, "PLL Enable");
 }
 
 static void mcp25xxfd_dump_reg_tefcon(const struct mcp25xxfd_priv *priv, u32 val, u16 addr)
 {
 	pr_info("TEFCON: tefcon(0x%03x)=0x%08x\n", addr, val);
 
-	__dump_mask(val, MCP25XXFD_CAN_TEFCON, FSIZE, "%3lu", "FIFO Size");
-	__dump_bit(val, MCP25XXFD_CAN_TEFCON, FRESET, "FIFO Reset");
-	__dump_bit(val, MCP25XXFD_CAN_TEFCON, UINC, "Increment Tail");
-	__dump_bit(val, MCP25XXFD_CAN_TEFCON, TEFTSEN, "Transmit Event FIFO Time Stamp Enable");
-	__dump_bit(val, MCP25XXFD_CAN_TEFCON, TEFOVIE, "Transmit Event FIFO Overflow Interrupt Enable");
-	__dump_bit(val, MCP25XXFD_CAN_TEFCON, TEFFIE, "Transmit Event FIFO Full Interrupt Enable");
-	__dump_bit(val, MCP25XXFD_CAN_TEFCON, TEFHIE, "Transmit Event FIFO Half Full Interrupt Enable");
-	__dump_bit(val, MCP25XXFD_CAN_TEFCON, TEFNEIE, "Transmit Event FIFO Not Empty Interrupt Enable");
+	__dump_mask(val, MCP25XXFD_REG_TEFCON, FSIZE, "%3lu", "FIFO Size");
+	__dump_bit(val, MCP25XXFD_REG_TEFCON, FRESET, "FIFO Reset");
+	__dump_bit(val, MCP25XXFD_REG_TEFCON, UINC, "Increment Tail");
+	__dump_bit(val, MCP25XXFD_REG_TEFCON, TEFTSEN, "Transmit Event FIFO Time Stamp Enable");
+	__dump_bit(val, MCP25XXFD_REG_TEFCON, TEFOVIE, "Transmit Event FIFO Overflow Interrupt Enable");
+	__dump_bit(val, MCP25XXFD_REG_TEFCON, TEFFIE, "Transmit Event FIFO Full Interrupt Enable");
+	__dump_bit(val, MCP25XXFD_REG_TEFCON, TEFHIE, "Transmit Event FIFO Half Full Interrupt Enable");
+	__dump_bit(val, MCP25XXFD_REG_TEFCON, TEFNEIE, "Transmit Event FIFO Not Empty Interrupt Enable");
 }
 
 static void mcp25xxfd_dump_reg_tefsta(const struct mcp25xxfd_priv *priv, u32 val, u16 addr)
 {
 	pr_info("TEFSTA: tefsta(0x%03x)=0x%08x\n", addr, val);
 
-	__dump_bit(val, MCP25XXFD_CAN_TEFSTA, TEFOVIF, "Transmit Event FIFO Overflow Interrupt Flag");
-	__dump_bit(val, MCP25XXFD_CAN_TEFSTA, TEFFIF, "Transmit Event FIFO Full Interrupt Flag (0 = not full)");
-	__dump_bit(val, MCP25XXFD_CAN_TEFSTA, TEFHIF, "Transmit Event FIFO Half Full Interrupt Flag (0= < half full)");
-	__dump_bit(val, MCP25XXFD_CAN_TEFSTA, TEFNEIF, "Transmit Event FIFO Not Empty Interrupt Flag (0=empty)");
+	__dump_bit(val, MCP25XXFD_REG_TEFSTA, TEFOVIF, "Transmit Event FIFO Overflow Interrupt Flag");
+	__dump_bit(val, MCP25XXFD_REG_TEFSTA, TEFFIF, "Transmit Event FIFO Full Interrupt Flag (0 = not full)");
+	__dump_bit(val, MCP25XXFD_REG_TEFSTA, TEFHIF, "Transmit Event FIFO Half Full Interrupt Flag (0= < half full)");
+	__dump_bit(val, MCP25XXFD_REG_TEFSTA, TEFNEIF, "Transmit Event FIFO Not Empty Interrupt Flag (0=empty)");
 }
 
 static void mcp25xxfd_dump_reg_tefua(const struct mcp25xxfd_priv *priv, u32 val, u16 addr)
@@ -259,36 +259,36 @@ static void mcp25xxfd_dump_reg_fifocon(const struct mcp25xxfd_priv *priv, u32 va
 {
 	pr_info("FIFOCON: fifocon(0x%03x)=0x%08x\n", addr, val);
 
-	__dump_mask(val, MCP25XXFD_CAN_FIFOCON, PLSIZE, "%3lu", "Payload Size");
-	__dump_mask(val, MCP25XXFD_CAN_FIFOCON, FSIZE, "%3lu", "FIFO Size");
-	__dump_mask(val, MCP25XXFD_CAN_FIFOCON, TXAT, "%3lu", "Retransmission Attempts");
-	__dump_mask(val, MCP25XXFD_CAN_FIFOCON, TXPRI, "%3lu", "Message Transmit Priority");
-	__dump_bit(val, MCP25XXFD_CAN_FIFOCON, FRESET, "FIFO Reset");
-	__dump_bit(val, MCP25XXFD_CAN_FIFOCON, TXREQ, "Message Send Request");
-	__dump_bit(val, MCP25XXFD_CAN_FIFOCON, UINC, "Increment Head/Tail");
-	__dump_bit(val, MCP25XXFD_CAN_FIFOCON, TXEN, "TX/RX FIFO Selection (0=RX, 1=TX)");
-	__dump_bit(val, MCP25XXFD_CAN_FIFOCON, RTREN, "Auto RTR Enable");
-	__dump_bit(val, MCP25XXFD_CAN_FIFOCON, RXTSEN, "Received Message Time Stamp Enable");
-	__dump_bit(val, MCP25XXFD_CAN_FIFOCON, TXATIE, "Transmit Attempts Exhausted Interrupt Enable");
-	__dump_bit(val, MCP25XXFD_CAN_FIFOCON, RXOVIE, "Overflow Interrupt Enable");
-	__dump_bit(val, MCP25XXFD_CAN_FIFOCON, TFERFFIE, "Transmit/Receive FIFO Empty/Full Interrupt Enable");
-	__dump_bit(val, MCP25XXFD_CAN_FIFOCON, TFHRFHIE, "Transmit/Receive FIFO Half Empty/Half Full Interrupt Enable");
-	__dump_bit(val, MCP25XXFD_CAN_FIFOCON, TFNRFNIE, "Transmit/Receive FIFO Not Full/Not Empty Interrupt Enable");
+	__dump_mask(val, MCP25XXFD_REG_FIFOCON, PLSIZE, "%3lu", "Payload Size");
+	__dump_mask(val, MCP25XXFD_REG_FIFOCON, FSIZE, "%3lu", "FIFO Size");
+	__dump_mask(val, MCP25XXFD_REG_FIFOCON, TXAT, "%3lu", "Retransmission Attempts");
+	__dump_mask(val, MCP25XXFD_REG_FIFOCON, TXPRI, "%3lu", "Message Transmit Priority");
+	__dump_bit(val, MCP25XXFD_REG_FIFOCON, FRESET, "FIFO Reset");
+	__dump_bit(val, MCP25XXFD_REG_FIFOCON, TXREQ, "Message Send Request");
+	__dump_bit(val, MCP25XXFD_REG_FIFOCON, UINC, "Increment Head/Tail");
+	__dump_bit(val, MCP25XXFD_REG_FIFOCON, TXEN, "TX/RX FIFO Selection (0=RX, 1=TX)");
+	__dump_bit(val, MCP25XXFD_REG_FIFOCON, RTREN, "Auto RTR Enable");
+	__dump_bit(val, MCP25XXFD_REG_FIFOCON, RXTSEN, "Received Message Time Stamp Enable");
+	__dump_bit(val, MCP25XXFD_REG_FIFOCON, TXATIE, "Transmit Attempts Exhausted Interrupt Enable");
+	__dump_bit(val, MCP25XXFD_REG_FIFOCON, RXOVIE, "Overflow Interrupt Enable");
+	__dump_bit(val, MCP25XXFD_REG_FIFOCON, TFERFFIE, "Transmit/Receive FIFO Empty/Full Interrupt Enable");
+	__dump_bit(val, MCP25XXFD_REG_FIFOCON, TFHRFHIE, "Transmit/Receive FIFO Half Empty/Half Full Interrupt Enable");
+	__dump_bit(val, MCP25XXFD_REG_FIFOCON, TFNRFNIE, "Transmit/Receive FIFO Not Full/Not Empty Interrupt Enable");
 }
 
 static void mcp25xxfd_dump_reg_fifosta(const struct mcp25xxfd_priv *priv, u32 val, u16 addr)
 {
 	pr_info("FIFOSTA: fifosta(0x%03x)=0x%08x\n", addr, val);
 
-	__dump_mask(val, MCP25XXFD_CAN_FIFOSTA, FIFOCI, "%3lu", "FIFO Message Index");
-	__dump_bit(val, MCP25XXFD_CAN_FIFOSTA, TXABT, "Message Aborted Status (1=aborted, 0=completed successfully)");
-	__dump_bit(val, MCP25XXFD_CAN_FIFOSTA, TXLARB, "Message Lost Arbitration Status");
-	__dump_bit(val, MCP25XXFD_CAN_FIFOSTA, TXERR, "Error Detected During Transmission");
-	__dump_bit(val, MCP25XXFD_CAN_FIFOSTA, TXATIF, "Transmit Attempts Exhausted Interrupt Pending");
-	__dump_bit(val, MCP25XXFD_CAN_FIFOSTA, RXOVIF, "Receive FIFO Overflow Interrupt Flag");
-	__dump_bit(val, MCP25XXFD_CAN_FIFOSTA, TFERFFIF, "Transmit/Receive FIFO Empty/Full Interrupt Flag");
-	__dump_bit(val, MCP25XXFD_CAN_FIFOSTA, TFHRFHIF, "Transmit/Receive FIFO Half Empty/Half Full Interrupt Flag");
-	__dump_bit(val, MCP25XXFD_CAN_FIFOSTA, TFNRFNIF, "Transmit/Receive FIFO Not Full/Not Empty Interrupt Flag");
+	__dump_mask(val, MCP25XXFD_REG_FIFOSTA, FIFOCI, "%3lu", "FIFO Message Index");
+	__dump_bit(val, MCP25XXFD_REG_FIFOSTA, TXABT, "Message Aborted Status (1=aborted, 0=completed successfully)");
+	__dump_bit(val, MCP25XXFD_REG_FIFOSTA, TXLARB, "Message Lost Arbitration Status");
+	__dump_bit(val, MCP25XXFD_REG_FIFOSTA, TXERR, "Error Detected During Transmission");
+	__dump_bit(val, MCP25XXFD_REG_FIFOSTA, TXATIF, "Transmit Attempts Exhausted Interrupt Pending");
+	__dump_bit(val, MCP25XXFD_REG_FIFOSTA, RXOVIF, "Receive FIFO Overflow Interrupt Flag");
+	__dump_bit(val, MCP25XXFD_REG_FIFOSTA, TFERFFIF, "Transmit/Receive FIFO Empty/Full Interrupt Flag");
+	__dump_bit(val, MCP25XXFD_REG_FIFOSTA, TFHRFHIF, "Transmit/Receive FIFO Half Empty/Half Full Interrupt Flag");
+	__dump_bit(val, MCP25XXFD_REG_FIFOSTA, TFNRFNIF, "Transmit/Receive FIFO Not Full/Not Empty Interrupt Flag");
 }
 
 static void mcp25xxfd_dump_reg_fifoua(const struct mcp25xxfd_priv *priv, u32 val, u16 addr)
@@ -349,23 +349,23 @@ static u8 mcp25xxfd_dump_get_fifo_size(const struct mcp25xxfd_priv *priv, const 
 {
 	u8 obj_size;
 
-	obj_size = FIELD_GET(MCP25XXFD_CAN_FIFOCON_PLSIZE_MASK, fifo_con);
+	obj_size = FIELD_GET(MCP25XXFD_REG_FIFOCON_PLSIZE_MASK, fifo_con);
 	switch (obj_size) {
-	case MCP25XXFD_CAN_FIFOCON_PLSIZE_8:
+	case MCP25XXFD_REG_FIFOCON_PLSIZE_8:
 		return 8;
-	case MCP25XXFD_CAN_FIFOCON_PLSIZE_12:
+	case MCP25XXFD_REG_FIFOCON_PLSIZE_12:
 		return 12;
-	case MCP25XXFD_CAN_FIFOCON_PLSIZE_16:
+	case MCP25XXFD_REG_FIFOCON_PLSIZE_16:
 		return 16;
-	case MCP25XXFD_CAN_FIFOCON_PLSIZE_20:
+	case MCP25XXFD_REG_FIFOCON_PLSIZE_20:
 		return 20;
-	case MCP25XXFD_CAN_FIFOCON_PLSIZE_24:
+	case MCP25XXFD_REG_FIFOCON_PLSIZE_24:
 		return 24;
-	case MCP25XXFD_CAN_FIFOCON_PLSIZE_32:
+	case MCP25XXFD_REG_FIFOCON_PLSIZE_32:
 		return 32;
-	case MCP25XXFD_CAN_FIFOCON_PLSIZE_48:
+	case MCP25XXFD_REG_FIFOCON_PLSIZE_48:
 		return 48;
-	case MCP25XXFD_CAN_FIFOCON_PLSIZE_64:
+	case MCP25XXFD_REG_FIFOCON_PLSIZE_64:
 		return 64;
 	}
 
@@ -376,7 +376,7 @@ static u8 mcp25xxfd_dump_get_fifo_obj_num(const struct mcp25xxfd_priv *priv, con
 {
 	u8 obj_num;
 
-	obj_num = FIELD_GET(MCP25XXFD_CAN_FIFOCON_FSIZE_MASK, fifo_con);
+	obj_num = FIELD_GET(MCP25XXFD_REG_FIFOCON_FSIZE_MASK, fifo_con);
 
 	return obj_num + 1;
 }
@@ -468,7 +468,7 @@ static u8 mcp25xxfd_dump_get_tx_head(const struct mcp25xxfd_priv *priv, const st
 
 static u8 mcp25xxfd_dump_get_tx_tail(const struct mcp25xxfd_priv *priv, const struct mcp25xxfd_dump_regs *regs)
 {
-	return FIELD_GET(MCP25XXFD_CAN_FIFOSTA_FIFOCI_MASK, regs->fifo[MCP25XXFD_TX_FIFO].sta);
+	return FIELD_GET(MCP25XXFD_REG_FIFOSTA_FIFOCI_MASK, regs->fifo[MCP25XXFD_TX_FIFO].sta);
 }
 
 /* RX */
@@ -505,7 +505,7 @@ static u8 mcp25xxfd_dump_get_rx_tail(const struct mcp25xxfd_priv *priv, const st
 
 static u8 mcp25xxfd_dump_get_rx_head(const struct mcp25xxfd_priv *priv, const struct mcp25xxfd_dump_regs *regs)
 {
-	return FIELD_GET(MCP25XXFD_CAN_FIFOSTA_FIFOCI_MASK, regs->fifo[MCP25XXFD_RX_FIFO(0)].sta);
+	return FIELD_GET(MCP25XXFD_REG_FIFOSTA_FIFOCI_MASK, regs->fifo[MCP25XXFD_RX_FIFO(0)].sta);
 }
 
 /* dump TEF */
@@ -518,8 +518,8 @@ static void mcp25xxfd_dump_ram_tef_obj_one(const struct mcp25xxfd_priv *priv, co
 		mcp25xxfd_dump_get_tef_tail(priv, regs) == n ? "  chip-TAIL" : "",
 		mcp25xxfd_get_tef_tail(priv) == n ? "  priv-TAIL" : "",
 		(mcp25xxfd_dump_get_tef_tail(priv, regs) == n ?
-		 ((regs->tef.sta & MCP25XXFD_CAN_TEFSTA_TEFFIF) ? "  chip-FIFO-full" :
-		  !(regs->tef.sta & MCP25XXFD_CAN_TEFSTA_TEFNEIF) ? "  chip-FIFO-empty" : "") :
+		 ((regs->tef.sta & MCP25XXFD_REG_TEFSTA_TEFFIF) ? "  chip-FIFO-full" :
+		  !(regs->tef.sta & MCP25XXFD_REG_TEFSTA_TEFNEIF) ? "  chip-FIFO-empty" : "") :
 		 ("")),
 		(mcp25xxfd_get_tef_head(priv) == mcp25xxfd_get_tef_tail(priv) &&
 		 mcp25xxfd_get_tef_tail(priv) == n ?
@@ -563,8 +563,8 @@ static void mcp25xxfd_dump_ram_tx_obj_one(const struct mcp25xxfd_priv *priv, con
 		mcp25xxfd_dump_get_tx_tail(priv, regs) == n ? "  chip-TAIL" : "",
 		mcp25xxfd_get_tx_tail(ring) == n ? "  priv-TAIL" : "",
 		mcp25xxfd_dump_get_tx_tail(priv, regs) == n ?
-		(!(regs->tx_fifo.sta & MCP25XXFD_CAN_FIFOSTA_TFNRFNIF) ? "  chip-FIFO-full" :
-		 (regs->tx_fifo.sta & MCP25XXFD_CAN_FIFOSTA_TFERFFIF) ? "  chip-FIFO-empty" : "") :
+		(!(regs->tx_fifo.sta & MCP25XXFD_REG_FIFOSTA_TFNRFNIF) ? "  chip-FIFO-full" :
+		 (regs->tx_fifo.sta & MCP25XXFD_REG_FIFOSTA_TFERFFIF) ? "  chip-FIFO-empty" : "") :
 		(""),
 		(mcp25xxfd_get_tx_head(ring) == mcp25xxfd_get_tx_tail(ring) &&
 		 mcp25xxfd_get_tx_tail(ring) == n ?
@@ -609,8 +609,8 @@ static void mcp25xxfd_dump_ram_rx_obj_one(const struct mcp25xxfd_priv *priv, con
 		mcp25xxfd_dump_get_rx_tail(priv, regs) == n ? "  chip-TAIL" : "",
 		mcp25xxfd_get_rx_tail(ring) == n ? "  priv-TAIL" : "",
 		mcp25xxfd_dump_get_rx_tail(priv, regs) == n ?
-		((regs->rx_fifo.sta & MCP25XXFD_CAN_FIFOSTA_TFERFFIF) ? "  chip-FIFO-full" :
-		 !(regs->rx_fifo.sta & MCP25XXFD_CAN_FIFOSTA_TFNRFNIF) ? "  chip-FIFO-empty" : "") :
+		((regs->rx_fifo.sta & MCP25XXFD_REG_FIFOSTA_TFERFFIF) ? "  chip-FIFO-full" :
+		 !(regs->rx_fifo.sta & MCP25XXFD_REG_FIFOSTA_TFNRFNIF) ? "  chip-FIFO-empty" : "") :
 		(""),
 		(mcp25xxfd_get_rx_head(ring) == mcp25xxfd_get_rx_tail(ring) &&
 		 mcp25xxfd_get_rx_tail(ring) == n ?
@@ -663,9 +663,9 @@ void mcp25xxfd_dump(struct mcp25xxfd_priv *priv)
 	int err;
 
 	BUILD_BUG_ON(sizeof(struct mcp25xxfd_dump_regs) !=
-		     MCP25XXFD_CAN_FIFOUA(31) - MCP25XXFD_CAN_CON + 4);
+		     MCP25XXFD_REG_FIFOUA(31) - MCP25XXFD_REG_CON + 4);
 
-	err = regmap_bulk_read(priv->map, MCP25XXFD_CAN_CON,
+	err = regmap_bulk_read(priv->map, MCP25XXFD_REG_CON,
 			       regs, sizeof(*regs) / sizeof(u32));
 	if (err)
 		return;
@@ -675,7 +675,7 @@ void mcp25xxfd_dump(struct mcp25xxfd_priv *priv)
 	if (err)
 		return;
 
-	err = regmap_bulk_read(priv->map, MCP25XXFD_OSC,
+	err = regmap_bulk_read(priv->map, MCP25XXFD_REG_OSC,
 			       regs_mcp25xxfd, sizeof(*regs_mcp25xxfd) / sizeof(u32));
 	if (err)
 		return;

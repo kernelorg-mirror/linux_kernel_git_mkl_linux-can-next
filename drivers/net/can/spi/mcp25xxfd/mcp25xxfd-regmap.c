@@ -46,17 +46,17 @@ static int mcp25xxfd_regmap_gather_write(void *context,
 static inline bool mcp25xxfd_update_bits_read_reg(unsigned int reg)
 {
 	switch (reg) {
-	case MCP25XXFD_CAN_INT:
-	case MCP25XXFD_CAN_TEFCON:
-	case MCP25XXFD_CAN_FIFOCON(MCP25XXFD_RX_FIFO(0)):
-	case MCP25XXFD_CAN_FLTCON(0):
-	case MCP25XXFD_ECCSTAT:
-	case MCP25XXFD_CRC:
+	case MCP25XXFD_REG_INT:
+	case MCP25XXFD_REG_TEFCON:
+	case MCP25XXFD_REG_FIFOCON(MCP25XXFD_RX_FIFO(0)):
+	case MCP25XXFD_REG_FLTCON(0):
+	case MCP25XXFD_REG_ECCSTAT:
+	case MCP25XXFD_REG_CRC:
 		return false;
-	case MCP25XXFD_CAN_CON:
-	case MCP25XXFD_CAN_FIFOSTA(MCP25XXFD_RX_FIFO(0)):
-	case MCP25XXFD_OSC:
-	case MCP25XXFD_ECCCON:
+	case MCP25XXFD_REG_CON:
+	case MCP25XXFD_REG_FIFOSTA(MCP25XXFD_RX_FIFO(0)):
+	case MCP25XXFD_REG_OSC:
+	case MCP25XXFD_REG_ECCCON:
 		return true;
 	default:
 		WARN(1, "Status of reg 0x%04x unknown.\n", reg);
@@ -253,9 +253,9 @@ static int mcp25xxfd_regmap_crc_read(void *context,
 				   "CRC read error at address 0x%04x, length %d, retrying.\n",
 				   reg, val_len);
 			continue;
-		} if (err) {
-			return err;
 		}
+		if (err)
+			return err;
 
 		return 0;
 	}

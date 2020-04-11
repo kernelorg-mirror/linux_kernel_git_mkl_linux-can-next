@@ -424,6 +424,7 @@ static inline void __dump(const void *d, unsigned int len)
 #define MCP25XXFD_POLL_SLEEP_US (10 * USEC_PER_MSEC)
 #define MCP25XXFD_POLL_TIMEOUT_US (1 * USEC_PER_SEC)
 #define MCP25XXFD_SOFTRESET_RETRIES_MAX 3
+#define MCP25XXFD_READ_CRC_RETRIES_MAX 3
 #define MCP25XXFD_ECC_CNT_MAX 2
 
 /* Silence RX MAB underflow/TX MAB overflow warnings */

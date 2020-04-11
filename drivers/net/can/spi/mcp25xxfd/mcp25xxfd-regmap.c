@@ -212,13 +212,8 @@ mcp25xxfd_regmap_crc_read_one(struct mcp25xxfd_priv *priv,
 	crc_calculated = mcp25xxfd_crc16_compute2(&buf_tx->cmd,
 						  sizeof(buf_tx->cmd),
 						  buf_rx->data, val_len);
-	if (crc_received != crc_calculated) {
-		netdev_info(priv->ndev,
-			    "CRC read error at address 0x%04x, length %d.\n",
-			    reg, val_len);
-
+	if (crc_received != crc_calculated)
 		return -EBADMSG;
-	}
 
 	return 0;
 }
@@ -240,7 +235,7 @@ static int mcp25xxfd_regmap_crc_read(void *context,
 		},
 	};
 	u16 reg = *(u16 *)reg_p;
-	int err;
+	int i, err;
 
 	BUILD_BUG_ON(sizeof(buf_rx->cmd) != sizeof(__be16) + sizeof(u8));
 	BUILD_BUG_ON(sizeof(buf_tx->cmd) != sizeof(__be16) + sizeof(u8));
@@ -250,9 +245,28 @@ static int mcp25xxfd_regmap_crc_read(void *context,
 		return -EINVAL;
 
 	mcp25xxfd_spi_cmd_read_crc(&buf_tx->cmd, reg, val_len);
-	err = mcp25xxfd_regmap_crc_read_one(priv, xfer, buf_rx, reg, val_len);
-	if (err)
+
+	for (i = 0; i < MCP25XXFD_READ_CRC_RETRIES_MAX; i++) {
+		err = mcp25xxfd_regmap_crc_read_one(priv, xfer, reg, val_len);
+		if (err == -EBADMSG) {
+			netdev_dbg(priv->ndev,
+				   "CRC read error at address 0x%04x, length %d, retrying.\n",
+				   reg, val_len);
+			continue;
+		} if (err) {
+			return err;
+		}
+
+		return 0;
+	}
+
+	if (err) {
+		netdev_info(priv->ndev,
+			    "CRC read error at address 0x%04x, length %d.\n",
+			    reg, val_len);
+
 		return err;
+	}
 
 	memcpy(val_buf, buf_rx->data, val_len);
 

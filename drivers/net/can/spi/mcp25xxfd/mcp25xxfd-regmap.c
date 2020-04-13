@@ -252,7 +252,7 @@ static int mcp25xxfd_regmap_crc_read(void *context,
 
 		if (err == -EBADMSG) {
 			netdev_dbg(priv->ndev,
-				   "CRC read error at address 0x%04x, length %d, retrying.\n",
+				   "CRC read error at address 0x%04x, length %zd, retrying.\n",
 				   reg, val_len);
 			continue;
 		}
@@ -264,7 +264,7 @@ static int mcp25xxfd_regmap_crc_read(void *context,
 
 	if (err) {
 		netdev_info(priv->ndev,
-			    "CRC read error at address 0x%04x, length %d.\n",
+			    "CRC read error at address 0x%04x, length %zd.\n",
 			    reg, val_len);
 
 		return err;

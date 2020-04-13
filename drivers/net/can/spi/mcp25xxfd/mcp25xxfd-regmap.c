@@ -192,12 +192,11 @@ static int mcp25xxfd_regmap_crc_write(void *context,
 
 static int
 mcp25xxfd_regmap_crc_read_one(struct mcp25xxfd_priv *priv,
-			      struct spi_transfer *xfer,
-			      u16 reg,
-			      size_t val_len)
+			      struct spi_transfer *xfer)
 {
-	struct mcp25xxfd_map_buf_crc *buf_rx = priv->map_buf_crc_rx;
-	struct mcp25xxfd_map_buf_crc *buf_tx = priv->map_buf_crc_tx;
+	struct mcp25xxfd_map_buf_crc *buf_rx = xfer->rx_buf;
+	const struct mcp25xxfd_map_buf_crc *buf_tx = xfer->tx_buf;
+	unsigned data_len;
 	u16 crc_received, crc_calculated;
 	int err;
 
@@ -208,10 +207,12 @@ mcp25xxfd_regmap_crc_read_one(struct mcp25xxfd_priv *priv,
 	if (err)
 		return err;
 
-	crc_received = get_unaligned_be16(buf_rx->data + val_len);
+	data_len = xfer->len - sizeof(buf_tx->cmd) - sizeof(buf_tx->crc);
+	crc_received = get_unaligned_be16(buf_rx->data + data_len);
 	crc_calculated = mcp25xxfd_crc16_compute2(&buf_tx->cmd,
 						  sizeof(buf_tx->cmd),
-						  buf_rx->data, val_len);
+						  buf_rx->data,
+						  data_len);
 	if (crc_received != crc_calculated)
 		return -EBADMSG;
 
@@ -247,7 +248,8 @@ static int mcp25xxfd_regmap_crc_read(void *context,
 	mcp25xxfd_spi_cmd_read_crc(&buf_tx->cmd, reg, val_len);
 
 	for (i = 0; i < MCP25XXFD_READ_CRC_RETRIES_MAX; i++) {
-		err = mcp25xxfd_regmap_crc_read_one(priv, xfer, reg, val_len);
+		err = mcp25xxfd_regmap_crc_read_one(priv, xfer);
+
 		if (err == -EBADMSG) {
 			netdev_dbg(priv->ndev,
 				   "CRC read error at address 0x%04x, length %d, retrying.\n",

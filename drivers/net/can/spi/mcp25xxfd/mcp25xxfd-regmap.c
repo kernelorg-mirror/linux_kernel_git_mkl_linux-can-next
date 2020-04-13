@@ -34,7 +34,7 @@ static int mcp25xxfd_regmap_gather_write(void *context,
 	BUILD_BUG_ON(sizeof(buf_tx->cmd) != sizeof(__be16));
 
 	if (IS_ENABLED(CONFIG_CAN_MCP25XXFD_SANITY) &&
-	    reg_len != sizeof(buf_tx->cmd))
+	    reg_len != sizeof(buf_tx->cmd.cmd))
 		return -EINVAL;
 
 	memcpy(&buf_tx->cmd, reg, sizeof(buf_tx->cmd));
@@ -137,7 +137,7 @@ static int mcp25xxfd_regmap_read(void *context,
 	BUILD_BUG_ON(sizeof(buf_tx->cmd) != sizeof(__be16));
 
 	if (IS_ENABLED(CONFIG_CAN_MCP25XXFD_SANITY) &&
-	    reg_len != sizeof(buf_tx->cmd))
+	    reg_len != sizeof(buf_tx->cmd.cmd))
 		return -EINVAL;
 
 	memcpy(&buf_tx->cmd, reg, sizeof(buf_tx->cmd));

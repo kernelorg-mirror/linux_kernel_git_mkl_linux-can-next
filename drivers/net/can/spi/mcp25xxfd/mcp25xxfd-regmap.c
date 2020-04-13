@@ -257,7 +257,7 @@ static int mcp25xxfd_regmap_crc_read(void *context,
 		if (err)
 			return err;
 
-		return 0;
+		break;
 	}
 
 	if (err) {

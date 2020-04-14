@@ -2657,12 +2657,12 @@ static int mcp25xxfd_probe(struct spi_device *spi)
 	 * equal SYSCLOCK / 2.
 	 *
 	 * It turns out, that the Controller is not stable at this
-	 * rate. Known good an bad combinations are:
+	 * rate. Known good and bad combinations are:
 	 *
 	 * MCP	ext-clk	SoC		SPI	SPI-clk		Status
 	 *
-	 * 2518	10 MHz	allwinner H3	sun6i	9090909	Hz	good
-	 * 2518	10 MHz	allwinner H3	sun6i	9375000	Hz	bad
+	 * 2518	20 MHz	allwinner H3	sun6i	9090909	Hz	good
+	 * 2518	20 MHz	allwinner H3	sun6i	9375000	Hz	bad
 	 *
 	 * Limit SPI clock to 92.5% of SYSCLOCK / 2 for now.
 	 */

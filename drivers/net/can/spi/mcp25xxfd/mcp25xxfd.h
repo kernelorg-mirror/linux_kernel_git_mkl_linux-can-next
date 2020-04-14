@@ -673,7 +673,7 @@ struct mcp25xxfd_priv {
 	struct regulator *reg_vdd;
 	struct regulator *reg_xceiver;
 
-	const struct mcp25xxfd_devtype_data *devtype_data;
+	struct mcp25xxfd_devtype_data devtype_data;
 
 	struct mcp25xxfd_dump dump;
 	atomic_t cnt;
@@ -686,11 +686,12 @@ struct mcp25xxfd_priv {
 static inline bool \
 mcp25xxfd_is_##_model(const struct mcp25xxfd_priv *priv) \
 { \
-	return priv->devtype_data->model == MCP25XXFD_MODEL_MCP##_model##FD; \
+	return priv->devtype_data.model == MCP25XXFD_MODEL_MCP##_model##FD; \
 }
 
 MCP25XXFD_IS(2517);
 MCP25XXFD_IS(2518);
+MCP25XXFD_IS(25XX);
 
 static inline u8 mcp25xxfd_first_byte_set(u32 mask)
 {

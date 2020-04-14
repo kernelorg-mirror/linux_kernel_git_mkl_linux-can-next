@@ -254,7 +254,7 @@ mcp25xxfd_tx_ring_init_tx_obj(const struct mcp25xxfd_priv *priv,
 
 	/* FIFO load */
 	addr = mcp25xxfd_get_tx_obj_addr(ring, n);
-	if (priv->devtype_data->quirks & MCP25XXFD_QUIRK_TX_CRC)
+	if (priv->devtype_data.quirks & MCP25XXFD_QUIRK_TX_CRC)
 		mcp25xxfd_spi_cmd_write_crc_set_addr(&tx_obj->load.buf.crc.cmd,
 						     addr);
 	else
@@ -502,7 +502,7 @@ static int mcp25xxfd_chip_clock_enable(const struct mcp25xxfd_priv *priv)
 	} else if (mcp25xxfd_osc_invalid(osc)) {
 		netdev_err(priv->ndev,
 			   "Failed to detect MCP%xFD (osc=0x%08x).\n",
-			   priv->devtype_data->model, osc);
+			   priv->devtype_data.model, osc);
 		return -ENODEV;
 	}
 
@@ -846,7 +846,7 @@ static int mcp25xxfd_chip_ecc_init(struct mcp25xxfd_priv *priv)
 	ecc->ecc_stat = 0;
 	ecc->cnt = 0;
 
-	if (priv->devtype_data->quirks & MCP25XXFD_QUIRK_ECC)
+	if (priv->devtype_data.quirks & MCP25XXFD_QUIRK_ECC)
 		val = MCP25XXFD_REG_ECCCON_ECCEN;
 
 	err = regmap_update_bits(priv->map, MCP25XXFD_REG_ECCCON,
@@ -1724,7 +1724,7 @@ mcp25xxfd_handle_modif(const struct mcp25xxfd_priv *priv, bool *set_normal_mode)
 	 * first. When polling this bit we see that it will transition
 	 * to Restricted Operation Mode shortly after.
 	 */
-	if ((priv->devtype_data->quirks & MCP25XXFD_QUIRK_MAB_NO_WARN) &&
+	if ((priv->devtype_data.quirks & MCP25XXFD_QUIRK_MAB_NO_WARN) &&
 	    (mode == MCP25XXFD_REG_CON_MODE_RESTRICTED ||
 	     mode == MCP25XXFD_REG_CON_MODE_LISTENONLY))
 		netdev_dbg(priv->ndev,
@@ -1793,7 +1793,7 @@ static int mcp25xxfd_handle_serrif(struct mcp25xxfd_priv *priv)
 		else
 			msg = "TX MAB underflow detected.";
 
-		if (priv->devtype_data->quirks & MCP25XXFD_QUIRK_MAB_NO_WARN)
+		if (priv->devtype_data.quirks & MCP25XXFD_QUIRK_MAB_NO_WARN)
 			netdev_dbg(priv->ndev, "%s\n", msg);
 		else
 			netdev_info(priv->ndev, "%s\n", msg);
@@ -2182,7 +2182,7 @@ mcp25xxfd_tx_obj_from_skb(const struct mcp25xxfd_priv *priv,
 			flags |= MCP25XXFD_OBJ_FLAGS_BRS;
 	}
 
-	if (priv->devtype_data->quirks & MCP25XXFD_QUIRK_TX_CRC)
+	if (priv->devtype_data.quirks & MCP25XXFD_QUIRK_TX_CRC)
 		hw_tx_obj = &tx_obj->load.buf.crc.hw_tx_obj;
 	else
 		hw_tx_obj = &tx_obj->load.buf.nocrc.hw_tx_obj;
@@ -2202,7 +2202,7 @@ mcp25xxfd_tx_obj_from_skb(const struct mcp25xxfd_priv *priv,
 	len = sizeof(hw_tx_obj->id) + sizeof(hw_tx_obj->flags);
 	len += round_up(cfd->len, sizeof(u32));
 
-	if (priv->devtype_data->quirks & MCP25XXFD_QUIRK_TX_CRC) {
+	if (priv->devtype_data.quirks & MCP25XXFD_QUIRK_TX_CRC) {
 		u16 crc;
 
 		mcp25xxfd_spi_cmd_crc_set_len_in_ram(&tx_obj->load.buf.crc.cmd,
@@ -2401,13 +2401,13 @@ static int mcp25xxfd_register_chip_detect(struct mcp25xxfd_priv *priv)
 	else
 		devtype_data = &mcp25xxfd_devtype_data_mcp2517fd;
 
-	if (priv->devtype_data != &mcp25xxfd_devtype_data_mcp25xxfd &&
-	    priv->devtype_data != devtype_data) {
+	if (!mcp25xxfd_is_25XX(priv) &&
+	    priv->devtype_data.model != devtype_data->model) {
 		netdev_info(ndev,
 			    "Detected MCP%xFD, but firmware specifies a MCP%xFD. Fixing up.",
-			    devtype_data->model, priv->devtype_data->model);
+			    devtype_data->model, priv->devtype_data.model);
 	}
-	priv->devtype_data = devtype_data;
+	priv->devtype_data = *devtype_data;
 
 	return 0;
 }
@@ -2463,7 +2463,7 @@ mcp25xxfd_register_check_controller(const struct mcp25xxfd_priv *priv)
 }
 
 #define MCP25XXFD_QUIRK_ACTIVE(quirk) \
-	(priv->devtype_data->quirks & MCP25XXFD_QUIRK_##quirk ? '+' : '-')
+	(priv->devtype_data.quirks & MCP25XXFD_QUIRK_##quirk ? '+' : '-')
 
 static int
 mcp25xxfd_register_done(const struct mcp25xxfd_priv *priv)
@@ -2477,7 +2477,7 @@ mcp25xxfd_register_done(const struct mcp25xxfd_priv *priv)
 
 	netdev_info(priv->ndev,
 		    "MCP%xFD rev%lu.%lu (%cRX_INT %cMAB_NO_WARN %cRX_CRC %cTX_CRC %cECC) successfully initialized.\n",
-		    priv->devtype_data->model,
+		    priv->devtype_data.model,
 		    FIELD_GET(MCP25XXFD_REG_DEVID_ID_MASK, devid),
 		    FIELD_GET(MCP25XXFD_REG_DEVID_REV_MASK, devid),
 		    priv->rx_int ? '+' : '-',
@@ -2684,9 +2684,9 @@ static int mcp25xxfd_probe(struct spi_device *spi)
 
 	match = device_get_match_data(&spi->dev);
 	if (match)
-		priv->devtype_data = match;
+		priv->devtype_data = *(struct mcp25xxfd_devtype_data *)match;
 	else
-		priv->devtype_data = (struct mcp25xxfd_devtype_data *)
+		priv->devtype_data = *(struct mcp25xxfd_devtype_data *)
 			spi_get_device_id(spi)->driver_data;
 
 	/* According to the datasheet the SPI clock must be less or

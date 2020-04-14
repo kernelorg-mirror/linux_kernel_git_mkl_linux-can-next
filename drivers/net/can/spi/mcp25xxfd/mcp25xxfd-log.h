@@ -166,7 +166,7 @@ static inline struct mcp25xxfd_log *__mcp25xxfd_log_hw_rx_head(struct mcp25xxfd_
 
 #define mcp25xxfd_log_hw_rx_head(priv, ...) __mcp25xxfd_log_hw_rx_head(priv, __func__, ## __VA_ARGS__)
 
-ssstatic inline struct mcp25xxfd_log *__mcp25xxfd_log_hw_rx_tail(struct mcp25xxfd_priv *priv, const char *func, u32 rx_tail)
+static inline struct mcp25xxfd_log *__mcp25xxfd_log_hw_rx_tail(struct mcp25xxfd_priv *priv, const char *func, u32 rx_tail)
 {
 	struct mcp25xxfd_log *log;
 

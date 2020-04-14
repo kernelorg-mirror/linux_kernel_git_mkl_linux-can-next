@@ -676,7 +676,7 @@ struct mcp25xxfd_priv {
 	struct mcp25xxfd_dump dump;
 	atomic_t cnt;
 #ifdef CONFIG_CAN_MCP25XXFD_LOG
-	struct mcp25xxfd_log log[64];
+	struct mcp25xxfd_log log[256];
 #endif
 };
 

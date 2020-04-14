@@ -26,6 +26,8 @@ struct mcp25xxfd_log {
 #define MCP25XXFD_LOG_STOP BIT(0)
 #define MCP25XXFD_LOG_WAKE BIT(1)
 #define MCP25XXFD_LOG_BUSY BIT(2)
+#define MCP25XXFD_LOG_TXMAB BIT(3)
+#define MCP25XXFD_LOG_RXMAB BIT(4)
 	u32 flags;
 
 	u32 hw_tef_tail;
@@ -104,6 +106,30 @@ static inline struct mcp25xxfd_log *__mcp25xxfd_log_busy(struct mcp25xxfd_priv *
 
 #define mcp25xxfd_log_busy(priv, ...) __mcp25xxfd_log_busy(priv, __func__, ## __VA_ARGS__)
 
+static inline struct mcp25xxfd_log *__mcp25xxfd_log_txmab(struct mcp25xxfd_priv *priv, const char *func)
+{
+	struct mcp25xxfd_log *log;
+
+	log = __mcp25xxfd_log_no_canid(priv, func);
+	log->flags |= MCP25XXFD_LOG_TXMAB;
+
+	return log;
+}
+
+#define mcp25xxfd_log_txmab(priv, ...) __mcp25xxfd_log_txmab(priv, __func__, ## __VA_ARGS__)
+
+static inline struct mcp25xxfd_log *__mcp25xxfd_log_rxmab(struct mcp25xxfd_priv *priv, const char *func)
+{
+	struct mcp25xxfd_log *log;
+
+	log = __mcp25xxfd_log_no_canid(priv, func);
+	log->flags |= MCP25XXFD_LOG_RXMAB;
+
+	return log;
+}
+
+#define mcp25xxfd_log_rxmab(priv, ...) __mcp25xxfd_log_rxmab(priv, __func__, ## __VA_ARGS__)
+
 static inline struct mcp25xxfd_log *__mcp25xxfd_log_hw_tx_ci(struct mcp25xxfd_priv *priv, const char *func, u32 tx_ci)
 {
 	struct mcp25xxfd_log *log;
@@ -115,18 +141,6 @@ static inline struct mcp25xxfd_log *__mcp25xxfd_log_hw_tx_ci(struct mcp25xxfd_pr
 }
 
 #define mcp25xxfd_log_hw_tx_ci(priv, ...) __mcp25xxfd_log_hw_tx_ci(priv, __func__, ## __VA_ARGS__)
-
-static inline struct mcp25xxfd_log *__mcp25xxfd_log_hw_rx_head(struct mcp25xxfd_priv *priv, const char *func, u32 rx_head)
-{
-	struct mcp25xxfd_log *log;
-
-	log = __mcp25xxfd_log_no_canid(priv, func);
-	log->hw_rx_head = rx_head;
-
-	return log;
-}
-
-#define mcp25xxfd_log_hw_rx_head(priv, ...) __mcp25xxfd_log_hw_rx_head(priv, __func__, ## __VA_ARGS__)
 
 static inline struct mcp25xxfd_log *__mcp25xxfd_log_hw_tef_tail(struct mcp25xxfd_priv *priv, const char *func, u32 tef_tail)
 {
@@ -140,7 +154,19 @@ static inline struct mcp25xxfd_log *__mcp25xxfd_log_hw_tef_tail(struct mcp25xxfd
 
 #define mcp25xxfd_log_hw_tef_tail(priv, ...) __mcp25xxfd_log_hw_tef_tail(priv, __func__, ## __VA_ARGS__)
 
-static inline struct mcp25xxfd_log *__mcp25xxfd_log_hw_rx_tail(struct mcp25xxfd_priv *priv, const char *func, u32 rx_tail)
+static inline struct mcp25xxfd_log *__mcp25xxfd_log_hw_rx_head(struct mcp25xxfd_priv *priv, const char *func, u32 rx_head)
+{
+	struct mcp25xxfd_log *log;
+
+	log = __mcp25xxfd_log_no_canid(priv, func);
+	log->hw_rx_head = rx_head;
+
+	return log;
+}
+
+#define mcp25xxfd_log_hw_rx_head(priv, ...) __mcp25xxfd_log_hw_rx_head(priv, __func__, ## __VA_ARGS__)
+
+ssstatic inline struct mcp25xxfd_log *__mcp25xxfd_log_hw_rx_tail(struct mcp25xxfd_priv *priv, const char *func, u32 rx_tail)
 {
 	struct mcp25xxfd_log *log;
 
@@ -196,12 +222,37 @@ static inline struct mcp25xxfd_log *mcp25xxfd_log_busy(struct mcp25xxfd_priv *pr
 	return NULL;
 }
 
+static inline struct mcp25xxfd_log *mcp25xxfd_log_txmab(struct mcp25xxfd_priv *priv)
+{
+	return NULL;
+}
+
+static inline struct mcp25xxfd_log *mcp25xxfd_log_rxmab(struct mcp25xxfd_priv *priv)
+{
+	return NULL;
+}
+
 static inline struct mcp25xxfd_log *mcp25xxfd_log_hw_tx_ci(struct mcp25xxfd_priv *priv, u32 tx_ci)
 {
 	return NULL;
 }
 
+static inline struct mcp25xxfd_log *mcp25xxfd_log_hw_rx_head(struct mcp25xxfd_priv *priv, u32 rx_head)
+{
+	return NULL;
+}
+
 static inline struct mcp25xxfd_log *mcp25xxfd_log_hw_tef_tail(struct mcp25xxfd_priv *priv, u32 tef_tail)
+{
+	return NULL;
+}
+
+static inline struct mcp25xxfd_log *mcp25xxfd_log_hw_rx_tail(struct mcp25xxfd_priv *priv, u32 rx_tail)
+{
+	return NULL;
+}
+
+static inline struct mcp25xxfd_log *mcp25xxfd_log_rx_obj_read(struct mcp25xxfd_priv *priv, u8 offset, u8 len)
 {
 	return NULL;
 }

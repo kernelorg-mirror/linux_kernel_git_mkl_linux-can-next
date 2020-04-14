@@ -51,7 +51,7 @@ static void mcp25xxfd_log_dump_one(const struct mcp25xxfd_priv *priv, const stru
 	if (last_log->rx_head != log->rx_head)
 		pr_cont("rx_h=%08x/%02x ", log->rx_head, log->rx_head & (priv->rx[0]->obj_num - 1));
 	else
-		pr_cont("   ---         ");
+		pr_cont("   ---           ");
 
 	if (log->hw_rx_head != -1 &&
 	    last_log->hw_rx_head != log->hw_rx_head)
@@ -119,10 +119,12 @@ static void mcp25xxfd_log_dump_one(const struct mcp25xxfd_priv *priv, const stru
 	else
 		pr_cont("   ---           ");
 
-	pr_cont("%s%s%s\n",
+	pr_cont("%s%s%s%s%s\n",
 		log->flags & MCP25XXFD_LOG_STOP ? "s" : " ",
 		log->flags & MCP25XXFD_LOG_WAKE ? "w" : " ",
-		log->flags & MCP25XXFD_LOG_BUSY ? "b" : " ");
+		log->flags & MCP25XXFD_LOG_BUSY ? "b" : " ",
+		log->flags & MCP25XXFD_LOG_TXMAB ? "T" : " ",
+		log->flags & MCP25XXFD_LOG_RXMAB ? "R" : " ");
 }
 
 void mcp25xxfd_log_dump(const struct mcp25xxfd_priv *priv)

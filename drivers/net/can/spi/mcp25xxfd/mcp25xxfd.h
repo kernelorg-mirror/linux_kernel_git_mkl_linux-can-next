@@ -427,7 +427,7 @@ static inline void __dump(const void *d, unsigned int len)
 #define MCP25XXFD_READ_CRC_RETRIES_MAX 3
 #define MCP25XXFD_ECC_CNT_MAX 2
 
-/* Silence RX MAB underflow/TX MAB overflow warnings */
+/* Silence TX MAB overflow warnings */
 #define MCP25XXFD_QUIRK_MAB_NO_WARN BIT(0)
 /* Use CRC in RX-PATH */
 #define MCP25XXFD_QUIRK_RX_CRC BIT(1)

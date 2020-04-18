@@ -1135,9 +1135,10 @@ mcp25xxfd_handle_tefif_recover(const struct mcp25xxfd_priv *priv, const u32 seq)
 	}
 
 	netdev_info(priv->ndev,
-		    "Transmit Event FIFO buffer %s (seq=0x%08x, tef_tail=0x%08x, tef_head=0x%08x, tx_head=0x%08x)\n",
-		    tef_sta & MCP25XXFD_REG_TEFSTA_TEFNEIF ?
-		    "empty." : "not empty anymore?",
+		    "Transmit Event FIFO buffer %s. (seq=0x%08x, tef_tail=0x%08x, tef_head=0x%08x, tx_head=0x%08x)\n",
+		    tef_sta & MCP25XXFD_REG_TEFSTA_TEFFIF ?
+		    "full" : tef_sta & MCP25XXFD_REG_TEFSTA_TEFNEIF ?
+		    "not empty" : "empty",
 		    seq, priv->tef.tail, priv->tef.head, tx_ring->head);
 
 	return -EAGAIN;

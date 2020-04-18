@@ -2502,7 +2502,8 @@ static int mcp25xxfd_register(struct mcp25xxfd_priv *priv)
 	pm_runtime_enable(ndev->dev.parent);
 
 	/* Wait for oscillator startup timer after power up */
-	usleep_range(MCP25XXFD_OSC_DELAY_US, 2 * MCP25XXFD_OSC_DELAY_US);
+	usleep_range(MCP25XXFD_OSC_STAB_SLEEP_US,
+		     2 * MCP25XXFD_OSC_STAB_SLEEP_US);
 
 	err = mcp25xxfd_chip_softreset(priv);
 	if (err)

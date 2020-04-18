@@ -459,6 +459,11 @@ mcp25xxfd_chip_set_mode_nowait(const struct mcp25xxfd_priv *priv,
 	return __mcp25xxfd_chip_set_mode(priv, mode_req, true);
 }
 
+static inline bool mcp25xxfd_osc_invalid(u32 reg)
+{
+	return reg == 0x0 || reg == 0xffffffff;
+}
+
 static int mcp25xxfd_chip_clock_enable(const struct mcp25xxfd_priv *priv)
 {
 	u32 osc, osc_reference, osc_mask;
@@ -485,14 +490,23 @@ static int mcp25xxfd_chip_clock_enable(const struct mcp25xxfd_priv *priv)
 	/* Wait for "Oscillator Ready" bit */
 	err = regmap_read_poll_timeout(priv->map, MCP25XXFD_REG_OSC, osc,
 				       (osc & osc_mask) == osc_reference,
-				       MCP25XXFD_POLL_SLEEP_US,
-				       MCP25XXFD_POLL_TIMEOUT_US);
-	if (err == -ETIMEDOUT)
+				       MCP25XXFD_OSC_STAB_SLEEP_US,
+				       MCP25XXFD_OSC_STAB_TIMEOUT_US);
+	if (err == -ETIMEDOUT) {
 		netdev_err(priv->ndev,
 			   "Timeout waiting for Oscillator Ready (osc=0x%08x, osc_reference=0x%08x)\n",
 			   osc, osc_reference);
+		return -ETIMEDOUT;
+	} else if (err) {
+		return err;
+	} else if (mcp25xxfd_osc_invalid(osc)) {
+		netdev_err(priv->ndev,
+			   "Failed to detect MCP%xFD (osc=0x%08x).\n",
+			   priv->devtype_data->model, osc);
+		return -ENODEV;
+	}
 
-	return err;
+	return 0;
 }
 
 static int mcp25xxfd_chip_softreset_do(const struct mcp25xxfd_priv *priv)

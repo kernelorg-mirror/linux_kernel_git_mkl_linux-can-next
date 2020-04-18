@@ -2458,7 +2458,7 @@ mcp25xxfd_register_check_controller(const struct mcp25xxfd_priv *priv)
 		return;
 
 	netdev_info(priv->ndev,
-		    "SPI thread not scheduled with RT priority, expect poor performance. Reconfigure with: 'chrt -f -p 1 %u'",
+		    "SPI thread not scheduled with RT priority, expect degraded performance. Reconfigure with: 'chrt -f -p 1 %u'",
 		    ctlr->kworker_task->pid);
 }
 

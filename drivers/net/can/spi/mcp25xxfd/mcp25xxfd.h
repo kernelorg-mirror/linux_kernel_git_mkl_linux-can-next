@@ -656,6 +656,7 @@ struct mcp25xxfd_priv {
 
 	struct regmap *map_rx;
 	struct spi_device *spi;
+	u32 spi_max_speed_hz_orig;
 
 	struct mcp25xxfd_tef_ring tef;
 	struct mcp25xxfd_tx_ring tx[1];

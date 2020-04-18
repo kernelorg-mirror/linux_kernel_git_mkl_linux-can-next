@@ -2704,6 +2704,7 @@ static int mcp25xxfd_probe(struct spi_device *spi)
 	 *
 	 * Limit SPI clock to 92.5% of SYSCLOCK / 2 for now.
 	 */
+	priv->spi_max_speed_hz_orig = spi->max_speed_hz;
 	spi->max_speed_hz = min(spi->max_speed_hz, freq / 2 / 1000 * 925);
 	spi->bits_per_word = 8;
 	err = spi_setup(spi);
@@ -2738,6 +2739,7 @@ static int mcp25xxfd_remove(struct spi_device *spi)
 
 	can_rx_offload_del(&priv->offload);
 	mcp25xxfd_unregister(priv);
+	spi->max_speed_hz = priv->spi_max_speed_hz_orig;
 	free_candev(ndev);
 
 	return 0;

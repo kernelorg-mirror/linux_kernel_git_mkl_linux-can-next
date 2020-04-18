@@ -1408,32 +1408,28 @@ mcp25xxfd_handle_rxif_ring(struct mcp25xxfd_priv *priv,
 			   struct mcp25xxfd_rx_ring *ring)
 {
 	struct mcp25xxfd_hw_rx_obj_canfd *hw_rx_obj = ring->obj;
-	u8 rx_tail, len, l;
+	u8 rx_tail, len;
 	int err, i;
 
 	err = mcp25xxfd_rx_ring_update(priv, ring);
 	if (err)
 		return err;
 
-	rx_tail = mcp25xxfd_get_rx_tail(ring);
-	len = mcp25xxfd_get_rx_len(ring);
-	l = mcp25xxfd_get_rx_linear_len(ring);
-	err = mcp25xxfd_rx_obj_read(priv, ring, hw_rx_obj, rx_tail, l);
-	if (err)
-		return err;
+	while ((len = mcp25xxfd_get_rx_linear_len(ring))) {
+		rx_tail = mcp25xxfd_get_rx_tail(ring);
 
-	if (l < len) {
-		err = mcp25xxfd_rx_obj_read(priv, ring, (void *)hw_rx_obj +
-					    l * ring->obj_size, 0, len - l);
+		err = mcp25xxfd_rx_obj_read(priv, ring, hw_rx_obj,
+					    rx_tail, len);
 		if (err)
 			return err;
-	}
 
-	for (i = 0; i < len; i++) {
-		err = mcp25xxfd_handle_rxif_one(priv, ring, (void *)hw_rx_obj +
-						i * ring->obj_size);
-		if (err)
-			return err;
+		for (i = 0; i < len; i++) {
+			err = mcp25xxfd_handle_rxif_one(priv, ring,
+							(void *)hw_rx_obj +
+							i * ring->obj_size);
+			if (err)
+				return err;
+		}
 	}
 
 	return 0;

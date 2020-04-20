@@ -2110,7 +2110,8 @@ static irqreturn_t mcp25xxfd_irq(int irq, void *dev_id)
 	} while (1);
 
  out_fail:
-	netdev_err(priv->ndev, "IRQ handler returned %d.\n", err);
+	netdev_err(priv->ndev, "IRQ handler returned %d (intf=0x%08x).\n",
+		   err, priv->regs_status.intf);
 	mcp25xxfd_dump(priv);
 	mcp25xxfd_log_dump(priv);
 	mcp25xxfd_chip_interrupts_disable(priv);

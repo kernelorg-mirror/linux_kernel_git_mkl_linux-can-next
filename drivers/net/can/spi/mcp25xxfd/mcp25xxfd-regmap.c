@@ -96,6 +96,9 @@ static int mcp25xxfd_regmap_update_bits(void *context, unsigned int reg,
 			},
 		};
 
+		if (IS_ENABLED(CONFIG_CAN_MCP25XXFD_SANITY))
+			memset(buf_tx->data, 0x0, len);
+
 		mcp25xxfd_spi_cmd_read(&buf_tx->cmd, reg + first_byte);
 		err = spi_sync_transfer(spi, xfer, ARRAY_SIZE(xfer));
 		if (err)
@@ -141,6 +144,8 @@ static int mcp25xxfd_regmap_read(void *context,
 		return -EINVAL;
 
 	memcpy(&buf_tx->cmd, reg, sizeof(buf_tx->cmd));
+	if (IS_ENABLED(CONFIG_CAN_MCP25XXFD_SANITY))
+		memset(buf_tx->data, 0x0, val_len);
 
 	err = spi_sync_transfer(spi, xfer, ARRAY_SIZE(xfer));
 	if (err)
@@ -246,6 +251,8 @@ static int mcp25xxfd_regmap_crc_read(void *context,
 		return -EINVAL;
 
 	mcp25xxfd_spi_cmd_read_crc(&buf_tx->cmd, reg, val_len);
+	if (IS_ENABLED(CONFIG_CAN_MCP25XXFD_SANITY))
+		memset(buf_tx->data, 0x0, val_len + sizeof(buf_tx->crc));
 
 	for (i = 0; i < MCP25XXFD_READ_CRC_RETRIES_MAX; i++) {
 		err = mcp25xxfd_regmap_crc_read_one(priv, xfer);

@@ -2376,6 +2376,16 @@ static const struct net_device_ops mcp25xxfd_netdev_ops = {
 	.ndo_change_mtu = can_change_mtu,
 };
 
+static void
+mcp25xxfd_register_quirks(struct mcp25xxfd_priv *priv)
+{
+	const struct spi_device *spi = priv->spi;
+	const struct spi_controller *ctlr = spi->controller;
+
+	if (ctlr->flags & SPI_CONTROLLER_HALF_DUPLEX)
+		priv->devtype_data.quirks |= MCP25XXFD_QUIRK_HALF_DUPLEX;
+}
+
 static int mcp25xxfd_register_chip_detect(struct mcp25xxfd_priv *priv)
 {
 	const struct net_device *ndev = priv->ndev;
@@ -2408,6 +2418,9 @@ static int mcp25xxfd_register_chip_detect(struct mcp25xxfd_priv *priv)
 			    devtype_data->model, priv->devtype_data.model);
 	}
 	priv->devtype_data = *devtype_data;
+
+	/* We need to preserve the Half Duplex Quirk. */
+	mcp25xxfd_register_quirks(priv);
 
 	return 0;
 }
@@ -2476,7 +2489,7 @@ mcp25xxfd_register_done(const struct mcp25xxfd_priv *priv)
 		return err;
 
 	netdev_info(priv->ndev,
-		    "MCP%xFD rev%lu.%lu (%cRX_INT %cMAB_NO_WARN %cRX_CRC %cTX_CRC %cECC) successfully initialized.\n",
+		    "MCP%xFD rev%lu.%lu (%cRX_INT %cMAB_NO_WARN %cRX_CRC %cTX_CRC %cECC %cHD) successfully initialized.\n",
 		    priv->devtype_data.model,
 		    FIELD_GET(MCP25XXFD_REG_DEVID_ID_MASK, devid),
 		    FIELD_GET(MCP25XXFD_REG_DEVID_REV_MASK, devid),
@@ -2484,7 +2497,8 @@ mcp25xxfd_register_done(const struct mcp25xxfd_priv *priv)
 		    MCP25XXFD_QUIRK_ACTIVE(MAB_NO_WARN),
 		    MCP25XXFD_QUIRK_ACTIVE(RX_CRC),
 		    MCP25XXFD_QUIRK_ACTIVE(TX_CRC),
-		    MCP25XXFD_QUIRK_ACTIVE(ECC));
+		    MCP25XXFD_QUIRK_ACTIVE(ECC),
+		    MCP25XXFD_QUIRK_ACTIVE(HALF_DUPLEX));
 
 	return 0;
 }
@@ -2503,6 +2517,8 @@ static int mcp25xxfd_register(struct mcp25xxfd_priv *priv)
 	if (err)
 		goto out_runtime_put_noidle;
 	pm_runtime_enable(ndev->dev.parent);
+
+	mcp25xxfd_register_quirks(priv);
 
 	/* Wait for oscillator startup timer after power up */
 	usleep_range(MCP25XXFD_OSC_STAB_SLEEP_US,

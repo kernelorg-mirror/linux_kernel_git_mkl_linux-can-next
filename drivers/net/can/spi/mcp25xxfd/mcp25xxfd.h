@@ -436,6 +436,8 @@ static inline void __dump(const void *d, unsigned int len)
 #define MCP25XXFD_QUIRK_TX_CRC BIT(2)
 /* Enable ECC for RAM */
 #define MCP25XXFD_QUIRK_ECC BIT(3)
+/* Use Half Duplex SPI transfers */
+#define MCP25XXFD_QUIRK_HALF_DUPLEX BIT(4)
 
 struct mcp25xxfd_dump_regs_fifo {
 	u32 con;

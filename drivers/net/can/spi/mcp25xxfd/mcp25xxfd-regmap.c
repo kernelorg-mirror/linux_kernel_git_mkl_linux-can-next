@@ -88,19 +88,30 @@ static int mcp25xxfd_regmap_update_bits(void *context, unsigned int reg,
 	len = last_byte - first_byte + 1;
 
 	if (mcp25xxfd_update_bits_read_reg(reg)) {
-		struct spi_transfer xfer[] = {
-			{
-				.tx_buf = buf_tx,
-				.rx_buf = buf_rx,
-				.len = sizeof(buf_tx->cmd) + len,
-			},
-		};
+		struct spi_transfer xfer[2] = { };
+		struct spi_message msg;
 
-		if (IS_ENABLED(CONFIG_CAN_MCP25XXFD_SANITY))
-			memset(buf_tx->data, 0x0, len);
+		spi_message_init(&msg);
+		spi_message_add_tail(&xfer[0], &msg);
+
+		if (priv->devtype_data.quirks & MCP25XXFD_QUIRK_HALF_DUPLEX) {
+			xfer[0].tx_buf = buf_tx;
+			xfer[0].len = sizeof(buf_tx->cmd);
+
+			xfer[1].rx_buf = buf_rx->data;
+			xfer[1].len = len;
+			spi_message_add_tail(&xfer[1], &msg);
+		} else {
+			xfer[0].tx_buf = buf_tx;
+			xfer[0].rx_buf = buf_rx;
+			xfer[0].len = sizeof(buf_tx->cmd) + len;
+
+			if (IS_ENABLED(CONFIG_CAN_MCP25XXFD_SANITY))
+				memset(buf_tx->data, 0x0, len);
+		}
 
 		mcp25xxfd_spi_cmd_read(&buf_tx->cmd, reg + first_byte);
-		err = spi_sync_transfer(spi, xfer, ARRAY_SIZE(xfer));
+		err = spi_sync(spi, &msg);
 		if (err)
 			return err;
 
@@ -127,13 +138,8 @@ static int mcp25xxfd_regmap_read(void *context,
 	struct mcp25xxfd_priv *priv = spi_get_drvdata(spi);
 	struct mcp25xxfd_map_buf *buf_rx = priv->map_buf_rx;
 	struct mcp25xxfd_map_buf *buf_tx = priv->map_buf_tx;
-	struct spi_transfer xfer[] = {
-		{
-			.tx_buf = buf_tx,
-			.rx_buf = buf_rx,
-			.len = sizeof(buf_tx->cmd) + val_len,
-		},
-	};
+	struct spi_transfer xfer[2] = { };
+	struct spi_message msg;
 	int err;
 
 	BUILD_BUG_ON(sizeof(buf_rx->cmd) != sizeof(__be16));
@@ -143,15 +149,32 @@ static int mcp25xxfd_regmap_read(void *context,
 	    reg_len != sizeof(buf_tx->cmd.cmd))
 		return -EINVAL;
 
-	memcpy(&buf_tx->cmd, reg, sizeof(buf_tx->cmd));
-	if (IS_ENABLED(CONFIG_CAN_MCP25XXFD_SANITY))
-		memset(buf_tx->data, 0x0, val_len);
+	spi_message_init(&msg);
+	spi_message_add_tail(&xfer[0], &msg);
 
-	err = spi_sync_transfer(spi, xfer, ARRAY_SIZE(xfer));
+	if (priv->devtype_data.quirks & MCP25XXFD_QUIRK_HALF_DUPLEX) {
+		xfer[0].tx_buf = reg;
+		xfer[0].len = sizeof(buf_tx->cmd);
+
+		xfer[1].rx_buf = val_buf;
+		xfer[1].len = val_len;
+		spi_message_add_tail(&xfer[1], &msg);
+	} else {
+		xfer[0].tx_buf = buf_tx;
+		xfer[0].rx_buf = buf_rx;
+		xfer[0].len = sizeof(buf_tx->cmd) + val_len;
+
+		memcpy(&buf_tx->cmd, reg, sizeof(buf_tx->cmd));
+		if (IS_ENABLED(CONFIG_CAN_MCP25XXFD_SANITY))
+			memset(buf_tx->data, 0x0, val_len);
+	};
+
+	err = spi_sync(spi, &msg);
 	if (err)
 		return err;
 
-	memcpy(val_buf, buf_rx->data, val_len);
+	if (!(priv->devtype_data.quirks & MCP25XXFD_QUIRK_HALF_DUPLEX))
+		memcpy(val_buf, buf_rx->data, val_len);
 
 	return 0;
 }
@@ -197,22 +220,20 @@ static int mcp25xxfd_regmap_crc_write(void *context,
 
 static int
 mcp25xxfd_regmap_crc_read_one(struct mcp25xxfd_priv *priv,
-			      struct spi_transfer *xfer)
+			      struct spi_message *msg, unsigned data_len)
 {
-	struct mcp25xxfd_map_buf_crc *buf_rx = xfer->rx_buf;
-	const struct mcp25xxfd_map_buf_crc *buf_tx = xfer->tx_buf;
-	unsigned data_len;
+	const struct mcp25xxfd_map_buf_crc *buf_rx = priv->map_buf_crc_rx;
+	const struct mcp25xxfd_map_buf_crc *buf_tx = priv->map_buf_crc_tx;
 	u16 crc_received, crc_calculated;
 	int err;
 
 	BUILD_BUG_ON(sizeof(buf_rx->cmd) != sizeof(__be16) + sizeof(u8));
 	BUILD_BUG_ON(sizeof(buf_tx->cmd) != sizeof(__be16) + sizeof(u8));
 
-	err = spi_sync_transfer(priv->spi, xfer, 1);
+	err = spi_sync(priv->spi, msg);
 	if (err)
 		return err;
 
-	data_len = xfer->len - sizeof(buf_tx->cmd) - sizeof(buf_tx->crc);
 	crc_received = get_unaligned_be16(buf_rx->data + data_len);
 	crc_calculated = mcp25xxfd_crc16_compute2(&buf_tx->cmd,
 						  sizeof(buf_tx->cmd),
@@ -232,14 +253,8 @@ static int mcp25xxfd_regmap_crc_read(void *context,
 	struct mcp25xxfd_priv *priv = spi_get_drvdata(spi);
 	struct mcp25xxfd_map_buf_crc *buf_rx = priv->map_buf_crc_rx;
 	struct mcp25xxfd_map_buf_crc *buf_tx = priv->map_buf_crc_tx;
-	struct spi_transfer xfer[] = {
-		{
-			.tx_buf = buf_tx,
-			.rx_buf = buf_rx,
-			.len = sizeof(buf_tx->cmd) + val_len +
-				sizeof(buf_tx->crc),
-		},
-	};
+	struct spi_transfer xfer[2] = { };
+	struct spi_message msg;
 	u16 reg = *(u16 *)reg_p;
 	int i, err;
 
@@ -250,21 +265,38 @@ static int mcp25xxfd_regmap_crc_read(void *context,
 	    reg_len != sizeof(buf_tx->cmd.cmd) + 2)
 		return -EINVAL;
 
+	spi_message_init(&msg);
+	spi_message_add_tail(&xfer[0], &msg);
+
+	if (priv->devtype_data.quirks & MCP25XXFD_QUIRK_HALF_DUPLEX) {
+		xfer[0].tx_buf = buf_tx;
+		xfer[0].len = sizeof(buf_tx->cmd);
+
+		xfer[1].rx_buf = buf_rx->data;
+		xfer[1].len = val_len + sizeof(buf_tx->crc);
+		spi_message_add_tail(&xfer[1], &msg);
+	} else {
+		xfer[0].tx_buf = buf_tx;
+		xfer[0].rx_buf = buf_rx;
+		xfer[0].len = sizeof(buf_tx->cmd) + val_len +
+			sizeof(buf_tx->crc);
+
+		if (IS_ENABLED(CONFIG_CAN_MCP25XXFD_SANITY))
+			memset(buf_tx->data, 0x0, val_len + sizeof(buf_tx->crc));
+	}
+
 	mcp25xxfd_spi_cmd_read_crc(&buf_tx->cmd, reg, val_len);
-	if (IS_ENABLED(CONFIG_CAN_MCP25XXFD_SANITY))
-		memset(buf_tx->data, 0x0, val_len + sizeof(buf_tx->crc));
 
 	for (i = 0; i < MCP25XXFD_READ_CRC_RETRIES_MAX; i++) {
-		err = mcp25xxfd_regmap_crc_read_one(priv, xfer);
-
+		err = mcp25xxfd_regmap_crc_read_one(priv, &msg, val_len);
 		if (err == -EBADMSG) {
 			netdev_dbg(priv->ndev,
 				   "CRC read error at address 0x%04x, length %zd, retrying.\n",
 				   reg, val_len);
 			continue;
-		}
-		if (err)
+		} else if (err) {
 			return err;
+		}
 
 		break;
 	}

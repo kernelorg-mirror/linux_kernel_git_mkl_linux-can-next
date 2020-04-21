@@ -964,7 +964,8 @@ static int mcp25xxfd_chip_stop(struct mcp25xxfd_priv *priv,
 	return mcp25xxfd_chip_set_mode(priv, MCP25XXFD_REG_CON_MODE_SLEEP);
 }
 
-static int mcp25xxfd_chip_start(struct mcp25xxfd_priv *priv)
+static int
+__mcp25xxfd_chip_start(struct mcp25xxfd_priv *priv, bool interrupts_enable)
 {
 	int err;
 
@@ -990,21 +991,13 @@ static int mcp25xxfd_chip_start(struct mcp25xxfd_priv *priv)
 	if (err)
 		goto out_chip_stop;
 
-	/* Note:
-	 *
-	 * First enable the interrupts, then bring the chip into
-	 * Normal Mode. Otherwise on a MCP2517FD a burst of CAN
-	 * messages on the bus may result in overwritten RX FIFO
-	 * contents and ECC errors.
-	 *
-	 * The current theory is that the SPI read access disturbes
-	 * the RX process in the chip.
-	 */
 	priv->can.state = CAN_STATE_ERROR_ACTIVE;
 
-	err = mcp25xxfd_chip_interrupts_enable(priv);
-	if (err)
-		goto out_chip_stop;
+	if (interrupts_enable) {
+		err = mcp25xxfd_chip_interrupts_enable(priv);
+		if (err)
+			goto out_chip_stop;
+	}
 
 	err = mcp25xxfd_chip_set_normal_mode(priv);
 	if (err)
@@ -1018,6 +1011,18 @@ static int mcp25xxfd_chip_start(struct mcp25xxfd_priv *priv)
 	return err;
 }
 
+static inline int
+mcp25xxfd_chip_start_interrupts_enabled(struct mcp25xxfd_priv *priv)
+{
+	return __mcp25xxfd_chip_start(priv, true);
+}
+
+static inline int
+mcp25xxfd_chip_start_interrupts_disabled(struct mcp25xxfd_priv *priv)
+{
+	return __mcp25xxfd_chip_start(priv, false);
+}
+
 static int mcp25xxfd_set_mode(struct net_device *ndev, enum can_mode mode)
 {
 	struct mcp25xxfd_priv *priv = netdev_priv(ndev);
@@ -1025,7 +1030,7 @@ static int mcp25xxfd_set_mode(struct net_device *ndev, enum can_mode mode)
 
 	switch (mode) {
 	case CAN_MODE_START:
-		err = mcp25xxfd_chip_start(priv);
+		err = mcp25xxfd_chip_start_interrupts_enabled(priv);
 		if (err)
 			return err;
 
@@ -2301,31 +2306,35 @@ static int mcp25xxfd_open(struct net_device *ndev)
 	if (err)
 		goto out_close_candev;
 
+	err = mcp25xxfd_transceiver_enable(priv);
+	if (err)
+		goto out_mcp25xxfd_ring_free;
+
+	can_rx_offload_enable(&priv->offload);
+
+	err = mcp25xxfd_chip_start_interrupts_disabled(priv);
+	if (err)
+		goto out_can_rx_offload_disable;
+
 	err = request_threaded_irq(spi->irq, NULL, mcp25xxfd_irq,
 				   IRQF_ONESHOT, dev_name(&spi->dev),
 				   priv);
 	if (err)
-		goto out_mcp25xxfd_ring_free;
+		goto out_can_rx_offload_disable;
 
-	err = mcp25xxfd_transceiver_enable(priv);
+	err = mcp25xxfd_chip_interrupts_enable(priv);
 	if (err)
 		goto out_free_irq;
-
-	can_rx_offload_enable(&priv->offload);
-
-	err = mcp25xxfd_chip_start(priv);
-	if (err)
-		goto out_can_rx_offload_disable;
 
 	netif_start_queue(ndev);
 
 	return 0;
 
+ out_free_irq:
+	free_irq(spi->irq, priv);
  out_can_rx_offload_disable:
 	can_rx_offload_disable(&priv->offload);
 	mcp25xxfd_transceiver_disable(priv);
- out_free_irq:
-	free_irq(spi->irq, priv);
  out_mcp25xxfd_ring_free:
 	mcp25xxfd_ring_free(priv);
  out_close_candev:
@@ -2343,9 +2352,9 @@ static int mcp25xxfd_stop(struct net_device *ndev)
 
 	netif_stop_queue(ndev);
 	mcp25xxfd_chip_stop(priv, CAN_STATE_STOPPED);
+	free_irq(ndev->irq, priv);
 	can_rx_offload_disable(&priv->offload);
 	mcp25xxfd_transceiver_disable(priv);
-	free_irq(ndev->irq, priv);
 	mcp25xxfd_ring_free(priv);
 	close_candev(ndev);
 

@@ -970,25 +970,25 @@ static int mcp25xxfd_chip_start(struct mcp25xxfd_priv *priv)
 
 	err = mcp25xxfd_chip_softreset(priv);
 	if (err)
-		goto out_chip_set_mode_sleep;
+		goto out_chip_stop;
 
 	err = mcp25xxfd_chip_clock_init(priv);
 	if (err)
-		goto out_chip_set_mode_sleep;
+		goto out_chip_stop;
 
 	err = mcp25xxfd_set_bittiming(priv);
 	if (err)
-		goto out_chip_set_mode_sleep;
+		goto out_chip_stop;
 
 	err = mcp25xxfd_chip_ecc_init(priv);
 	if (err)
-		goto out_chip_set_mode_sleep;
+		goto out_chip_stop;
 
 	mcp25xxfd_ring_init(priv);
 
 	err = mcp25xxfd_chip_fifo_init(priv);
 	if (err)
-		goto out_chip_set_mode_sleep;
+		goto out_chip_stop;
 
 	/* Note:
 	 *
@@ -1004,18 +1004,16 @@ static int mcp25xxfd_chip_start(struct mcp25xxfd_priv *priv)
 
 	err = mcp25xxfd_chip_interrupts_enable(priv);
 	if (err)
-		goto out_chip_set_mode_sleep;
+		goto out_chip_stop;
 
 	err = mcp25xxfd_chip_set_normal_mode(priv);
 	if (err)
-		goto out_chip_set_mode_sleep;
+		goto out_chip_stop;
 
 	return 0;
 
- out_chip_set_mode_sleep:
-	mcp25xxfd_chip_interrupts_disable(priv);
-	mcp25xxfd_chip_set_mode(priv, MCP25XXFD_REG_CON_MODE_SLEEP);
-	priv->can.state = CAN_STATE_STOPPED;
+ out_chip_stop:
+	mcp25xxfd_chip_stop(priv, CAN_STATE_STOPPED);
 
 	return err;
 }

@@ -888,6 +888,16 @@ static int mcp25xxfd_chip_interrupts_enable(const struct mcp25xxfd_priv *priv)
 	u32 val;
 	int err;
 
+	val = MCP25XXFD_REG_CRC_FERRIE | MCP25XXFD_REG_CRC_CRCERRIE;
+	err = regmap_write(priv->map, MCP25XXFD_REG_CRC, val);
+	if (err)
+		return err;
+
+	val = MCP25XXFD_REG_ECCCON_DEDIE | MCP25XXFD_REG_ECCCON_SECIE;
+	err = regmap_update_bits(priv->map, MCP25XXFD_REG_ECCCON, val, val);
+	if (err)
+		return err;
+
 	val = MCP25XXFD_REG_INT_CERRIE |
 		MCP25XXFD_REG_INT_SERRIE |
 		MCP25XXFD_REG_INT_RXOVIE |
@@ -901,17 +911,7 @@ static int mcp25xxfd_chip_interrupts_enable(const struct mcp25xxfd_priv *priv)
 	if (priv->can.ctrlmode & CAN_CTRLMODE_BERR_REPORTING)
 		val |= MCP25XXFD_REG_INT_IVMIE;
 
-	err = regmap_write(priv->map, MCP25XXFD_REG_INT, val);
-	if (err)
-		return err;
-
-	val = MCP25XXFD_REG_CRC_FERRIE | MCP25XXFD_REG_CRC_CRCERRIE;
-	err = regmap_write(priv->map, MCP25XXFD_REG_CRC, val);
-	if (err)
-		return err;
-
-	val = MCP25XXFD_REG_ECCCON_DEDIE | MCP25XXFD_REG_ECCCON_SECIE;
-	return regmap_update_bits(priv->map, MCP25XXFD_REG_ECCCON, val, val);
+	return regmap_write(priv->map, MCP25XXFD_REG_INT, val);
 }
 
 static int mcp25xxfd_chip_interrupts_disable(const struct mcp25xxfd_priv *priv)
@@ -919,16 +919,16 @@ static int mcp25xxfd_chip_interrupts_disable(const struct mcp25xxfd_priv *priv)
 	int err;
 	u32 mask;
 
+	err = regmap_write(priv->map, MCP25XXFD_REG_INT, 0);
+	if (err)
+		return err;
+
 	mask = MCP25XXFD_REG_ECCCON_DEDIE | MCP25XXFD_REG_ECCCON_SECIE;
 	err = regmap_update_bits(priv->map, MCP25XXFD_REG_ECCCON, mask, 0x0);
 	if (err)
 		return err;
 
-	err = regmap_write(priv->map, MCP25XXFD_REG_CRC, 0);
-	if (err)
-		return err;
-
-	return regmap_write(priv->map, MCP25XXFD_REG_INT, 0);
+	return regmap_write(priv->map, MCP25XXFD_REG_CRC, 0);
 }
 
 static int mcp25xxfd_chip_start(struct mcp25xxfd_priv *priv)

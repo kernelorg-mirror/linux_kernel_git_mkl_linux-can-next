@@ -699,9 +699,15 @@ static int mcp25xxfd_chip_pinctrl_init(const struct mcp25xxfd_priv *priv)
 
 	/* Configure GPIOs:
 	 * - PIN0: GPIO Input
-	 * - PIN1: RX Interrupt
+	 * - PIN1: GPIO Input/RX Interrupt
+	 *
+	 * PIN1 must be Input, otherwise there is a glitch on the
+	 * rx-INT line. It happens between setting the PIN as output
+	 * (in the first byte of the SPI transfer) and configuring the
+	 * PIN as interrupt (in the last byte of the SPI transfer).
 	 */
-	val = MCP25XXFD_REG_IOCON_PM0 | MCP25XXFD_REG_IOCON_TRIS0;
+	val = MCP25XXFD_REG_IOCON_PM0 | MCP25XXFD_REG_IOCON_TRIS1 |
+		MCP25XXFD_REG_IOCON_TRIS0;
 	return regmap_write(priv->map, MCP25XXFD_REG_IOCON, val);
 }
 

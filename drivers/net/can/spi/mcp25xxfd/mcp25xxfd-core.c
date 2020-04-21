@@ -955,6 +955,15 @@ static int mcp25xxfd_chip_interrupts_disable(const struct mcp25xxfd_priv *priv)
 	return mcp25xxfd_chip_rx_int_disable(priv);
 }
 
+static int mcp25xxfd_chip_stop(struct mcp25xxfd_priv *priv,
+			       const enum can_state state)
+{
+	priv->can.state = state;
+
+	mcp25xxfd_chip_interrupts_disable(priv);
+	return mcp25xxfd_chip_set_mode(priv, MCP25XXFD_REG_CON_MODE_SLEEP);
+}
+
 static int mcp25xxfd_chip_start(struct mcp25xxfd_priv *priv)
 {
 	int err;
@@ -1009,15 +1018,6 @@ static int mcp25xxfd_chip_start(struct mcp25xxfd_priv *priv)
 	priv->can.state = CAN_STATE_STOPPED;
 
 	return err;
-}
-
-static int mcp25xxfd_chip_stop(struct mcp25xxfd_priv *priv,
-			       const enum can_state state)
-{
-	priv->can.state = state;
-
-	mcp25xxfd_chip_interrupts_disable(priv);
-	return mcp25xxfd_chip_set_mode(priv, MCP25XXFD_REG_CON_MODE_SLEEP);
 }
 
 static int mcp25xxfd_set_mode(struct net_device *ndev, enum can_mode mode)

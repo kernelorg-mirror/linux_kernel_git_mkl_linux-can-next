@@ -690,7 +690,7 @@ static int mcp25xxfd_set_bittiming(const struct mcp25xxfd_priv *priv)
 	return regmap_write(priv->map, MCP25XXFD_REG_TDC, val);
 }
 
-static int mcp25xxfd_chip_pinctrl_init(const struct mcp25xxfd_priv *priv)
+static int mcp25xxfd_chip_rx_int_enable(const struct mcp25xxfd_priv *priv)
 {
 	u32 val;
 
@@ -708,6 +708,22 @@ static int mcp25xxfd_chip_pinctrl_init(const struct mcp25xxfd_priv *priv)
 	 */
 	val = MCP25XXFD_REG_IOCON_PM0 | MCP25XXFD_REG_IOCON_TRIS1 |
 		MCP25XXFD_REG_IOCON_TRIS0;
+	return regmap_write(priv->map, MCP25XXFD_REG_IOCON, val);
+}
+
+static int mcp25xxfd_chip_rx_int_disable(const struct mcp25xxfd_priv *priv)
+{
+	u32 val;
+
+	if (!priv->rx_int)
+		return 0;
+
+	/* Configure GPIOs:
+	 * - PIN0: GPIO Input
+	 * - PIN1: GPIO Input
+	 */
+	val = MCP25XXFD_REG_IOCON_PM1 | MCP25XXFD_REG_IOCON_PM0 |
+		MCP25XXFD_REG_IOCON_TRIS1 | MCP25XXFD_REG_IOCON_TRIS0;
 	return regmap_write(priv->map, MCP25XXFD_REG_IOCON, val);
 }
 
@@ -888,6 +904,10 @@ static int mcp25xxfd_chip_interrupts_enable(const struct mcp25xxfd_priv *priv)
 	u32 val;
 	int err;
 
+	err = mcp25xxfd_chip_rx_int_enable(priv);
+	if (err)
+		return err;
+
 	val = MCP25XXFD_REG_CRC_FERRIE | MCP25XXFD_REG_CRC_CRCERRIE;
 	err = regmap_write(priv->map, MCP25XXFD_REG_CRC, val);
 	if (err)
@@ -928,7 +948,11 @@ static int mcp25xxfd_chip_interrupts_disable(const struct mcp25xxfd_priv *priv)
 	if (err)
 		return err;
 
-	return regmap_write(priv->map, MCP25XXFD_REG_CRC, 0);
+	err = regmap_write(priv->map, MCP25XXFD_REG_CRC, 0);
+	if (err)
+		return err;
+
+	return mcp25xxfd_chip_rx_int_disable(priv);
 }
 
 static int mcp25xxfd_chip_start(struct mcp25xxfd_priv *priv)
@@ -944,10 +968,6 @@ static int mcp25xxfd_chip_start(struct mcp25xxfd_priv *priv)
 		goto out_chip_set_mode_sleep;
 
 	err = mcp25xxfd_set_bittiming(priv);
-	if (err)
-		goto out_chip_set_mode_sleep;
-
-	err = mcp25xxfd_chip_pinctrl_init(priv);
 	if (err)
 		goto out_chip_set_mode_sleep;
 
@@ -2391,7 +2411,7 @@ static int mcp25xxfd_register_check_rx_int(struct mcp25xxfd_priv *priv)
 	if (!priv->rx_int)
 		return 0;
 
-	err = mcp25xxfd_chip_pinctrl_init(priv);
+	err = mcp25xxfd_chip_rx_int_enable(priv);
 	if (err)
 		return err;
 
@@ -2399,6 +2419,11 @@ static int mcp25xxfd_register_check_rx_int(struct mcp25xxfd_priv *priv)
 	 * be active after a softreset.
 	 */
 	rx_pending = gpiod_get_value_cansleep(priv->rx_int);
+
+	err = mcp25xxfd_chip_rx_int_disable(priv);
+	if (err)
+		return err;
+
 	if (!rx_pending)
 		return 0;
 

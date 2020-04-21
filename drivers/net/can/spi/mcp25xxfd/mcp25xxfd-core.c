@@ -971,13 +971,13 @@ static int mcp25xxfd_chip_start(struct mcp25xxfd_priv *priv)
 	if (err)
 		goto out_chip_set_mode_sleep;
 
-	mcp25xxfd_ring_init(priv);
-
-	err = mcp25xxfd_chip_fifo_init(priv);
+	err = mcp25xxfd_chip_ecc_init(priv);
 	if (err)
 		goto out_chip_set_mode_sleep;
 
-	err = mcp25xxfd_chip_ecc_init(priv);
+	mcp25xxfd_ring_init(priv);
+
+	err = mcp25xxfd_chip_fifo_init(priv);
 	if (err)
 		goto out_chip_set_mode_sleep;
 

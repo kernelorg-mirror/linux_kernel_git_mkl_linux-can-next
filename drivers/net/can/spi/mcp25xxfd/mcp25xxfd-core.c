@@ -67,6 +67,25 @@ static const struct can_bittiming_const mcp25xxfd_data_bittiming_const = {
 	.brp_inc = 1,
 };
 
+static const char *__mcp25xxfd_get_model_str(enum mcp25xxfd_model model)
+{
+	switch (model) {
+	case MCP25XXFD_MODEL_MCP2517FD:
+		return "17"; break;
+	case MCP25XXFD_MODEL_MCP2518FD:
+		return "18"; break;
+	case MCP25XXFD_MODEL_MCP25XXFD:
+		return "xx"; break;
+	}
+
+	return "<unknown>";
+}
+
+static inline const char *mcp25xxfd_get_model_str(const struct mcp25xxfd_priv *priv)
+{
+	return __mcp25xxfd_get_model_str(priv->devtype_data.model);
+}
+
 static const char *mcp25xxfd_get_mode_str(const u8 mode)
 {
 	switch (mode) {
@@ -501,8 +520,8 @@ static int mcp25xxfd_chip_clock_enable(const struct mcp25xxfd_priv *priv)
 		return err;
 	} else if (mcp25xxfd_osc_invalid(osc)) {
 		netdev_err(priv->ndev,
-			   "Failed to detect MCP%xFD (osc=0x%08x).\n",
-			   priv->devtype_data.model, osc);
+			   "Failed to detect MCP%sFD (osc=0x%08x).\n",
+			   mcp25xxfd_get_model_str(priv), osc);
 		return -ENODEV;
 	}
 
@@ -2414,8 +2433,9 @@ static int mcp25xxfd_register_chip_detect(struct mcp25xxfd_priv *priv)
 	if (!mcp25xxfd_is_25XX(priv) &&
 	    priv->devtype_data.model != devtype_data->model) {
 		netdev_info(ndev,
-			    "Detected MCP%xFD, but firmware specifies a MCP%xFD. Fixing up.",
-			    devtype_data->model, priv->devtype_data.model);
+			    "Detected MCP25%sFD, but firmware specifies a MCP25%sFD. Fixing up.",
+			    __mcp25xxfd_get_model_str(devtype_data->model),
+			    mcp25xxfd_get_model_str(priv));
 	}
 	priv->devtype_data = *devtype_data;
 
@@ -2489,8 +2509,8 @@ mcp25xxfd_register_done(const struct mcp25xxfd_priv *priv)
 		return err;
 
 	netdev_info(priv->ndev,
-		    "MCP%xFD rev%lu.%lu (%cRX_INT %cMAB_NO_WARN %cRX_CRC %cTX_CRC %cECC %cHD) successfully initialized.\n",
-		    priv->devtype_data.model,
+		    "MCP25%sFD rev%lu.%lu (%cRX_INT %cMAB_NO_WARN %cRX_CRC %cTX_CRC %cECC %cHD) successfully initialized.\n",
+		    mcp25xxfd_get_model_str(priv),
 		    FIELD_GET(MCP25XXFD_REG_DEVID_ID_MASK, devid),
 		    FIELD_GET(MCP25XXFD_REG_DEVID_REV_MASK, devid),
 		    priv->rx_int ? '+' : '-',

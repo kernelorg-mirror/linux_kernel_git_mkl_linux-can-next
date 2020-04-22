@@ -511,18 +511,18 @@ static int mcp25xxfd_chip_clock_enable(const struct mcp25xxfd_priv *priv)
 				       (osc & osc_mask) == osc_reference,
 				       MCP25XXFD_OSC_STAB_SLEEP_US,
 				       MCP25XXFD_OSC_STAB_TIMEOUT_US);
-	if (err == -ETIMEDOUT) {
+	if (mcp25xxfd_osc_invalid(osc)) {
+		netdev_err(priv->ndev,
+			   "Failed to detect MCP25%sFD (osc=0x%08x).\n",
+			   mcp25xxfd_get_model_str(priv), osc);
+		return -ENODEV;
+	} else if (err == -ETIMEDOUT) {
 		netdev_err(priv->ndev,
 			   "Timeout waiting for Oscillator Ready (osc=0x%08x, osc_reference=0x%08x)\n",
 			   osc, osc_reference);
 		return -ETIMEDOUT;
 	} else if (err) {
 		return err;
-	} else if (mcp25xxfd_osc_invalid(osc)) {
-		netdev_err(priv->ndev,
-			   "Failed to detect MCP%sFD (osc=0x%08x).\n",
-			   mcp25xxfd_get_model_str(priv), osc);
-		return -ENODEV;
 	}
 
 	return 0;

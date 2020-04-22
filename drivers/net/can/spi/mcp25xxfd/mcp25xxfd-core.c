@@ -71,11 +71,11 @@ static const char *__mcp25xxfd_get_model_str(enum mcp25xxfd_model model)
 {
 	switch (model) {
 	case MCP25XXFD_MODEL_MCP2517FD:
-		return "17"; break;
+		return "MCP2517FD"; break;
 	case MCP25XXFD_MODEL_MCP2518FD:
-		return "18"; break;
+		return "MCP2518FD"; break;
 	case MCP25XXFD_MODEL_MCP25XXFD:
-		return "xx"; break;
+		return "MCP25xxFD"; break;
 	}
 
 	return "<unknown>";
@@ -513,7 +513,7 @@ static int mcp25xxfd_chip_clock_enable(const struct mcp25xxfd_priv *priv)
 				       MCP25XXFD_OSC_STAB_TIMEOUT_US);
 	if (mcp25xxfd_osc_invalid(osc)) {
 		netdev_err(priv->ndev,
-			   "Failed to detect MCP25%sFD (osc=0x%08x).\n",
+			   "Failed to detect %s (osc=0x%08x).\n",
 			   mcp25xxfd_get_model_str(priv), osc);
 		return -ENODEV;
 	} else if (err == -ETIMEDOUT) {
@@ -2433,7 +2433,7 @@ static int mcp25xxfd_register_chip_detect(struct mcp25xxfd_priv *priv)
 	if (!mcp25xxfd_is_25XX(priv) &&
 	    priv->devtype_data.model != devtype_data->model) {
 		netdev_info(ndev,
-			    "Detected MCP25%sFD, but firmware specifies a MCP25%sFD. Fixing up.",
+			    "Detected %s, but firmware specifies a %s. Fixing up.",
 			    __mcp25xxfd_get_model_str(devtype_data->model),
 			    mcp25xxfd_get_model_str(priv));
 	}
@@ -2509,7 +2509,7 @@ mcp25xxfd_register_done(const struct mcp25xxfd_priv *priv)
 		return err;
 
 	netdev_info(priv->ndev,
-		    "MCP25%sFD rev%lu.%lu (%cRX_INT %cMAB_NO_WARN %cRX_CRC %cTX_CRC %cECC %cHD) successfully initialized.\n",
+		    "%s rev%lu.%lu (%cRX_INT %cMAB_NO_WARN %cRX_CRC %cTX_CRC %cECC %cHD) successfully initialized.\n",
 		    mcp25xxfd_get_model_str(priv),
 		    FIELD_GET(MCP25XXFD_REG_DEVID_ID_MASK, devid),
 		    FIELD_GET(MCP25XXFD_REG_DEVID_REV_MASK, devid),

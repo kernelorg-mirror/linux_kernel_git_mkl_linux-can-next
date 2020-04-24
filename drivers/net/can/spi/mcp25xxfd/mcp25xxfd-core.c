@@ -2731,12 +2731,12 @@ static int mcp25xxfd_probe(struct spi_device *spi)
 	 * It turns out, that the Controller is not stable at this
 	 * rate. Known good and bad combinations are:
 	 *
-	 * MCP	ext-clk	SoC			SPI			SPI-clk		parent-clk	Status
+	 * MCP	ext-clk	SoC			SPI			SPI-clk		max-clk	parent-clk	Status
 	 *
-	 * 2518	20 MHz	allwinner,sun8i-h3	allwinner,sun8i-h3-spi	 9090909 Hz	600000000 Hz	good
-	 * 2518	20 MHz	allwinner,sun8i-h3	allwinner,sun8i-h3-spi	 9375000 Hz	600000000 Hz	bad
-	 * 2517	20 MHz	fsl,imx8mm		fsl,imx51-ecspi		 9090909 Hz	 18181819 Hz	good
-	 * 2517	20 MHz	fsl,imx8mm		fsl,imx51-ecspi		 9523809 Hz	 28571429 Hz	bad
+	 * 2518	20 MHz	allwinner,sun8i-h3	allwinner,sun8i-h3-spi	 9090909 Hz	90.90%	600000000 Hz	good
+	 * 2518	20 MHz	allwinner,sun8i-h3	allwinner,sun8i-h3-spi	 9375000 Hz	93.75%	600000000 Hz	bad
+	 * 2517	20 MHz	fsl,imx8mm		fsl,imx51-ecspi		 9090909 Hz	90.09%	 18181819 Hz	good
+	 * 2517	20 MHz	fsl,imx8mm		fsl,imx51-ecspi		 9523809 Hz	95.34%	 28571429 Hz	bad
 	 *
 	 * Limit SPI clock to 92.5% of SYSCLOCK / 2 for now.
 	 */

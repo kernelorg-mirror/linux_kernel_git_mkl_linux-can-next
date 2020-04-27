@@ -28,15 +28,15 @@
 #define DEVICE_NAME "mcp25xxfd"
 
 static const struct mcp25xxfd_devtype_data mcp25xxfd_devtype_data_mcp2517fd = {
-	.quirks = MCP25XXFD_QUIRK_MAB_NO_WARN |
-		MCP25XXFD_QUIRK_CRC_RX | MCP25XXFD_QUIRK_CRC_TX | \
+	.quirks = MCP25XXFD_QUIRK_MAB_NO_WARN | MCP25XXFD_QUIRK_CRC_REG |
+		MCP25XXFD_QUIRK_CRC_RX | MCP25XXFD_QUIRK_CRC_TX |
 		MCP25XXFD_QUIRK_ECC,
 	.model = MCP25XXFD_MODEL_MCP2517FD,
 };
 
 static const struct mcp25xxfd_devtype_data mcp25xxfd_devtype_data_mcp2518fd = {
-	.quirks = MCP25XXFD_QUIRK_CRC_RX | MCP25XXFD_QUIRK_CRC_TX |
-		MCP25XXFD_QUIRK_ECC,
+	.quirks = MCP25XXFD_QUIRK_CRC_REG | MCP25XXFD_QUIRK_CRC_RX |
+		MCP25XXFD_QUIRK_CRC_TX | MCP25XXFD_QUIRK_ECC,
 	.model = MCP25XXFD_MODEL_MCP2518FD,
 };
 

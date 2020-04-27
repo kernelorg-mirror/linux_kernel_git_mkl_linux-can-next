@@ -28,13 +28,14 @@
 #define DEVICE_NAME "mcp25xxfd"
 
 static const struct mcp25xxfd_devtype_data mcp25xxfd_devtype_data_mcp2517fd = {
-	.quirks = MCP25XXFD_QUIRK_MAB_NO_WARN | MCP25XXFD_QUIRK_RX_CRC |
-		MCP25XXFD_QUIRK_TX_CRC | MCP25XXFD_QUIRK_ECC,
+	.quirks = MCP25XXFD_QUIRK_MAB_NO_WARN |
+		MCP25XXFD_QUIRK_CRC_RX | MCP25XXFD_QUIRK_CRC_TX | \
+		MCP25XXFD_QUIRK_ECC,
 	.model = MCP25XXFD_MODEL_MCP2517FD,
 };
 
 static const struct mcp25xxfd_devtype_data mcp25xxfd_devtype_data_mcp2518fd = {
-	.quirks = MCP25XXFD_QUIRK_RX_CRC | MCP25XXFD_QUIRK_TX_CRC |
+	.quirks = MCP25XXFD_QUIRK_CRC_RX | MCP25XXFD_QUIRK_CRC_TX |
 		MCP25XXFD_QUIRK_ECC,
 	.model = MCP25XXFD_MODEL_MCP2518FD,
 };
@@ -273,7 +274,7 @@ mcp25xxfd_tx_ring_init_tx_obj(const struct mcp25xxfd_priv *priv,
 
 	/* FIFO load */
 	addr = mcp25xxfd_get_tx_obj_addr(ring, n);
-	if (priv->devtype_data.quirks & MCP25XXFD_QUIRK_TX_CRC)
+	if (priv->devtype_data.quirks & MCP25XXFD_QUIRK_CRC_TX)
 		mcp25xxfd_spi_cmd_write_crc_set_addr(&tx_obj->load.buf.crc.cmd,
 						     addr);
 	else
@@ -2201,7 +2202,7 @@ mcp25xxfd_tx_obj_from_skb(const struct mcp25xxfd_priv *priv,
 			flags |= MCP25XXFD_OBJ_FLAGS_BRS;
 	}
 
-	if (priv->devtype_data.quirks & MCP25XXFD_QUIRK_TX_CRC)
+	if (priv->devtype_data.quirks & MCP25XXFD_QUIRK_CRC_TX)
 		hw_tx_obj = &tx_obj->load.buf.crc.hw_tx_obj;
 	else
 		hw_tx_obj = &tx_obj->load.buf.nocrc.hw_tx_obj;
@@ -2221,7 +2222,7 @@ mcp25xxfd_tx_obj_from_skb(const struct mcp25xxfd_priv *priv,
 	len = sizeof(hw_tx_obj->id) + sizeof(hw_tx_obj->flags);
 	len += round_up(cfd->len, sizeof(u32));
 
-	if (priv->devtype_data.quirks & MCP25XXFD_QUIRK_TX_CRC) {
+	if (priv->devtype_data.quirks & MCP25XXFD_QUIRK_CRC_TX) {
 		u16 crc;
 
 		mcp25xxfd_spi_cmd_crc_set_len_in_ram(&tx_obj->load.buf.crc.cmd,
@@ -2509,14 +2510,14 @@ mcp25xxfd_register_done(const struct mcp25xxfd_priv *priv)
 		return err;
 
 	netdev_info(priv->ndev,
-		    "%s rev%lu.%lu (%cRX_INT %cMAB_NO_WARN %cRX_CRC %cTX_CRC %cECC %cHD) successfully initialized.\n",
+		    "%s rev%lu.%lu (%cRX_INT %cMAB_NO_WARN %cCRC_RX %cCRC_TX %cECC %cHD) successfully initialized.\n",
 		    mcp25xxfd_get_model_str(priv),
 		    FIELD_GET(MCP25XXFD_REG_DEVID_ID_MASK, devid),
 		    FIELD_GET(MCP25XXFD_REG_DEVID_REV_MASK, devid),
 		    priv->rx_int ? '+' : '-',
 		    MCP25XXFD_QUIRK_ACTIVE(MAB_NO_WARN),
-		    MCP25XXFD_QUIRK_ACTIVE(RX_CRC),
-		    MCP25XXFD_QUIRK_ACTIVE(TX_CRC),
+		    MCP25XXFD_QUIRK_ACTIVE(CRC_RX),
+		    MCP25XXFD_QUIRK_ACTIVE(CRC_TX),
 		    MCP25XXFD_QUIRK_ACTIVE(ECC),
 		    MCP25XXFD_QUIRK_ACTIVE(HALF_DUPLEX));
 

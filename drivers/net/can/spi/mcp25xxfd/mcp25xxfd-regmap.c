@@ -399,7 +399,7 @@ mcp25xxfd_regmap_init_nocrc(struct mcp25xxfd_priv *priv)
 static int
 mcp25xxfd_regmap_init_crc(struct mcp25xxfd_priv *priv)
 {
-	if (!(priv->devtype_data.quirks & MCP25XXFD_QUIRK_RX_CRC)) {
+	if (!(priv->devtype_data.quirks & MCP25XXFD_QUIRK_CRC_RX)) {
 		priv->map_rx = priv->map;
 
 		return 0;

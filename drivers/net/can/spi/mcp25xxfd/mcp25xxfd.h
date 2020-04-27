@@ -430,10 +430,10 @@ static inline void __dump(const void *d, unsigned int len)
 
 /* Silence TX MAB overflow warnings */
 #define MCP25XXFD_QUIRK_MAB_NO_WARN BIT(0)
-/* Use CRC in RX-PATH */
-#define MCP25XXFD_QUIRK_RX_CRC BIT(1)
-/* Use CRC in TX-PATH */
-#define MCP25XXFD_QUIRK_TX_CRC BIT(2)
+/* Use CRC to access RX/TEF-RAM */
+#define MCP25XXFD_QUIRK_CRC_RX BIT(1)
+/* Use CRC to access TX-RAM */
+#define MCP25XXFD_QUIRK_CRC_TX BIT(2)
 /* Enable ECC for RAM */
 #define MCP25XXFD_QUIRK_ECC BIT(3)
 /* Use Half Duplex SPI transfers */

@@ -430,14 +430,16 @@ static inline void __dump(const void *d, unsigned int len)
 
 /* Silence TX MAB overflow warnings */
 #define MCP25XXFD_QUIRK_MAB_NO_WARN BIT(0)
+/* Use CRC to access registers */
+#define MCP25XXFD_QUIRK_CRC_REG BIT(1)
 /* Use CRC to access RX/TEF-RAM */
-#define MCP25XXFD_QUIRK_CRC_RX BIT(1)
+#define MCP25XXFD_QUIRK_CRC_RX BIT(2)
 /* Use CRC to access TX-RAM */
-#define MCP25XXFD_QUIRK_CRC_TX BIT(2)
+#define MCP25XXFD_QUIRK_CRC_TX BIT(3)
 /* Enable ECC for RAM */
-#define MCP25XXFD_QUIRK_ECC BIT(3)
+#define MCP25XXFD_QUIRK_ECC BIT(4)
 /* Use Half Duplex SPI transfers */
-#define MCP25XXFD_QUIRK_HALF_DUPLEX BIT(4)
+#define MCP25XXFD_QUIRK_HALF_DUPLEX BIT(5)
 
 struct mcp25xxfd_dump_regs_fifo {
 	u32 con;
@@ -649,15 +651,14 @@ struct mcp25xxfd_priv {
 	struct can_rx_offload offload;
 	struct net_device *ndev;
 
-	struct regmap *map;
-	struct mcp25xxfd_map_buf map_buf_rx[1];
-	struct mcp25xxfd_map_buf map_buf_tx[1];
+	struct regmap *map;			/* register access */
+	struct regmap *map_rx;			/* RX/TEF RAM access */
 
-	struct regmap *map_crc;
+	struct mcp25xxfd_map_buf *map_buf_rx;
+	struct mcp25xxfd_map_buf *map_buf_tx;
 	struct mcp25xxfd_map_buf_crc *map_buf_crc_rx;
 	struct mcp25xxfd_map_buf_crc *map_buf_crc_tx;
 
-	struct regmap *map_rx;
 	struct spi_device *spi;
 	u32 spi_max_speed_hz_orig;
 

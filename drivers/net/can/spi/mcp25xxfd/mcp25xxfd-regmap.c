@@ -390,25 +390,51 @@ static const struct regmap_bus mcp25xxfd_bus_crc = {
 static int
 mcp25xxfd_regmap_init_nocrc(struct mcp25xxfd_priv *priv)
 {
-	priv->map = devm_regmap_init(&priv->spi->dev, &mcp25xxfd_bus,
-				     priv->spi, &mcp25xxfd_regmap);
+	struct regmap *map;
 
-	return PTR_ERR_OR_ZERO(priv->map);
+	if ((priv->devtype_data.quirks & MCP25XXFD_QUIRK_CRC_REG) &&
+	    (priv->devtype_data.quirks & MCP25XXFD_QUIRK_CRC_RX))
+		return 0;
+
+	map = devm_regmap_init(&priv->spi->dev, &mcp25xxfd_bus,
+			       priv->spi, &mcp25xxfd_regmap);
+	if (IS_ERR(map))
+		return PTR_ERR(map);
+
+	priv->map_buf_rx = devm_kzalloc(&priv->spi->dev,
+					sizeof(*priv->map_buf_rx),
+					GFP_KERNEL);
+	if (!priv->map_buf_rx)
+		return -ENOMEM;
+
+	priv->map_buf_tx = devm_kzalloc(&priv->spi->dev,
+					sizeof(*priv->map_buf_tx),
+					GFP_KERNEL);
+	if (!priv->map_buf_tx)
+		return -ENOMEM;
+
+	if (!(priv->devtype_data.quirks & MCP25XXFD_QUIRK_CRC_REG))
+		priv->map = map;
+
+	if (!(priv->devtype_data.quirks & MCP25XXFD_QUIRK_CRC_RX))
+		priv->map_rx = map;
+
+	return 0;
 }
 
 static int
 mcp25xxfd_regmap_init_crc(struct mcp25xxfd_priv *priv)
 {
-	if (!(priv->devtype_data.quirks & MCP25XXFD_QUIRK_CRC_RX)) {
-		priv->map_rx = priv->map;
+	struct regmap *map;
 
+	if (!((priv->devtype_data.quirks & MCP25XXFD_QUIRK_CRC_REG) ||
+	      (priv->devtype_data.quirks & MCP25XXFD_QUIRK_CRC_RX)))
 		return 0;
-	}
 
-	priv->map_crc = devm_regmap_init(&priv->spi->dev, &mcp25xxfd_bus_crc,
-					 priv->spi, &mcp25xxfd_regmap_crc);
-	if (IS_ERR(priv->map_crc))
-		return PTR_ERR(priv->map_crc);
+	map = devm_regmap_init(&priv->spi->dev, &mcp25xxfd_bus_crc,
+			       priv->spi, &mcp25xxfd_regmap_crc);
+	if (IS_ERR(map))
+		return PTR_ERR(map);
 
 	priv->map_buf_crc_rx = devm_kzalloc(&priv->spi->dev,
 					    sizeof(*priv->map_buf_crc_rx),
@@ -422,7 +448,11 @@ mcp25xxfd_regmap_init_crc(struct mcp25xxfd_priv *priv)
 	if (!priv->map_buf_crc_tx)
 		return -ENOMEM;
 
-	priv->map_rx = priv->map_crc;
+	if (priv->devtype_data.quirks & MCP25XXFD_QUIRK_CRC_REG)
+		priv->map = map;
+
+	if (priv->devtype_data.quirks & MCP25XXFD_QUIRK_CRC_RX)
+		priv->map_rx = map;
 
 	return 0;
 }

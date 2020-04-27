@@ -2510,12 +2510,13 @@ mcp25xxfd_register_done(const struct mcp25xxfd_priv *priv)
 		return err;
 
 	netdev_info(priv->ndev,
-		    "%s rev%lu.%lu (%cRX_INT %cMAB_NO_WARN %cCRC_RX %cCRC_TX %cECC %cHD) successfully initialized.\n",
+		    "%s rev%lu.%lu (%cRX_INT %cMAB_NO_WARN %cCRC_REG %cCRC_RX %cCRC_TX %cECC %cHD) successfully initialized.\n",
 		    mcp25xxfd_get_model_str(priv),
 		    FIELD_GET(MCP25XXFD_REG_DEVID_ID_MASK, devid),
 		    FIELD_GET(MCP25XXFD_REG_DEVID_REV_MASK, devid),
 		    priv->rx_int ? '+' : '-',
 		    MCP25XXFD_QUIRK_ACTIVE(MAB_NO_WARN),
+		    MCP25XXFD_QUIRK_ACTIVE(CRC_REG),
 		    MCP25XXFD_QUIRK_ACTIVE(CRC_RX),
 		    MCP25XXFD_QUIRK_ACTIVE(CRC_TX),
 		    MCP25XXFD_QUIRK_ACTIVE(ECC),

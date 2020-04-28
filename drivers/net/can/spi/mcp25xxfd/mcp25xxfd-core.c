@@ -1169,6 +1169,7 @@ mcp25xxfd_handle_tefif_recover(const struct mcp25xxfd_priv *priv, const u32 seq)
 		    "not empty" : "empty",
 		    seq, priv->tef.tail, priv->tef.head, tx_ring->head);
 
+	/* The Sequence Number in the TEF doesn't match our tef_tail. */
 	return -EAGAIN;
 }
 

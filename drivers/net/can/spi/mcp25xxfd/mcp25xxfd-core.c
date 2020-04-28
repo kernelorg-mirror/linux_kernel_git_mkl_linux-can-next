@@ -2474,25 +2474,6 @@ static int mcp25xxfd_register_check_rx_int(struct mcp25xxfd_priv *priv)
 	return 0;
 }
 
-static void
-mcp25xxfd_register_check_controller(const struct mcp25xxfd_priv *priv)
-{
-	const struct spi_device *spi = priv->spi;
-	const struct spi_controller *ctlr = spi->controller;
-	unsigned int policy;
-
-	if (!ctlr->kworker_task)
-		return;
-
-	policy = ctlr->kworker_task->policy;
-	if (policy == SCHED_FIFO || policy == SCHED_RR)
-		return;
-
-	netdev_info(priv->ndev,
-		    "SPI thread not scheduled with RT priority, expect degraded performance. Reconfigure with: 'chrt -f -p 1 %u'",
-		    ctlr->kworker_task->pid);
-}
-
 #define MCP25XXFD_QUIRK_ACTIVE(quirk) \
 	(priv->devtype_data.quirks & MCP25XXFD_QUIRK_##quirk ? '+' : '-')
 
@@ -2558,8 +2539,6 @@ static int mcp25xxfd_register(struct mcp25xxfd_priv *priv)
 	err = register_candev(ndev);
 	if (err)
 		goto out_chip_set_mode_sleep;
-
-	mcp25xxfd_register_check_controller(priv);
 
 	err = mcp25xxfd_register_done(priv);
 	if (err)
@@ -2744,6 +2723,7 @@ static int mcp25xxfd_probe(struct spi_device *spi)
 	priv->spi_max_speed_hz_orig = spi->max_speed_hz;
 	spi->max_speed_hz = min(spi->max_speed_hz, freq / 2 / 1000 * 925);
 	spi->bits_per_word = 8;
+	spi->rt = true;
 	err = spi_setup(spi);
 	if (err)
 		goto out_free_candev;

@@ -10,6 +10,8 @@
 
 #include <asm/unaligned.h>
 
+static const struct regmap_config mcp25xxfd_regmap_crc;
+
 static int mcp25xxfd_regmap_write(void *context, const void *data, size_t count)
 {
 	struct spi_device *spi = context;
@@ -199,7 +201,8 @@ static int mcp25xxfd_regmap_crc_gather_write(void *context,
 	BUILD_BUG_ON(sizeof(buf_tx->cmd) != sizeof(__be16) + sizeof(u8));
 
 	if (IS_ENABLED(CONFIG_CAN_MCP25XXFD_SANITY) &&
-	    reg_len != sizeof(buf_tx->cmd.cmd) + 2)
+	    reg_len != sizeof(buf_tx->cmd.cmd) +
+	    mcp25xxfd_regmap_crc.pad_bits / BITS_PER_BYTE)
 		return -EINVAL;
 
 	mcp25xxfd_spi_cmd_write_crc(&buf_tx->cmd, reg, val_len);
@@ -214,13 +217,18 @@ static int mcp25xxfd_regmap_crc_gather_write(void *context,
 static int mcp25xxfd_regmap_crc_write(void *context,
 				      const void *data, size_t count)
 {
-	return mcp25xxfd_regmap_crc_gather_write(context, data, sizeof(__be16),
-						 data + 4, count - 4);
+	const size_t data_offset = sizeof(__be16) +
+		mcp25xxfd_regmap_crc.pad_bits / BITS_PER_BYTE;
+
+	return mcp25xxfd_regmap_crc_gather_write(context,
+						 data, data_offset,
+						 data + data_offset,
+						 count - data_offset);
 }
 
 static int
 mcp25xxfd_regmap_crc_read_one(struct mcp25xxfd_priv *priv,
-			      struct spi_message *msg, unsigned data_len)
+			      struct spi_message *msg, unsigned int data_len)
 {
 	const struct mcp25xxfd_map_buf_crc *buf_rx = priv->map_buf_crc_rx;
 	const struct mcp25xxfd_map_buf_crc *buf_tx = priv->map_buf_crc_tx;
@@ -262,7 +270,8 @@ static int mcp25xxfd_regmap_crc_read(void *context,
 	BUILD_BUG_ON(sizeof(buf_tx->cmd) != sizeof(__be16) + sizeof(u8));
 
 	if (IS_ENABLED(CONFIG_CAN_MCP25XXFD_SANITY) &&
-	    reg_len != sizeof(buf_tx->cmd.cmd) + 2)
+	    reg_len != sizeof(buf_tx->cmd.cmd) +
+	    mcp25xxfd_regmap_crc.pad_bits / BITS_PER_BYTE)
 		return -EINVAL;
 
 	spi_message_init(&msg);
@@ -282,7 +291,8 @@ static int mcp25xxfd_regmap_crc_read(void *context,
 			sizeof(buf_tx->crc);
 
 		if (IS_ENABLED(CONFIG_CAN_MCP25XXFD_SANITY))
-			memset(buf_tx->data, 0x0, val_len + sizeof(buf_tx->crc));
+			memset(buf_tx->data, 0x0, val_len +
+			       sizeof(buf_tx->crc));
 	}
 
 	mcp25xxfd_spi_cmd_read_crc(&buf_tx->cmd, reg, val_len);

@@ -2285,10 +2285,6 @@ static netdev_tx_t mcp25xxfd_start_xmit(struct sk_buff *skb,
 	tx_obj = mcp25xxfd_get_tx_obj_next(tx_ring);
 	mcp25xxfd_tx_obj_from_skb(priv, tx_obj, skb, tx_ring->head);
 
-	// FIXME:
-	// if (!netdev_xmit_more() ||
-	//	netif_xmit_stopped(netdev_get_tx_queue(netdev, 0)))
-
 	/* Stop queue if we occupy the complete TX FIFO */
 	tx_head = mcp25xxfd_get_tx_head(tx_ring);
 	tx_ring->head++;

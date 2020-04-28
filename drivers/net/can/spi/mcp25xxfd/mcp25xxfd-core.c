@@ -2813,6 +2813,6 @@ static struct spi_driver mcp25xxfd_driver = {
 };
 module_spi_driver(mcp25xxfd_driver);
 
-MODULE_AUTHOR("Marc Kleine-Budde <mkl@pengutornix.de>");
+MODULE_AUTHOR("Marc Kleine-Budde <mkl@pengutronix.de>");
 MODULE_DESCRIPTION("Microchip MCP25xxFD Family CAN controller driver");
 MODULE_LICENSE("GPL v2");

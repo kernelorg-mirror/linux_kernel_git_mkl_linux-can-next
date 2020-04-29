@@ -1829,12 +1829,17 @@ static int mcp25xxfd_handle_serrif(struct mcp25xxfd_priv *priv)
 	 * According to MCP2517FD Errata DS80000792B 1. a RX MAB
 	 * overflow is indicated by SERRIF.
 	 *
-	 * In addition to the effects mentioned in the Errata, a
-	 * RXOVIF is raised if the FIFO that is being received into
-	 * has the RXOVIE activated (and we have enabled RXOVIE on all
-	 * FIFOs).
+	 * In addition to the effects mentioned in the Errata, (most
+	 * of the times) a RXOVIF is raised, if the FIFO that is being
+	 * received into has the RXOVIE activated (and we have enabled
+	 * RXOVIE on all FIFOs).
+	 *
+	 * Sometimes there is no RXOVIF just a RXIF is pending.
+	 *
+	 * Treat all as a known system errors..
 	 */
-	if (priv->regs_status.intf & MCP25XXFD_REG_INT_RXOVIF) {
+	if (priv->regs_status.intf & MCP25XXFD_REG_INT_RXOVIF ||
+	    priv->regs_status.intf & MCP25XXFD_REG_INT_RXIF) {
 		stats->rx_dropped++;
 		handled = true;
 	}

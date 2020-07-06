@@ -969,10 +969,6 @@ static int mcp25xxfd_chip_interrupts_enable(const struct mcp25xxfd_priv *priv)
 	u32 val;
 	int err;
 
-	err = mcp25xxfd_chip_rx_int_enable(priv);
-	if (err)
-		return err;
-
 	val = MCP25XXFD_REG_CRC_FERRIE | MCP25XXFD_REG_CRC_CRCERRIE;
 	err = regmap_write(priv->map_reg, MCP25XXFD_REG_CRC, val);
 	if (err)
@@ -1014,11 +1010,7 @@ static int mcp25xxfd_chip_interrupts_disable(const struct mcp25xxfd_priv *priv)
 	if (err)
 		return err;
 
-	err = regmap_write(priv->map_reg, MCP25XXFD_REG_CRC, 0);
-	if (err)
-		return err;
-
-	return mcp25xxfd_chip_rx_int_disable(priv);
+	return regmap_write(priv->map_reg, MCP25XXFD_REG_CRC, 0);
 }
 
 static int mcp25xxfd_chip_stop(struct mcp25xxfd_priv *priv,
@@ -1027,6 +1019,7 @@ static int mcp25xxfd_chip_stop(struct mcp25xxfd_priv *priv,
 	priv->can.state = state;
 
 	mcp25xxfd_chip_interrupts_disable(priv);
+	mcp25xxfd_chip_rx_int_disable(priv);
 	return mcp25xxfd_chip_set_mode(priv, MCP25XXFD_REG_CON_MODE_SLEEP);
 }
 
@@ -1045,6 +1038,10 @@ static int mcp25xxfd_chip_start(struct mcp25xxfd_priv *priv)
 	err = mcp25xxfd_set_bittiming(priv);
 	if (err)
 		goto out_chip_stop;
+
+	err = mcp25xxfd_chip_rx_int_enable(priv);
+	if (err)
+		return err;
 
 	err = mcp25xxfd_chip_ecc_init(priv);
 	if (err)

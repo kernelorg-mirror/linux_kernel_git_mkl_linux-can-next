@@ -2369,7 +2369,7 @@ static int mcp25xxfd_open(struct net_device *ndev)
 
 	err = mcp25xxfd_chip_start(priv);
 	if (err)
-		goto out_can_rx_offload_disable;
+		goto out_transceiver_disable;
 
 	can_rx_offload_enable(&priv->offload);
 
@@ -2391,6 +2391,7 @@ static int mcp25xxfd_open(struct net_device *ndev)
 	free_irq(spi->irq, priv);
  out_can_rx_offload_disable:
 	can_rx_offload_disable(&priv->offload);
+ out_transceiver_disable:
 	mcp25xxfd_transceiver_disable(priv);
  out_mcp25xxfd_ring_free:
 	mcp25xxfd_ring_free(priv);

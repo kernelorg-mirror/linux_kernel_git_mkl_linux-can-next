@@ -2821,11 +2821,13 @@ static int mcp25xxfd_probe(struct spi_device *spi)
 	 * 2518	40 MHz	allwinner,sun8i-h3	allwinner,sun8i-h3-spi	18750000 Hz	 93.75%	600000000 Hz	bad	assigned-clocks = <&ccu CLK_SPIx>
 	 * 2517	20 MHz	fsl,imx8mm		fsl,imx51-ecspi		 9090909 Hz	 90.09%	 18181819 Hz	good	assigned-clocks = <&clk IMX8MM_CLK_ECSPIx_ROOT>
 	 * 2517	20 MHz	fsl,imx8mm		fsl,imx51-ecspi		 9523809 Hz	 95.34%	 28571429 Hz	bad	assigned-clocks = <&clk IMX8MM_CLK_ECSPIx_ROOT>
+	 * 2517 40 MHz  atmel,sama5d27          atmel,at91rm9200-spi    16400000 Hz      82%     82000000 Hz    good    default
+	 * 2518 40 MHz  atmel,sama5d27          atmel,at91rm9200-spi    16400000 Hz      82%     82000000 Hz    good    default
 	 *
-	 * Limit SPI clock to 92.5% of SYSCLOCK / 2 for now.
+	 * Limit SPI clock to 85% of SYSCLOCK / 2 for now.
 	 */
 	priv->spi_max_speed_hz_orig = spi->max_speed_hz;
-	spi->max_speed_hz = min(spi->max_speed_hz, freq / 2 / 1000 * 925);
+	spi->max_speed_hz = min(spi->max_speed_hz, freq / 2 / 1000 * 850);
 	spi->bits_per_word = 8;
 	spi->rt = true;
 	err = spi_setup(spi);

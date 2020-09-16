@@ -2814,9 +2814,9 @@ static int mcp25xxfd_probe(struct spi_device *spi)
 	 *
 	 * MCP	ext-clk	SoC			SPI			SPI-clk		max-clk	parent-clk	Status	config
 	 *
-	 * 2518	20 MHz	allwinner,sun8i-h3	allwinner,sun8i-h3-spi	 9090909 Hz	 90.90%	600000000 Hz	good	assigned-clocks = <&ccu CLK_SPIx>
+	 * 2518	20 MHz	allwinner,sun8i-h3	allwinner,sun8i-h3-spi	 8333333 Hz	 83.33%	600000000 Hz	good	assigned-clocks = <&ccu CLK_SPIx>
 	 * 2518	20 MHz	allwinner,sun8i-h3	allwinner,sun8i-h3-spi	 9375000 Hz	 93.75%	600000000 Hz	bad	assigned-clocks = <&ccu CLK_SPIx>
-	 * 2518	40 MHz	allwinner,sun8i-h3	allwinner,sun8i-h3-spi	17647058 Hz	 88.24%	600000000 Hz	good	assigned-clocks = <&ccu CLK_SPIx>
+	 * 2518	40 MHz	allwinner,sun8i-h3	allwinner,sun8i-h3-spi	16666667 Hz	 83.33%	600000000 Hz	good	assigned-clocks = <&ccu CLK_SPIx>
 	 * 2518	40 MHz	allwinner,sun8i-h3	allwinner,sun8i-h3-spi	18750000 Hz	 93.75%	600000000 Hz	bad	assigned-clocks = <&ccu CLK_SPIx>
 	 * 2517	20 MHz	fsl,imx8mm		fsl,imx51-ecspi		 9090909 Hz	 90.09%	 18181819 Hz	good	assigned-clocks = <&clk IMX8MM_CLK_ECSPIx_ROOT>
 	 * 2517	20 MHz	fsl,imx8mm		fsl,imx51-ecspi		 9523809 Hz	 95.34%	 28571429 Hz	bad	assigned-clocks = <&clk IMX8MM_CLK_ECSPIx_ROOT>

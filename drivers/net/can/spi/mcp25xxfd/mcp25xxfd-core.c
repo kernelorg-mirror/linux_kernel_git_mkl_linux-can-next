@@ -1340,7 +1340,11 @@ static int mcp25xxfd_handle_tefif(struct mcp25xxfd_priv *priv)
 
  out_netif_wake_queue:
 	mcp25xxfd_ecc_tefif_successful(priv);
-	netif_wake_queue(priv->ndev);
+
+	if (mcp25xxfd_get_tx_free(priv->tx)) {
+		smp_mb();
+		netif_wake_queue(priv->ndev);
+	}
 
 	return 0;
 }
@@ -2297,6 +2301,30 @@ static int mcp25xxfd_tx_obj_write(const struct mcp25xxfd_priv *priv,
 	return spi_async(priv->spi, &tx_obj->msg);
 }
 
+static bool mcp25xxfd_tx_busy(const struct mcp25xxfd_priv *priv,
+			      struct mcp25xxfd_tx_ring *tx_ring)
+{
+	if (mcp25xxfd_get_tx_free(tx_ring) > 0)
+		return false;
+
+	netif_stop_queue(priv->ndev);
+
+	smp_mb();
+
+	if (mcp25xxfd_get_tx_free(tx_ring) == 0) {
+		netdev_dbg(priv->ndev,
+			   "Stopping tx-queue (tx_head=0x%08x, tx_tail=0x%08x, len=%d).\n",
+			   tx_ring->head, tx_ring->tail,
+			   tx_ring->head - tx_ring->tail);
+
+		return true;
+	}
+
+	netif_start_queue(priv->ndev);
+
+	return false;
+}
+
 static netdev_tx_t mcp25xxfd_start_xmit(struct sk_buff *skb,
 					struct net_device *ndev)
 {
@@ -2309,16 +2337,8 @@ static netdev_tx_t mcp25xxfd_start_xmit(struct sk_buff *skb,
 	if (can_dropped_invalid_skb(ndev, skb))
 		return NETDEV_TX_OK;
 
-	if (tx_ring->head - tx_ring->tail >= tx_ring->obj_num) {
-		netdev_dbg(priv->ndev,
-			   "Stopping tx-queue (tx_head=0x%08x, tx_tail=0x%08x, len=%d).\n",
-			   tx_ring->head, tx_ring->tail,
-			   tx_ring->head - tx_ring->tail);
-
-		netif_stop_queue(ndev);
-
+	if (mcp25xxfd_tx_busy(priv, tx_ring))
 		return NETDEV_TX_BUSY;
-	}
 
 	tx_obj = mcp25xxfd_get_tx_obj_next(tx_ring);
 	mcp25xxfd_tx_obj_from_skb(priv, tx_obj, skb, tx_ring->head);

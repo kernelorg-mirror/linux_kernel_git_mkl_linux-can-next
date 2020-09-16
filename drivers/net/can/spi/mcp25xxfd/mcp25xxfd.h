@@ -771,6 +771,11 @@ static inline u8 mcp25xxfd_get_tx_tail(const struct mcp25xxfd_tx_ring *ring)
 	return ring->tail & (ring->obj_num - 1);
 }
 
+static inline u8 mcp25xxfd_get_tx_free(const struct mcp25xxfd_tx_ring *ring)
+{
+	return ring->obj_num - (ring->head - ring->tail);
+}
+
 static inline int
 mcp25xxfd_get_tx_nr_by_addr(const struct mcp25xxfd_tx_ring *tx_ring, u8 *nr,
 			    u16 addr)

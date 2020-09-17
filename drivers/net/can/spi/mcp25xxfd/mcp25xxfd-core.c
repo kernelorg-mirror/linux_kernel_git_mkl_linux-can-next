@@ -2583,7 +2583,7 @@ mcp25xxfd_register_done(const struct mcp25xxfd_priv *priv)
 		return err;
 
 	netdev_info(priv->ndev,
-		    "%s rev%lu.%lu (%cRX_INT %cMAB_NO_WARN %cCRC_REG %cCRC_RX %cCRC_TX %cECC %cHD m:%u.%02uMHz r:%u.%02uMHz e:%u.%02uMHz) successfully initialized.\n",
+		    "%s rev%lu.%lu (%cRX_INT %cMAB_NO_WARN %cCRC_REG %cCRC_RX %cCRC_TX %cECC %cHD c:%u.%02uMHz m:%u.%02uMHz r:%u.%02uMHz e:%u.%02uMHz) successfully initialized.\n",
 		    mcp25xxfd_get_model_str(priv),
 		    FIELD_GET(MCP25XXFD_REG_DEVID_ID_MASK, dev_id),
 		    FIELD_GET(MCP25XXFD_REG_DEVID_REV_MASK, dev_id),
@@ -2594,6 +2594,8 @@ mcp25xxfd_register_done(const struct mcp25xxfd_priv *priv)
 		    MCP25XXFD_QUIRK_ACTIVE(CRC_TX),
 		    MCP25XXFD_QUIRK_ACTIVE(ECC),
 		    MCP25XXFD_QUIRK_ACTIVE(HALF_DUPLEX),
+		    priv->can.clock.freq / 1000000,
+		    priv->can.clock.freq % 1000000 / 1000 / 10,
 		    priv->spi_max_speed_hz_orig / 1000000,
 		    priv->spi_max_speed_hz_orig % 1000000 / 1000 / 10,
 		    priv->spi->max_speed_hz / 1000000,

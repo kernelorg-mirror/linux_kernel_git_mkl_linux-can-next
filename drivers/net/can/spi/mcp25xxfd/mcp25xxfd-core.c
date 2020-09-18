@@ -2262,16 +2262,18 @@ mcp25xxfd_tx_obj_from_skb(const struct mcp25xxfd_priv *priv,
 	put_unaligned_le32(flags, &hw_tx_obj->flags);
 
 	/* Clear data at end of CAN frame */
-	// FIXME: what does the controller send in CANFD if can_dlc2len(can_len2dlc(cfd->len)) > cfd->len?
 	offset = round_down(cfd->len, sizeof(u32));
 	len = round_up(can_dlc2len(dlc), sizeof(u32)) - offset;
-	if (len)
+	if (MCP25XXFD_SANITIZE_CAN && len)
 		memset(hw_tx_obj->data + offset, 0x0, len);
 	memcpy(hw_tx_obj->data, cfd->data, cfd->len);
 
 	/* Number of bytes to be written into the RAM of the controller */
 	len = sizeof(hw_tx_obj->id) + sizeof(hw_tx_obj->flags);
-	len += round_up(cfd->len, sizeof(u32));
+	if (MCP25XXFD_SANITIZE_CAN)
+		len += round_up(can_dlc2len(dlc), sizeof(u32));
+	else
+		len += round_up(cfd->len, sizeof(u32));
 
 	if (priv->devtype_data.quirks & MCP25XXFD_QUIRK_CRC_TX) {
 		u16 crc;

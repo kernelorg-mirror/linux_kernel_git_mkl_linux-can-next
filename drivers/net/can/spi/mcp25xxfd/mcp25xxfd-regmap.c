@@ -111,7 +111,7 @@ mcp25xxfd_regmap_nocrc_update_bits(void *context, unsigned int reg,
 			xfer[0].rx_buf = buf_rx;
 			xfer[0].len = sizeof(buf_tx->cmd) + len;
 
-			if (IS_ENABLED(CONFIG_CAN_MCP25XXFD_SANITY))
+			if (MCP25XXFD_SANITIZE_SPI)
 				memset(buf_tx->data, 0x0, len);
 		}
 
@@ -171,7 +171,7 @@ mcp25xxfd_regmap_nocrc_read(void *context,
 		xfer[0].len = sizeof(buf_tx->cmd) + val_len;
 
 		memcpy(&buf_tx->cmd, reg, sizeof(buf_tx->cmd));
-		if (IS_ENABLED(CONFIG_CAN_MCP25XXFD_SANITY))
+		if (MCP25XXFD_SANITIZE_SPI)
 			memset(buf_tx->data, 0x0, val_len);
 	};
 
@@ -297,7 +297,7 @@ mcp25xxfd_regmap_crc_read(void *context,
 		xfer[0].len = sizeof(buf_tx->cmd) + val_len +
 			sizeof(buf_tx->crc);
 
-		if (IS_ENABLED(CONFIG_CAN_MCP25XXFD_SANITY))
+		if (MCP25XXFD_SANITIZE_SPI)
 			memset(buf_tx->data, 0x0, val_len +
 			       sizeof(buf_tx->crc));
 	}

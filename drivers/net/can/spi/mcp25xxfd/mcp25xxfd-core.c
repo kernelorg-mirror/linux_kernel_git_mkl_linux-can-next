@@ -1339,6 +1339,9 @@ static int mcp25xxfd_handle_tefif(struct mcp25xxfd_priv *priv)
 	mcp25xxfd_ecc_tefif_successful(priv);
 
 	if (mcp25xxfd_get_tx_free(priv->tx)) {
+		/* Make sure that anybody stopping the queue after
+		 * this sees the new tx_ring->tail.
+		 */
 		smp_mb();
 		netif_wake_queue(priv->ndev);
 	}
@@ -2308,6 +2311,7 @@ static bool mcp25xxfd_tx_busy(const struct mcp25xxfd_priv *priv,
 
 	netif_stop_queue(priv->ndev);
 
+	/* Memory barrier before checking tx_free (head and tail) */
 	smp_mb();
 
 	if (mcp25xxfd_get_tx_free(tx_ring) == 0) {

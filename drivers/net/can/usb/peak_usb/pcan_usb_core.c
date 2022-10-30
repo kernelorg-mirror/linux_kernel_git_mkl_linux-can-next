@@ -1028,8 +1028,8 @@ static int peak_usb_create_dev(const struct peak_usb_adapter *peak_usb_adapter,
 	/* get device number early */
 	dev->adapter->dev_get_user_devid(dev, &dev->user_devid);
 
-	netdev_info(netdev, "attached to %s channel %u (device %u)\n",
-			peak_usb_adapter->name, ctrl_idx, dev->user_devid);
+	netdev_info(netdev, "attached to %s channel %u (device %08Xh)\n",
+		    peak_usb_adapter->name, ctrl_idx, dev->user_devid);
 
 	return 0;
 

@@ -1,0 +1,15 @@
+
+What:		/sys/class/net/<iface>/peak_usb/user_devid
+Date:		October 2022
+KernelVersion:	6.1
+Contact:	Stephane Grosjean <s.grosjean@peak-system.com>
+Description:
+		PEAK PCAN-USB devices support a user-configurable device
+		identifier. This attribute provides read-only access to the
+		currently configured value of the device identifier. Depending
+		on the device type, the identifier has a length of 8 or 32 bit.
+		The value read from this attribute is always an 8 digit 32 bit
+		hexadecimal value in big endian format. If the device only
+		supports an 8 bit identifier, the upper 24 bit of the value are
+		set to zero.
+

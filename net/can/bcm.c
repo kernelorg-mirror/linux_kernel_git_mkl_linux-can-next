@@ -850,7 +850,7 @@ static int bcm_read_op(struct list_head *ops, struct bcm_msg_head *msg_head,
 
 	bcm_send_to_user(op, msg_head, op->frames, 0);
 
-	return MHSIZ;
+	return 0;
 }
 
 /*
@@ -1023,7 +1023,7 @@ static int bcm_tx_setup(struct bcm_msg_head *msg_head, struct msghdr *msg,
 	if (op->flags & STARTTIMER)
 		bcm_tx_start_timer(op);
 
-	return msg_head->nframes * op->cfsiz + MHSIZ;
+	return msg_head->nframes * op->cfsiz;
 
 free_op:
 	if (op->frames != &op->sframe)
@@ -1240,7 +1240,7 @@ static int bcm_rx_setup(struct bcm_msg_head *msg_head, struct msghdr *msg,
 		}
 	}
 
-	return msg_head->nframes * op->cfsiz + MHSIZ;
+	return msg_head->nframes * op->cfsiz;
 }
 
 /*
@@ -1285,7 +1285,7 @@ static int bcm_tx_send(struct msghdr *msg, int ifindex, struct sock *sk,
 	if (err)
 		return err;
 
-	return cfsiz + MHSIZ;
+	return cfsiz;
 }
 
 /*
@@ -1361,14 +1361,14 @@ static int bcm_sendmsg(struct socket *sock, struct msghdr *msg, size_t size)
 
 	case TX_DELETE:
 		if (bcm_delete_tx_op(&bo->tx_ops, &msg_head, ifindex))
-			ret = MHSIZ;
+			ret = 0;
 		else
 			ret = -EINVAL;
 		break;
 
 	case RX_DELETE:
 		if (bcm_delete_rx_op(&bo->rx_ops, &msg_head, ifindex))
-			ret = MHSIZ;
+			ret = 0;
 		else
 			ret = -EINVAL;
 		break;
@@ -1400,7 +1400,10 @@ static int bcm_sendmsg(struct socket *sock, struct msghdr *msg, size_t size)
 
 	release_sock(sk);
 
-	return ret;
+	if (ret < 0)
+		return ret;
+
+	return ret + MHSIZ;
 }
 
 /*

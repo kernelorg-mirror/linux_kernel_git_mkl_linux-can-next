@@ -166,7 +166,6 @@ static bool bcm_is_invalid_tv(struct bcm_msg_head *msg_head)
 
 #define CFSIZ(flags) ((flags & CAN_FD_FRAME) ? CANFD_MTU : CAN_MTU)
 #define OPSIZ sizeof(struct bcm_op)
-#define MHSIZ sizeof(struct bcm_msg_head)
 
 /*
  * procfs functions
@@ -1297,23 +1296,25 @@ static int bcm_sendmsg(struct socket *sock, struct msghdr *msg, size_t size)
 	struct bcm_sock *bo = bcm_sk(sk);
 	int ifindex = bo->ifindex; /* default ifindex for this bcm_op */
 	struct bcm_msg_head msg_head;
-	int cfsiz;
+	int cfsiz, msg_head_size;
 	int ret; /* read bytes or error codes as return value */
 
 	if (!bo->bound)
 		return -ENOTCONN;
 
+	msg_head_size = sizeof(msg_head);
+
 	/* check for valid message length from userspace */
-	if (size < MHSIZ)
+	if (size < msg_head_size)
 		return -EINVAL;
 
 	/* read message head information */
-	ret = memcpy_from_msg((u8 *)&msg_head, msg, MHSIZ);
+	ret = memcpy_from_msg((u8 *)&msg_head, msg, msg_head_size);
 	if (ret < 0)
 		return ret;
 
 	cfsiz = CFSIZ(msg_head.flags);
-	if ((size - MHSIZ) % cfsiz)
+	if ((size - msg_head_size) % cfsiz)
 		return -EINVAL;
 
 	/* check for alternative ifindex for this bcm_op */
@@ -1387,10 +1388,11 @@ static int bcm_sendmsg(struct socket *sock, struct msghdr *msg, size_t size)
 
 	case TX_SEND:
 		/* we need exactly one CAN frame behind the msg head */
-		if ((msg_head.nframes != 1) || (size != cfsiz + MHSIZ))
+		if ((msg_head.nframes != 1) || (size != cfsiz + msg_head_size))
 			ret = -EINVAL;
 		else
 			ret = bcm_tx_send(msg, ifindex, sk, cfsiz);
+
 		break;
 
 	default:
@@ -1403,7 +1405,7 @@ static int bcm_sendmsg(struct socket *sock, struct msghdr *msg, size_t size)
 	if (ret < 0)
 		return ret;
 
-	return ret + MHSIZ;
+	return ret + msg_head_size;
 }
 
 /*

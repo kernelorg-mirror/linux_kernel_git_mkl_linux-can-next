@@ -40,6 +40,7 @@
  *
  */
 
+#include <linux/compat.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
@@ -60,6 +61,27 @@
 #include <linux/slab.h>
 #include <net/sock.h>
 #include <net/net_namespace.h>
+
+/**
+ * struct bcm_msg_head_compat - head of messages to/from the broadcast manager
+ * @opcode:    opcode, see enum below.
+ * @flags:     special flags, see below.
+ * @count:     number of frames to send before changing interval.
+ * @ival1:     interval for the first @count frames (using s32).
+ * @ival2:     interval for the following frames (using s32).
+ * @can_id:    CAN ID of frames to be sent or received.
+ * @nframes:   number of frames appended to the message head.
+ * @frames:    array of CAN frames.
+ */
+struct bcm_msg_head_compat {
+	__u32 opcode;
+	__u32 flags;
+	__u32 count;
+	struct old_timeval32 ival1, ival2;
+	canid_t can_id;
+	__u32 nframes;
+	struct can_frame frames[];
+};
 
 /*
  * To send multiple CAN frame content within TX_SETUP or to filter
@@ -1302,16 +1324,41 @@ static int bcm_sendmsg(struct socket *sock, struct msghdr *msg, size_t size)
 	if (!bo->bound)
 		return -ENOTCONN;
 
-	msg_head_size = sizeof(msg_head);
+	if (msg->msg_flags & MSG_CMSG_COMPAT) {
+		struct bcm_msg_head_compat msg_head_compat;
 
-	/* check for valid message length from userspace */
-	if (size < msg_head_size)
-		return -EINVAL;
+		msg_head_size = sizeof(msg_head_compat);
 
-	/* read message head information */
-	ret = memcpy_from_msg((u8 *)&msg_head, msg, msg_head_size);
-	if (ret < 0)
-		return ret;
+		/* check for valid message length from userspace */
+		if (size < msg_head_size)
+			return -EINVAL;
+
+		/* read message head information */
+		ret = memcpy_from_msg(&msg_head_compat, msg, msg_head_size);
+		if (ret < 0)
+			return ret;
+
+		msg_head.opcode = msg_head_compat.opcode;
+		msg_head.flags = msg_head_compat.flags;
+		msg_head.count = msg_head_compat.count;
+		msg_head.ival1.tv_sec = msg_head_compat.ival1.tv_sec;
+		msg_head.ival1.tv_usec = msg_head_compat.ival1.tv_usec;
+		msg_head.ival2.tv_sec = msg_head_compat.ival2.tv_sec;
+		msg_head.ival2.tv_usec = msg_head_compat.ival2.tv_usec;
+		msg_head.can_id = msg_head_compat.can_id;
+		msg_head.nframes = msg_head_compat.nframes;
+	} else {
+		msg_head_size = sizeof(msg_head);
+
+		/* check for valid message length from userspace */
+		if (size < msg_head_size)
+			return -EINVAL;
+
+		/* read message head information */
+		ret = memcpy_from_msg((u8 *)&msg_head, msg, msg_head_size);
+		if (ret < 0)
+			return ret;
+	}
 
 	cfsiz = CFSIZ(msg_head.flags);
 	if ((size - msg_head_size) % cfsiz)
@@ -1657,6 +1704,7 @@ static int bcm_recvmsg(struct socket *sock, struct msghdr *msg, size_t size,
 	struct sock *sk = sock->sk;
 	struct sk_buff *skb;
 	int error = 0;
+	int rem_len;
 	int err;
 
 	skb = skb_recv_datagram(sk, flags, &error);
@@ -1666,7 +1714,39 @@ static int bcm_recvmsg(struct socket *sock, struct msghdr *msg, size_t size,
 	if (skb->len < size)
 		size = skb->len;
 
-	err = memcpy_to_msg(msg, skb->data, size);
+	rem_len = size;
+
+	if (flags & MSG_CMSG_COMPAT) {
+		struct bcm_msg_head_compat msg_head_compat;
+		struct bcm_msg_head *msg_head;
+
+		if (skb->len < sizeof(*msg_head)) {
+			skb_free_datagram(sk, skb);
+			return -EINVAL;
+		}
+
+		msg_head = skb_pull_data(skb, sizeof(*msg_head));
+		msg_head_compat.opcode = msg_head->opcode;
+		msg_head_compat.flags = msg_head->flags;
+		msg_head_compat.count = msg_head->count;
+		msg_head_compat.ival1.tv_sec = msg_head->ival1.tv_sec;
+		msg_head_compat.ival1.tv_usec = msg_head->ival1.tv_usec;
+		msg_head_compat.ival2.tv_sec = msg_head->ival2.tv_sec;
+		msg_head_compat.ival2.tv_usec = msg_head->ival2.tv_usec;
+		msg_head_compat.can_id = msg_head->can_id;
+		msg_head_compat.nframes = msg_head->nframes;
+
+		err = memcpy_to_msg(msg, &msg_head_compat, sizeof(msg_head_compat));
+		if (err < 0) {
+			skb_free_datagram(sk, skb);
+			return err;
+		}
+
+		rem_len = size - sizeof(*msg_head);
+		size = rem_len + sizeof(msg_head_compat);
+	}
+
+	err = memcpy_to_msg(msg, skb->data, rem_len);
 	if (err < 0) {
 		skb_free_datagram(sk, skb);
 		return err;

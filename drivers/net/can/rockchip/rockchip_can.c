@@ -309,7 +309,7 @@ static netdev_tx_t rockchip_can_start_xmit(struct sk_buff *skb,
 	}
 
 	writel(fi, rcan->base + CAN_TX_FRM_INFO);
-	can_put_echo_skb(skb, ndev, 0);
+	can_put_echo_skb(skb, ndev, 0, 0);
 
 	rockchip_can_write_cmdreg(rcan, TX_REQ);
 	netdev_dbg(ndev, "TX: can_id:0x%08x dlc: %d mode: 0x%08x data: 0x%08x 0x%08x\n",
@@ -506,11 +506,9 @@ static irqreturn_t rockchip_can_interrupt(int irq, void *dev_id)
 	isr = readl(rcan->base + CAN_INT);
 	if (isr & TX_FINISH) {
 		/* transmission complete interrupt */
-		stats->tx_bytes += readl(rcan->base + CAN_TX_FRM_INFO) &
-				   CAN_DLC_MASK;
+		stats->tx_bytes += can_get_echo_skb(ndev, 0, NULL);
 		stats->tx_packets++;
 		rockchip_can_write_cmdreg(rcan, 0);
-		can_get_echo_skb(ndev, 0);
 		netif_wake_queue(ndev);
 	}
 

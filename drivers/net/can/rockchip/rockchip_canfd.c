@@ -549,7 +549,7 @@ static netdev_tx_t rockchip_canfd_start_xmit(struct sk_buff *skb,
 	if (cf->can_id & CAN_EFF_FLAG) {
 		/* Extended CAN ID format */
 		id = cf->can_id & CAN_EFF_MASK;
-		dlc = can_len2dlc(cf->len) & DLC_MASK;
+		dlc = can_fd_len2dlc(cf->len) & DLC_MASK;
 		dlc |= FORMAT_MASK;
 
 		/* Extended frames remote TX request */
@@ -558,7 +558,7 @@ static netdev_tx_t rockchip_canfd_start_xmit(struct sk_buff *skb,
 	} else {
 		/* Standard CAN ID format */
 		id = cf->can_id & CAN_SFF_MASK;
-		dlc = can_len2dlc(cf->len) & DLC_MASK;
+		dlc = can_fd_len2dlc(cf->len) & DLC_MASK;
 
 		/* Standard frames remote TX request */
 		if (cf->can_id & CAN_RTR_FLAG)
@@ -663,9 +663,9 @@ static int rockchip_canfd_rx(struct net_device *ndev)
 
 	/* Change CAN data length format to socketCAN data format */
 	if (dlc & FDF_MASK)
-		cf->len = can_dlc2len(dlc & DLC_MASK);
+		cf->len = can_fd_dlc2len(dlc & DLC_MASK);
 	else
-		cf->len = get_can_dlc(dlc & DLC_MASK);
+		cf->len = can_cc_dlc2len(dlc & DLC_MASK);
 
 	/* Change CAN ID format to socketCAN ID format */
 	if (dlc & FORMAT_MASK) {

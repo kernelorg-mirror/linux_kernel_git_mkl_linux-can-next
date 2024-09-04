@@ -1,0 +1,2 @@
+Ported from https://github.com/radxa/kernel/tree/linux-6.1-stan-rkr4.1
+25d6c4ec945 ("arm64: dts: rockchip: add radxa-e54c")

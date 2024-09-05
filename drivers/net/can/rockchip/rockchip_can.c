@@ -16,6 +16,8 @@
 #include <linux/of_device.h>
 #include <linux/reset.h>
 #include <linux/pm_runtime.h>
+#include <linux/mod_devicetable.h>
+#include <linux/platform_device.h>
 
 #define DRV_NAME		"rockchip_can"
 

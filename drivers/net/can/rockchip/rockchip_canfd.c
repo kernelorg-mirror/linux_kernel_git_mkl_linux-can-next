@@ -26,7 +26,6 @@
 #include <linux/can/error.h>
 #include <linux/reset.h>
 #include <linux/pm_runtime.h>
-#include <linux/rockchip/cpu.h>
 
 /* registers definition */
 enum rockchip_canfd_reg {
@@ -1090,8 +1089,10 @@ static int rockchip_canfd_probe(struct platform_device *pdev)
 
 	rcan->mode = (unsigned long)of_device_get_match_data(&pdev->dev);
 
+#if 0
 	if ((cpu_is_rk3566() || cpu_is_rk3568()) && (rockchip_get_cpu_version() == 3))
 		rcan->mode = ROCKCHIP_RK3568_CAN_MODE_V2;
+#endif
 
 	rcan->base = addr;
 	rcan->can.clock.freq = clk_get_rate(rcan->clks[0].clk);

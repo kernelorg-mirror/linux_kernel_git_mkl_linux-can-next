@@ -422,16 +422,17 @@ static int raw_release(struct socket *sock)
 	ro = raw_sk(sk);
 	net = sock_net(sk);
 
+	rtnl_lock();
+
+	/* The netdev notifier chain runs under RTNL, so raw_notifier() can't
+	 * be walking raw_notifier_list and point to this socket. The spinlock
+	 * is still needed as raw_init() adds sockets without holding RTNL.
+	 */
 	spin_lock(&raw_notifier_lock);
-	while (raw_busy_notifier == ro) {
-		spin_unlock(&raw_notifier_lock);
-		schedule_timeout_uninterruptible(1);
-		spin_lock(&raw_notifier_lock);
-	}
+	WARN_ON_ONCE(raw_busy_notifier == ro);
 	list_del(&ro->notifier);
 	spin_unlock(&raw_notifier_lock);
 
-	rtnl_lock();
 	lock_sock(sk);
 
 	/* remove current filters & unregister */

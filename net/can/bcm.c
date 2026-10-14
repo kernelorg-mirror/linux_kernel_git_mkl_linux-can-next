@@ -1926,27 +1926,40 @@ static int bcm_release(struct socket *sock)
 
 	/* remove bcm_ops, timer, rx_unregister(), etc. */
 
-	spin_lock(&bcm_notifier_lock);
-	while (bcm_busy_notifier == bo) {
-		spin_unlock(&bcm_notifier_lock);
-		schedule_timeout_uninterruptible(1);
-		spin_lock(&bcm_notifier_lock);
-	}
-	list_del(&bo->notifier);
-	spin_unlock(&bcm_notifier_lock);
-
+	/* Remove the procfs entry and the tx_ops before taking RTNL:
+	 * remove_proc_entry() waits for concurrent readers of the entry and
+	 * must not hold up RTNL for them. Clear bo->bcm_proc_read so that
+	 * bcm_notify() does not remove the entry a second time.
+	 */
 	lock_sock(sk);
 
 #if IS_ENABLED(CONFIG_PROC_FS)
 	/* remove procfs entry */
-	if (net->can.bcmproc_dir && bo->bcm_proc_read)
+	if (net->can.bcmproc_dir && bo->bcm_proc_read) {
 		remove_proc_entry(bo->procname, net->can.bcmproc_dir);
+		bo->bcm_proc_read = NULL;
+	}
 #endif /* CONFIG_PROC_FS */
 
 	list_for_each_entry_safe(op, next, &bo->tx_ops, list) {
 		list_del_rcu(&op->list);
 		bcm_remove_op(op);
 	}
+
+	release_sock(sk);
+
+	rtnl_lock();
+
+	/* The netdev notifier chain runs under RTNL, so bcm_notifier() can't
+	 * be walking bcm_notifier_list and point to this socket. The spinlock
+	 * is still needed as bcm_init() adds sockets without holding RTNL.
+	 */
+	spin_lock(&bcm_notifier_lock);
+	WARN_ON_ONCE(bcm_busy_notifier == bo);
+	list_del(&bo->notifier);
+	spin_unlock(&bcm_notifier_lock);
+
+	lock_sock(sk);
 
 	list_for_each_entry_safe(op, next, &bo->rx_ops, list) {
 		/*
@@ -1972,6 +1985,8 @@ static int bcm_release(struct socket *sock)
 					  bcm_rx_handler, op);
 
 	}
+
+	rtnl_unlock();
 
 	synchronize_rcu();
 

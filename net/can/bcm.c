@@ -1926,17 +1926,30 @@ static int bcm_release(struct socket *sock)
 
 	/* remove bcm_ops, timer, rx_unregister(), etc. */
 
+	rtnl_lock();
+
+	/* The netdev notifier chain runs under RTNL, so bcm_notifier() can't
+	 * be walking bcm_notifier_list and point to this socket. The spinlock
+	 * is still needed as bcm_init() adds sockets without holding RTNL.
+	 */
 	spin_lock(&bcm_notifier_lock);
-	while (bcm_busy_notifier == bo) {
-		spin_unlock(&bcm_notifier_lock);
-		schedule_timeout_uninterruptible(1);
-		spin_lock(&bcm_notifier_lock);
-	}
+	WARN_ON_ONCE(bcm_busy_notifier == bo);
 	list_del(&bo->notifier);
 	spin_unlock(&bcm_notifier_lock);
 
 	lock_sock(sk);
 
+	/* Remove the device specific subscriptions under RTNL */
+	list_for_each_entry(op, &bo->rx_ops, list)
+		if (op->ifindex && op->rx_reg_dev)
+			bcm_rx_unreg(op->rx_reg_dev, op);
+
+	rtnl_unlock();
+
+	/* bcm_notify() can not access this socket anymore. Release the other
+	 * resources without holding RTNL, e.g. remove_proc_entry() waits for
+	 * concurrent readers of the procfs entry.
+	 */
 #if IS_ENABLED(CONFIG_PROC_FS)
 	/* remove procfs entry */
 	if (net->can.bcmproc_dir && bo->bcm_proc_read)
@@ -1948,30 +1961,12 @@ static int bcm_release(struct socket *sock)
 		bcm_remove_op(op);
 	}
 
-	list_for_each_entry_safe(op, next, &bo->rx_ops, list) {
-		/*
-		 * Don't care if we're bound or not (due to netdev problems)
-		 * can_rx_unregister() is always a save thing to do here.
-		 */
-		if (op->ifindex) {
-			/*
-			 * Only remove subscriptions that had not
-			 * been removed due to NETDEV_UNREGISTER
-			 * in bcm_notifier()
-			 *
-			 * op->rx_reg_dev is a tracked reference taken
-			 * when the subscription was registered, so it
-			 * stays valid here even if a concurrent
-			 * NETDEV_UNREGISTER already unlisted the device.
-			 */
-			if (op->rx_reg_dev)
-				bcm_rx_unreg(op->rx_reg_dev, op);
-		} else
+	/* 'any' CAN device subscriptions live in the socket's namespace */
+	list_for_each_entry(op, &bo->rx_ops, list)
+		if (!op->ifindex)
 			can_rx_unregister(net, NULL, op->can_id,
 					  REGMASK(op->can_id),
 					  bcm_rx_handler, op);
-
-	}
 
 	synchronize_rcu();
 

@@ -1624,16 +1624,25 @@ static int isotp_bind(struct socket *sock, struct sockaddr_unsized *uaddr, int l
 
 	ifindex = dev->ifindex;
 
-	if (isotp_register_rxid(so))
-		can_rx_register(net, dev, rx_id, SINGLE_MASK(rx_id),
-				isotp_rcv, sk, sock_i_ino(sk), sk);
+	if (isotp_register_rxid(so)) {
+		err = can_rx_register(net, dev, rx_id, SINGLE_MASK(rx_id),
+				      isotp_rcv, sk, sock_i_ino(sk), sk);
+		if (err)
+			goto out_put_dev;
+	}
 
 	/* no consecutive frame echo skb in flight */
 	WRITE_ONCE(so->cfecho, 0);
 
 	/* register for echo skb's */
-	can_rx_register(net, dev, tx_id, SINGLE_MASK(tx_id),
-			isotp_rcv_echo, sk, sock_i_ino(sk), sk);
+	err = can_rx_register(net, dev, tx_id, SINGLE_MASK(tx_id),
+			      isotp_rcv_echo, sk, sock_i_ino(sk), sk);
+	if (err) {
+		if (isotp_register_rxid(so))
+			can_rx_unregister(net, dev, rx_id, SINGLE_MASK(rx_id),
+					  isotp_rcv, sk);
+		goto out_put_dev;
+	}
 
 	/* switch to new settings */
 	so->ifindex = ifindex;
